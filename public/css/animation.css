@@ -1,0 +1,195 @@
+/* Animaciones para nodos */
+@keyframes nodeAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.drawflow-node {
+    animation: nodeAppear 0.3s ease;
+}
+
+/* Efecto de pulso para nodos seleccionados */
+@keyframes nodePulse {
+    0% {
+        box-shadow: 0 0 0 0 var(--accent-glow);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(0, 122, 204, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 122, 204, 0);
+    }
+}
+
+.drawflow-node.selected {
+    animation: nodePulse 2s infinite;
+}
+
+/* Animación para conexiones */
+@keyframes connectionDraw {
+    from {
+        stroke-dashoffset: 1000;
+    }
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+.connection .main-path {
+    stroke-dasharray: 5;
+    animation: connectionDraw 0.5s linear infinite;
+}
+
+/* Efecto de hover en nodos */
+.drawflow-node:hover {
+    transform: scale(1.05);
+    transition: transform 0.2s;
+    z-index: 100;
+}
+
+/* Animación para notificaciones */
+@keyframes notificationPulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.notification {
+    animation: slideIn 0.3s ease, notificationPulse 0.5s ease 0.3s;
+}
+
+/* Efecto de onda al hacer clic */
+@keyframes ripple {
+    0% {
+        transform: scale(0);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+.ripple-effect {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--accent-color);
+    animation: ripple 0.6s linear;
+    pointer-events: none;
+}
+
+/* Animación para el loader */
+@keyframes gradientShift {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+.loader {
+    background: linear-gradient(45deg, var(--accent-color), #00aaff, var(--accent-color));
+    background-size: 200% 200%;
+    animation: spin 1s linear infinite, gradientShift 2s ease infinite;
+}
+
+/* Efecto de glassmorphism para paneles */
+.glass-effect {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Animación para el minimapa */
+@keyframes minimapPulse {
+    0% {
+        opacity: 0.5;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0.5;
+    }
+}
+
+.minimap {
+    animation: minimapPulse 2s ease infinite;
+}
+
+/* Efecto de typing para el input */
+@keyframes blink {
+    0%, 100% {
+        border-color: transparent;
+    }
+    50% {
+        border-color: var(--accent-color);
+    }
+}
+
+.flow-name input:focus {
+    animation: blink 1s step-end infinite;
+}
+
+/* Transición para el sidebar */
+@keyframes sidebarSlide {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+.sidebar-left {
+    animation: sidebarSlide 0.5s ease;
+}
+
+/* Efecto de brillo para botones */
+@keyframes buttonGlow {
+    0% {
+        box-shadow: 0 0 5px var(--accent-color);
+    }
+    50% {
+        box-shadow: 0 0 20px var(--accent-color);
+    }
+    100% {
+        box-shadow: 0 0 5px var(--accent-color);
+    }
+}
+
+.toolbar-btn:hover {
+    animation: buttonGlow 1.5s ease infinite;
+}
+
+/* Animación para estadísticas */
+@keyframes countUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stat-number {
+    animation: countUp 0.5s ease;
+}

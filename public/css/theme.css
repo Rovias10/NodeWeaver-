@@ -1,0 +1,68 @@
+/* ===== TEMA OSCURO (por defecto) ===== */
+[data-theme="dark"] {
+  /* Fondos */
+  --bg-primary: #15191e;
+  --bg-secondary: #1e2329;
+  --bg-tertiary: #252c35;
+  --bg-hover: #2d3748;
+
+  /* Texto */
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+
+  /* Bordes y sombras */
+  --border-color: #30363d;
+  --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+
+  /* Acento azul blueprint */
+  --accent-color: #40a9ff;
+  --accent-glow: rgba(64, 169, 255, 0.2);
+
+  /* Grid blueprint */
+  --grid-major: rgba(64, 169, 255, 0.12);
+  --grid-minor: rgba(64, 169, 255, 0.04);
+
+  /* Badges */
+  --badge-bg: #2d3748;
+  --badge-text: #8b949e;
+}
+
+/* ===== TEMA CLARO ===== */
+[data-theme="light"] {
+  /* Fondos */
+  --bg-primary: #f0f4f8;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #eaeff5;
+  --bg-hover: #dde3ec;
+
+  /* Texto */
+  --text-primary: #1a202c;
+  --text-secondary: #4a5568;
+
+  /* Bordes y sombras */
+  --border-color: #cbd5e0;
+  --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+  /* Acento */
+  --accent-color: #007acc;
+  --accent-glow: rgba(0, 122, 204, 0.2);
+
+  /* Grid */
+  --grid-major: rgba(0, 122, 204, 0.12);
+  --grid-minor: rgba(0, 122, 204, 0.05);
+
+  /* Badges */
+  --badge-bg: #e2e8f0;
+  --badge-text: #4a5568;
+}
+
+/* Transición suave entre temas */
+*,
+*::before,
+*::after {
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.3s ease,
+    box-shadow 0.3s ease;
+}

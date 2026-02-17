@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoFlow - Automatización Visual Profesional</title>
+    
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Drawflow para el editor de nodos -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/drawflow@0.0.58/dist/drawflow.min.css">
+    
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Nuestros estilos -->
+    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/animation.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Pantalla de carga -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loader"></div>
+        <h2>Inicializando AutoFlow...</h2>
+        <div class="loading-progress">
+            <div class="progress-bar" id="loading-progress-bar"></div>
+        </div>
+    </div>
+
+    <!-- Contenedor principal -->
+    <div id="app" style="display: none;">
+        <!-- Barra lateral izquierda (nodos) -->
+        <div class="sidebar-left" id="sidebar-left">
+            <div class="logo">
+                <i class="fas fa-bolt"></i>
+                <span>NodeWeaver</span>
+                <span class="version">v0.2</span>
+            </div>
+            
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Buscar nodos..." id="node-search">
+            </div>
+            
+            <div class="node-categories">
+                <div class="category">
+                    <div class="category-header" data-category="triggers">
+                        <i class="fas fa-bolt"></i>
+                        <span>Disparadores</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="category-content" id="category-triggers">
+                        <div class="node-item" data-type="schedule" draggable="true">
+                            <i class="fas fa-clock"></i>
+                            <span>Programación</span>
+                            <span class="node-badge">cron</span>
+                        </div>
+                        <div class="node-item" data-type="webhook" draggable="true">
+                            <i class="fas fa-globe"></i>
+                            <span>Webhook</span>
+                            <span class="node-badge">http</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="category">
+                    <div class="category-header" data-category="actions">
+                        <i class="fas fa-play"></i>
+                        <span>Acciones</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="category-content" id="category-actions">
+                        <div class="node-item" data-type="email" draggable="true">
+                            <i class="fas fa-envelope"></i>
+                            <span>Email</span>
+                            <span class="node-badge">smtp</span>
+                        </div>
+                        <div class="node-item" data-type="backup" draggable="true">
+                            <i class="fas fa-database"></i>
+                            <span>Backup</span>
+                            <span class="node-badge">ftp</span>
+                        </div>
+                        <div class="node-item" data-type="telegram" draggable="true">
+                            <i class="fab fa-telegram"></i>
+                            <span>Telegram</span>
+                            <span class="node-badge">bot</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="category">
+                    <div class="category-header" data-category="logic">
+                        <i class="fas fa-code-branch"></i>
+                        <span>Lógica</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="category-content" id="category-logic">
+                        <div class="node-item" data-type="condition" draggable="true">
+                            <i class="fas fa-code-branch"></i>
+                            <span>Condición</span>
+                            <span class="node-badge">if/else</span>
+                        </div>
+                        <div class="node-item" data-type="loop" draggable="true">
+                            <i class="fas fa-redo"></i>
+                            <span>Bucle</span>
+                            <span class="node-badge">for</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <i class="fas fa-user-circle"></i>
+                    <span>Demo User</span>
+                </div>
+                <button id="theme-toggle" class="theme-toggle">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Área central (editor) -->
+        <div class="main-content">
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <button class="toolbar-btn" id="new-flow">
+                        <i class="fas fa-file"></i>
+                        <span>Nuevo</span>
+                    </button>
+                    <button class="toolbar-btn" id="save-flow">
+                        <i class="fas fa-save"></i>
+                        <span>Guardar</span>
+                    </button>
+                    <button class="toolbar-btn" id="execute-flow">
+                        <i class="fas fa-play"></i>
+                        <span>Ejecutar</span>
+                    </button>
+                    <button class="toolbar-btn" id="clone-flow">
+                        <i class="fas fa-copy"></i>
+                        <span>Clonar</span>
+                    </button>
+                </div>
+                
+                <div class="flow-name">
+                    <i class="fas fa-pen"></i>
+                    <input type="text" value="Mi automatización principal" id="flow-name-input">
+                </div>
+                
+                <div class="toolbar-right">
+                    <span class="badge" id="node-count">0 nodos</span>
+                    <span class="badge" id="connection-count">0 conexiones</span>
+                    <button class="toolbar-btn" id="zoom-in">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                    <button class="toolbar-btn" id="zoom-out">
+                        <i class="fas fa-search-minus"></i>
+                    </button>
+                    <button class="toolbar-btn" id="fit-view">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="editor-container">
+                <div id="drawflow" class="drawflow"></div>
+                
+                <!-- Mini mapa de navegación -->
+                <div class="minimap" id="minimap">
+                    <div class="minimap-header">
+                        <i class="fas fa-map"></i>
+                        <span>Navegador</span>
+                    </div>
+                    <div class="minimap-content" id="minimap-content">
+                        <!-- Aquí se dibujará el minimapa -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Barra lateral derecha (configuración) -->
+        <div class="sidebar-right" id="sidebar-right">
+            <div class="sidebar-tabs">
+                <button class="tab-btn active" data-tab="config">
+                    <i class="fas fa-cog"></i>
+                    <span>Configuración</span>
+                </button>
+                <button class="tab-btn" data-tab="logs">
+                    <i class="fas fa-history"></i>
+                    <span>Historial</span>
+                </button>
+                <button class="tab-btn" data-tab="stats">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Estadísticas</span>
+                </button>
+            </div>
+
+            <!-- Panel de configuración -->
+            <div class="tab-panel active" id="panel-config">
+                <div class="panel-content" id="node-config">
+                    <div class="empty-state">
+                        <i class="fas fa-arrow-left"></i>
+                        <p>Selecciona un nodo para configurarlo</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel de logs -->
+            <div class="tab-panel" id="panel-logs">
+                <div class="panel-content">
+                    <div class="log-filters">
+                        <select id="log-filter">
+                            <option value="all">Todos</option>
+                            <option value="success">Éxito</option>
+                            <option value="error">Error</option>
+                        </select>
+                    </div>
+                    <div class="log-list" id="log-list">
+                        <!-- Los logs se cargarán aquí -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel de estadísticas -->
+            <div class="tab-panel" id="panel-stats">
+                <div class="panel-content">
+                    <canvas id="stats-chart"></canvas>
+                    <div class="stats-numbers" id="stats-numbers">
+                        <!-- Estadísticas -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modales -->
+    <div id="modal-container"></div>
+
+    <!-- Notificaciones -->
+    <div id="notification-container" class="notification-container"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/drawflow@0.0.58/dist/drawflow.min.js"></script>
+    <script src="js/editor.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/sounds.js"></script>
+    <script src="js/stats.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
