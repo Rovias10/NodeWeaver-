@@ -22,29 +22,22 @@ class FlowEditor {
     this.editor.snap = true;
     this.editor.snap_grid = 20;
 
+    this.registerCustomNodes();
+
     this.setupEditorEvents();
     this._startGridLoop();
   }
 
-  /**
-   * Loop rAF: cada frame comprueba si el transform cambió.
-   * Si cambió → actualiza las CSS vars del grid.
-   * Usamos las propiedades internas de Drawflow para mayor precisión y performance.
-   */
   _startGridLoop() {
-    // Inicializar valores previos para evitar updates innecesarios
     this._lastX = 0;
     this._lastY = 0;
     this._lastZoom = 1;
 
     const tick = () => {
-      // Accedemos directamente a las propiedades de la instancia de Drawflow
-      // Esto evita tener que parsear strings del DOM que pueden cambiar de formato
       const x = this.editor.canvas_x || 0;
       const y = this.editor.canvas_y || 0;
       const zoom = this.editor.zoom || 1;
 
-      // Solo actualizamos el DOM si los valores cambian
       if (x !== this._lastX || y !== this._lastY || zoom !== this._lastZoom) {
         this._lastX = x;
         this._lastY = y;
@@ -54,21 +47,85 @@ class FlowEditor {
         this.container.style.setProperty("--df-y", `${y}px`);
         this.container.style.setProperty("--df-zoom", `${zoom}`);
       }
-
       requestAnimationFrame(tick);
     };
-
     requestAnimationFrame(tick);
   }
-
-  // _syncGrid ya no es necesario con la nueva lógica, pero lo mantengo vacío por si acaso
-  _syncGrid(transform) {}
 
   setupEditorEvents() {
     this.editor.on("nodeCreated", () => this._updateCounts());
     this.editor.on("nodeRemoved", () => this._updateCounts());
     this.editor.on("connectionCreated", () => this._updateCounts());
     this.editor.on("connectionRemoved", () => this._updateCounts());
+
+    this.editor.on("nodeSelected", (id) => {
+      this.showNodeConfig(id);
+    });
+
+    this.editor.on("nodeUnselected", () => {
+      document.getElementById("node-config").innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-arrow-left"></i>
+          <p>Selecciona un nodo para configurarlo</p>
+        </div>`;
+    });
+  }
+
+  showNodeConfig(id) {
+    const node = this.editor.getNodeFromId(id);
+    const configPanel = document.getElementById("node-config");
+
+    document.querySelector('[data-tab="config"]').click();
+
+    let html = `<div class="node-config-form">
+                  <h4 style="margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                    Configurar ${node.name}
+                  </h4>`;
+
+    if (node.name === 'email') {
+      html += `
+        <div class="form-group">
+          <label>Email de Destino</label>
+          <input type="email" id="config-email" value="${node.data.email || ''}" placeholder="cliente@empresa.com">
+        </div>
+        <div class="form-group">
+          <label>Asunto</label>
+          <input type="text" id="config-subject" value="${node.data.subject || ''}" placeholder="Tu factura está lista">
+        </div>`;
+    } else if (node.name === 'telegram') {
+      html += `
+        <div class="form-group">
+          <label>Chat ID</label>
+          <input type="text" id="config-chatid" value="${node.data.chatId || ''}" placeholder="@mi_canal">
+        </div>
+        <div class="form-group">
+          <label>Mensaje</label>
+          <textarea id="config-message" rows="4" placeholder="¡Alerta del sistema!">${node.data.message || ''}</textarea>
+        </div>`;
+    } else {
+      html += `<p class="text-secondary">Este nodo no requiere configuración adicional.</p>`;
+    }
+
+    html += `<button class="btn-landing-primary mt-3" style="width:100%; padding: 10px;" onclick="window.flowEditor.saveNodeConfig(${id})">Guardar Cambios</button></div>`;
+
+    configPanel.innerHTML = html;
+  }
+
+
+  saveNodeConfig(id) {
+    const node = this.editor.getNodeFromId(id);
+    let newData = { ...node.data };
+
+    if (node.name === 'email') {
+      newData.email = document.getElementById('config-email').value;
+      newData.subject = document.getElementById('config-subject').value;
+    } else if (node.name === 'telegram') {
+      newData.chatId = document.getElementById('config-chatid').value;
+      newData.message = document.getElementById('config-message').value;
+    }
+
+    this.editor.updateNodeDataFromId(id, newData);
+    showNotification("Configuración del nodo guardada", "success");
   }
 
   _updateCounts() {
@@ -76,13 +133,7 @@ class FlowEditor {
     const nodes = Object.values(data.drawflow?.Home?.data ?? {});
     const nCount = nodes.length;
     const cCount = nodes.reduce(
-      (acc, n) =>
-        acc +
-        Object.values(n.outputs ?? {}).reduce(
-          (a, o) => a + (o.connections?.length ?? 0),
-          0,
-        ),
-      0,
+      (acc, n) => acc + Object.values(n.outputs ?? {}).reduce((a, o) => a + (o.connections?.length ?? 0), 0), 0
     );
 
     const nEl = document.getElementById("node-count");
@@ -92,41 +143,22 @@ class FlowEditor {
   }
 
   registerCustomNodes() {
-    this.editor.registerNode("email", {
-      html: `
+    this.editor.registerNode("email", `
         <div class="custom-node email-node">
           <div class="node-header"><i class="fas fa-envelope"></i><span>Email</span></div>
-          <div class="node-content">
-            <div class="node-field"><input type="email" placeholder="destino@email.com"></div>
-          </div>
           <div class="node-footer"><span class="node-status">Listo</span></div>
-        </div>`,
-      props: { type: "email", icon: "fa-envelope" },
-      options: { class: "email-node" },
-    });
+        </div>`, {}, {}, 1, 1);
 
-    this.editor.registerNode("backup", {
-      html: `
-        <div class="custom-node backup-node">
-          <div class="node-header"><i class="fas fa-database"></i><span>Backup</span></div>
-          <div class="node-content">
-            <div class="node-field"><input type="text" placeholder="Carpeta origen"></div>
-            <div class="node-field"><input type="text" placeholder="Destino FTP"></div>
-          </div>
-          <div class="node-footer"><span class="node-status">Pendiente</span></div>
-        </div>`,
-      props: { type: "backup", icon: "fa-database" },
-    });
-
-    this.editor.registerNode("telegram", {
-      html: `
+    this.editor.registerNode("telegram", `
         <div class="custom-node telegram-node">
           <div class="node-header"><i class="fab fa-telegram"></i><span>Telegram</span></div>
-          <div class="node-content">
-            <div class="node-field"><input type="text" placeholder="Chat ID"></div>
-            <div class="node-field"><textarea placeholder="Mensaje"></textarea></div>
-          </div>
-        </div>`,
-    });
+          <div class="node-footer"><span class="node-status">Listo</span></div>
+        </div>`, {}, {}, 1, 1);
+
+    this.editor.registerNode("webhook", `
+        <div class="custom-node webhook-node" style="border-left: 4px solid #a855f7;">
+          <div class="node-header"><i class="fas fa-globe"></i><span>Webhook In</span></div>
+          <div class="node-footer"><span class="node-status">Esperando...</span></div>
+        </div>`, {}, {}, 0, 1);
   }
 }

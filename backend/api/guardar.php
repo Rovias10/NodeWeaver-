@@ -4,25 +4,21 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
-// Si es petición OPTIONS (preflight), respondemos OK
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
 
-// Iniciar sesión para guardar datos
 session_start();
 
-// Inicializar array de automatizaciones si no existe
 if (!isset($_SESSION['automations'])) {
     $_SESSION['automations'] = [];
 }
 
-// Obtener datos del POST
 $input = json_decode(file_get_contents('php://input'), true);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Guardar nueva automatización
+    // Guardamos la nueva automatización
     $id = count($_SESSION['automations']) + 1;
     $automation = [
         'id' => $id,
@@ -46,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ], JSON_PRETTY_PRINT);
 } 
 elseif ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    // Listar todas las automatizaciones
+    // Devolver toda lo que hay
     echo json_encode([
         'success' => true,
         'automations' => array_values($_SESSION['automations'])

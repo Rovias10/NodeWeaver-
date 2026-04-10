@@ -14,11 +14,10 @@ session_start();
 $input = json_decode(file_get_contents('php://input'), true);
 $id = $input['id'] ?? 1;
 
-// Simular tiempo de ejecución variable
+// Metemos un sleep aleatorio para que parezca que está pensando
 $executionTime = rand(2, 6);
 sleep($executionTime);
 
-// Templates de resultados más variados y realistas
 $resultTemplates = [
     [
         'success' => true,
@@ -42,7 +41,7 @@ $resultTemplates = [
         'output' => [
             'logs' => [
                 ['time' => date('H:i:s', time()-$executionTime), 'message' => '⚡ Inicializando worker #' . rand(1, 5) . '...'],
-                ['time' => date('H:i:s', time()-$executionTime+1), 'message' => '📱 Conectando con Telegram API (bot: AutoFlowBot)...'],
+                ['time' => date('H:i:s', time()-$executionTime+1), 'message' => '📱 Conectando con Telegram API (bot: NodeWeaverBot)...'],
                 ['time' => date('H:i:s', time()-$executionTime+2), 'message' => '✅ Mensaje enviado a canal #general (usuarios: ' . rand(50, 200) . ')'],
                 ['time' => date('H:i:s', time()-$executionTime+3), 'message' => '📊 Procesando estadísticas de uso...'],
                 ['time' => date('H:i:s', time()-$executionTime+4), 'message' => '📎 Adjuntando informe PDF...'],
@@ -85,7 +84,7 @@ $results = [
     'timestamp' => date('Y-m-d H:i:s')
 ];
 
-// Guardar en historial
+// Guardamos la ejecución en la sesión
 if (!isset($_SESSION['execution_logs'])) {
     $_SESSION['execution_logs'] = [];
 }

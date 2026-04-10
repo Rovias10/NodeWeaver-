@@ -1,0 +1,12 @@
+# Ignorar archivos de entorno
+.env
+.env.local
+*.env
+
+# Ignorar dependencias
+vendor/
+node_modules/
+
+# Ignorar archivos de sistema
+.DS_Store
+Thumbs.db

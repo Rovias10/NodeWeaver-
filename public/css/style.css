@@ -88,7 +88,7 @@ body {
   box-shadow: 0 0 0 2px var(--accent-glow);
 }
 
-/* Categorías de nodos */
+
 .node-categories {
   flex: 1;
   overflow-y: auto;
@@ -140,7 +140,7 @@ body {
   padding: 0;
 }
 
-/* Items de nodos */
+
 .node-item {
   padding: 10px;
   margin: 5px;
@@ -178,7 +178,7 @@ body {
   border-radius: 4px;
 }
 
-/* ===== ÁREA PRINCIPAL ===== */
+
 .main-content {
   flex: 1;
   display: flex;
@@ -264,7 +264,7 @@ body {
   color: var(--badge-text);
 }
 
-/* Editor container */
+
 .editor-container {
   flex: 1;
   position: relative;
@@ -276,25 +276,20 @@ body {
   height: 100%;
   background-color: var(--bg-primary);
 
-  /* Valores por defecto para evitar errores antes de que JS los rellene */
+  
   --df-zoom: 1;
   --df-x: 0px;
   --df-y: 0px;
-  --grid-cell: 20px; /* tamaño base de celda menor */
+  --grid-cell: 20px; 
 
-  /*
-    Dos capas de grid:
-      1. Líneas MAYORES cada 5 celdas  → más visibles
-      2. Líneas MENORES cada 1 celda   → sutiles
-    El tamaño y posición se escalan con --df-zoom y se desplazan con --df-x/y.
-  */
+  
   background-image:
-    /* Mayor vertical */
+    
     linear-gradient(var(--grid-major) 1px, transparent 1px),
-    /* Mayor horizontal */
+    
     linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
-    /* Menor vertical */ linear-gradient(var(--grid-minor) 1px, transparent 1px),
-    /* Menor horizontal */
+     linear-gradient(var(--grid-minor) 1px, transparent 1px),
+    
     linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px);
 
   background-size:
@@ -307,23 +302,18 @@ body {
     calc(var(--grid-cell) * var(--df-zoom))
       calc(var(--grid-cell) * var(--df-zoom));
 
-  /*
-    background-position necesita el módulo del tamaño de celda escalado
-    para que el grid "ancle" al mismo origen que los nodos.
-    CSS no tiene módulo, pero como el background repite automáticamente,
-    con pasarle el offset directo (--df-x, --df-y) es suficiente.
-  */
+  
   background-position:
     var(--df-x) var(--df-y),
     var(--df-x) var(--df-y),
     var(--df-x) var(--df-y),
     var(--df-x) var(--df-y);
 
-  /* Fuerza al GPU a compositar esta capa → sin parpadeos */
+  
   will-change: background-position, background-size;
   transform: translateZ(0);
 }
-/* Minimapa */
+
 .minimap {
   position: absolute;
   bottom: 20px;
@@ -354,7 +344,7 @@ body {
   position: relative;
 }
 
-/* ===== SIDEBAR DERECHA ===== */
+
 .sidebar-right {
   width: 350px;
   background: var(--bg-secondary);
@@ -433,7 +423,7 @@ body {
   opacity: 0.5;
 }
 
-/* Configuración de nodos */
+
 .node-config-form {
   display: flex;
   flex-direction: column;
@@ -472,7 +462,7 @@ body {
   box-shadow: 0 0 0 2px var(--accent-glow);
 }
 
-/* Logs */
+
 .log-filters {
   margin-bottom: 15px;
 }
@@ -505,7 +495,7 @@ body {
   font-size: 10px;
 }
 
-/* Notificaciones */
+
 .notification-container {
   position: fixed;
   top: 20px;
@@ -559,7 +549,7 @@ body {
   }
 }
 
-/* Loading screen */
+
 .loading-screen {
   position: fixed;
   top: 0;

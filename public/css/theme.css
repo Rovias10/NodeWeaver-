@@ -1,65 +1,82 @@
-/* ===== TEMA OSCURO (por defecto) ===== */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
+
+:root {
+  --font-family: "Inter", system-ui, -apple-system, sans-serif;
+}
+
 [data-theme="dark"] {
-  /* Fondos */
-  --bg-primary: #15191e;
-  --bg-secondary: #1e2329;
-  --bg-tertiary: #252c35;
-  --bg-hover: #2d3748;
+  
+  --bg-primary: #0b1120; 
+  --bg-secondary: #0f172a;
+  --bg-tertiary: #1e293b;
+  --bg-hover: rgba(59, 130, 246, 0.1); 
 
-  /* Texto */
-  --text-primary: #e6edf3;
-  --text-secondary: #8b949e;
+  
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
 
-  /* Bordes y sombras */
-  --border-color: #30363d;
-  --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  
+  --border-color: rgba(255, 255, 255, 0.08); 
+  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 
-  /* Acento azul blueprint */
-  --accent-color: #40a9ff;
-  --accent-glow: rgba(64, 169, 255, 0.2);
+  
+  --accent-color: #3b82f6;
+  --accent-color-hover: #60a5fa;
+  --accent-gradient: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  --accent-glow: rgba(59, 130, 246, 0.4);
 
-  /* Grid blueprint */
-  --grid-major: rgba(64, 169, 255, 0.12);
-  --grid-minor: rgba(64, 169, 255, 0.04);
+  
+  --grid-major: rgba(59, 130, 246, 0.12); 
+  --grid-minor: rgba(59, 130, 246, 0.04);
 
-  /* Badges */
-  --badge-bg: #2d3748;
-  --badge-text: #8b949e;
+  
+  --badge-bg: rgba(59, 130, 246, 0.2);
+  --badge-text: #60a5fa;
 }
 
-/* ===== TEMA CLARO ===== */
+
 [data-theme="light"] {
-  /* Fondos */
-  --bg-primary: #f0f4f8;
+  
+  --bg-primary: #f8fafc;
   --bg-secondary: #ffffff;
-  --bg-tertiary: #eaeff5;
-  --bg-hover: #dde3ec;
+  --bg-tertiary: #f1f5f9;
+  --bg-hover: rgba(0, 0, 0, 0.05);
 
-  /* Texto */
-  --text-primary: #1a202c;
-  --text-secondary: #4a5568;
+  
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
 
-  /* Bordes y sombras */
-  --border-color: #cbd5e0;
-  --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  
+  --border-color: rgba(0, 0, 0, 0.1);
+  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
 
-  /* Acento */
-  --accent-color: #007acc;
-  --accent-glow: rgba(0, 122, 204, 0.2);
+  
+  --accent-color: #2563eb;
+  --accent-color-hover: #3b82f6;
+  --accent-gradient: linear-gradient(135deg, #2563eb, #7c3aed);
+  --accent-glow: rgba(37, 99, 235, 0.3);
 
-  /* Grid */
-  --grid-major: rgba(0, 122, 204, 0.12);
-  --grid-minor: rgba(0, 122, 204, 0.05);
+  
+  --grid-major: rgba(37, 99, 235, 0.1);
+  --grid-minor: rgba(37, 99, 235, 0.03);
 
-  /* Badges */
-  --badge-bg: #e2e8f0;
-  --badge-text: #4a5568;
+  
+  --badge-bg: rgba(37, 99, 235, 0.1);
+  --badge-text: #2563eb;
 }
 
-/* Transición suave entre temas */
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+
 *,
 *::before,
 *::after {
+  box-sizing: border-box;
   transition:
     background-color 0.3s ease,
     border-color 0.3s ease,

@@ -12,7 +12,7 @@ themeToggle.addEventListener("click", () => {
   html.setAttribute("data-theme", newTheme);
   localStorage.setItem("theme", newTheme);
   updateThemeIcon(newTheme);
-  
+
   document.body.style.transition = "background-color 0.3s";
   setTimeout(() => {
     document.body.style.transition = "";

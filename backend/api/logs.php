@@ -58,7 +58,7 @@ if (empty($logs)) {
             ? $successMessages[array_rand($successMessages)]
             : $errorMessages[array_rand($errorMessages)];
         
-        // Hacer que los más recientes tengan fechas más cercanas
+        // Ajusto las fechas para que parezcan recientes
         $hoursAgo = $i * rand(1, 3);
         
         $logs[] = [
@@ -77,14 +77,14 @@ if (empty($logs)) {
     }
 }
 
-// Filtrar por estado si es necesario
+// Si hay filtro, lo aplicamos
 if ($filter !== 'all') {
     $logs = array_filter($logs, function($log) use ($filter) {
         return $log['status'] === $filter;
     });
 }
 
-// Ordenar por fecha (más reciente primero) y limitar a 50
+// Ordenamos por fecha y nos quedamos con los últimos 50
 $logs = array_slice(array_reverse($logs), 0, 50);
 
 echo json_encode(array_values($logs), JSON_PRETTY_PRINT);

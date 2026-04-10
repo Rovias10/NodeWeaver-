@@ -11,13 +11,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 session_start();
 
-// Calcular uptime desde inicio de año
+// Calculamos cuánto tiempo lleva arriba el sistema
 $startTime = strtotime('2024-01-01 00:00:00');
 $uptime = time() - $startTime;
 $days = floor($uptime / 86400);
 $hours = floor(($uptime % 86400) / 3600);
 
-// Generar estadísticas simuladas con variedad
+// Genero datos aleatorios para que las gráficas queden bonitas
 $stats = [
     'total_executions' => rand(1250, 3450),
     'success_count' => rand(1100, 3200),
