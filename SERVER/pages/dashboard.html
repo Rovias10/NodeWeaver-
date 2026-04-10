@@ -3,260 +3,218 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NodeWeaver - Automatización Visual Profesional</title>
+    <title>NodeWeaver - Panel Pro</title>
 
-    
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
-    />
-
-    
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/drawflow@0.0.58/dist/drawflow.min.css"
-    />
-
-    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/drawflow@0.0.58/dist/drawflow.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+    <link rel="stylesheet" href="../css/tailwind.css" />
     
-    <link rel="stylesheet" href="../css/theme.css?v=17" />
-    <link rel="stylesheet" href="../css/animation.css?v=17" />
-    <link rel="stylesheet" href="../css/style.css?v=17" />
+    <style>
+      /* Keeping custom animation keyframes and drawflow overrides */
+      @keyframes spin { 100% { transform: rotate(360deg); } }
+      .loading-spinner { border: 4px solid rgba(255, 255, 255, 0.1); border-left-color: var(--color-primary); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+      
+      /* Drawflow custom fixes since we removed the old style.css */
+      #drawflow { width: 100%; height: 100%; background-color: #0e1015; background-size: 25px 25px; background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px); }
+      .drawflow .connection .main-path { stroke: var(--color-primary); stroke-width: 3px; }
+      .drawflow-node { background: #151821; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5); }
+      .drawflow-node .inputs .input { top: 50%; width: 14px; height: 14px; border-radius: 50%; background: #0e1015; border: 2px solid white; transform: translate(-10px, -50%); }
+      .drawflow-node .outputs .output { top: 50%; width: 14px; height: 14px; border-radius: 50%; background: var(--color-primary); border: 2px solid #0e1015; transform: translate(10px, -50%); }
+    </style>
   </head>
-  <body>
+  <body class="bg-[#0e1015] text-white h-screen overflow-hidden font-sans antialiased text-sm">
     
-    <div id="loading-screen" class="loading-screen">
-      <div class="loader"></div>
-      <h2>Inicializando NodeWeaver...</h2>
-      <div class="loading-progress">
-        <div class="progress-bar" id="loading-progress-bar"></div>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="fixed inset-0 bg-[#0e1015] flex flex-col items-center justify-center z-[100] transition-opacity duration-500">
+      <div class="loading-spinner mb-6"></div>
+      <h2 class="text-xl font-bold tracking-wider animate-pulse mb-6">Inicializando NodeWeaver...</h2>
+      <div class="w-64 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+        <div id="loading-progress-bar" class="h-full bg-primary w-0 transition-all duration-300 ease-out"></div>
       </div>
     </div>
 
-    
-    <div id="app" style="display: none">
+    <!-- App Layout -->
+    <div id="app" class="hidden h-full flex flex-row w-full">
       
-      <div class="sidebar-left" id="sidebar-left">
-        <div class="logo">
-          <i class="fas fa-bolt"></i>
-          <span>NodeWeaver</span>
-          <span class="version">v0.2</span>
+      <!-- Sidebar Left (Nodes) -->
+      <div id="sidebar-left" class="w-64 bg-[#151821] border-r border-white/10 flex flex-col flex-shrink-0 z-20">
+        <!-- Logo -->
+        <div class="px-5 py-4 border-b border-white/10 flex items-center justify-between">
+          <div class="flex items-center gap-2 font-bold text-lg">
+            <i class="fas fa-bolt text-primary"></i> <span class="tracking-wide">NodeWeaver</span>
+          </div>
+          <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-primary/20 text-primary">v0.2</span>
         </div>
 
-        <div class="search-box">
-          <i class="fas fa-search"></i>
-          <input type="text" placeholder="Buscar nodos..." id="node-search" />
-        </div>
-
-        <div class="node-categories">
-          <div class="category">
-            <div class="category-header" data-category="triggers">
-              <i class="fas fa-bolt"></i>
-              <span>Disparadores</span>
-              <i class="fas fa-chevron-down"></i>
-            </div>
-            <div class="category-content" id="category-triggers">
-              <div class="node-item" data-type="schedule" draggable="true">
-                <i class="fas fa-clock"></i>
-                <span>Programación</span>
-                <span class="node-badge">cron</span>
-              </div>
-              <div class="node-item" data-type="webhook" draggable="true">
-                <i class="fas fa-globe"></i>
-                <span>Webhook</span>
-                <span class="node-badge">http</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="category">
-            <div class="category-header" data-category="actions">
-              <i class="fas fa-play"></i>
-              <span>Acciones</span>
-              <i class="fas fa-chevron-down"></i>
-            </div>
-            <div class="category-content" id="category-actions">
-              <div class="node-item" data-type="email" draggable="true">
-                <i class="fas fa-envelope"></i>
-                <span>Email</span>
-                <span class="node-badge">smtp</span>
-              </div>
-              <div class="node-item" data-type="backup" draggable="true">
-                <i class="fas fa-database"></i>
-                <span>Backup</span>
-                <span class="node-badge">ftp</span>
-              </div>
-              <div class="node-item" data-type="telegram" draggable="true">
-                <i class="fab fa-telegram"></i>
-                <span>Telegram</span>
-                <span class="node-badge">bot</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="category">
-            <div class="category-header" data-category="logic">
-              <i class="fas fa-code-branch"></i>
-              <span>Lógica</span>
-              <i class="fas fa-chevron-down"></i>
-            </div>
-            <div class="category-content" id="category-logic">
-              <div class="node-item" data-type="condition" draggable="true">
-                <i class="fas fa-code-branch"></i>
-                <span>Condición</span>
-                <span class="node-badge">if/else</span>
-              </div>
-              <div class="node-item" data-type="loop" draggable="true">
-                <i class="fas fa-redo"></i>
-                <span>Bucle</span>
-                <span class="node-badge">for</span>
-              </div>
-            </div>
+        <!-- Search -->
+        <div class="p-4 border-b border-white/5">
+          <div class="relative">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+            <input type="text" id="node-search" placeholder="Buscar nodos..." class="w-full bg-[#0e1015] border border-white/10 rounded-md py-2 pl-9 pr-3 text-xs focus:outline-none focus:border-primary/50 text-white placeholder-gray-500 transition-colors" />
           </div>
         </div>
 
-        <div class="sidebar-footer">
-          <div class="user-info">
-            <i class="fas fa-user-circle"></i>
-            <span>Demo User</span>
+        <!-- Categories -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
+          
+          <div class="group">
+            <div class="flex items-center justify-between p-2 rounded-md hover:bg-white/5 cursor-pointer transition-colors text-xs font-semibold text-gray-400 hover:text-white uppercase tracking-wider select-none">
+              <div class="flex items-center gap-2"><i class="fas fa-bolt text-primary w-4"></i> Disparadores</div>
+              <i class="fas fa-chevron-down text-[10px]"></i>
+            </div>
+            <div class="pl-4 pr-1 py-1 space-y-1">
+              <div class="flex items-center justify-between p-2 bg-white/5 border border-white/10 rounded-md cursor-grab active:cursor-grabbing hover:border-primary/50 transition-colors opacity-90 hover:opacity-100" draggable="true" ondragstart="editorInstance.drag(event)" data-type="schedule">
+                <div class="flex items-center gap-2"><i class="fas fa-clock text-blue-400"></i> Programación</div>
+                <span class="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">cron</span>
+              </div>
+              <div class="flex items-center justify-between p-2 bg-white/5 border border-white/10 rounded-md cursor-grab active:cursor-grabbing hover:border-primary/50 transition-colors opacity-90 hover:opacity-100" draggable="true" ondragstart="editorInstance.drag(event)" data-type="webhook">
+                <div class="flex items-center gap-2"><i class="fas fa-globe text-purple-400"></i> Webhook</div>
+                <span class="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">http</span>
+              </div>
+            </div>
           </div>
-          <button id="theme-toggle" class="theme-toggle">
+
+          <div class="group">
+            <div class="flex items-center justify-between p-2 rounded-md hover:bg-white/5 cursor-pointer transition-colors text-xs font-semibold text-gray-400 hover:text-white uppercase tracking-wider select-none">
+              <div class="flex items-center gap-2"><i class="fas fa-play text-green-400 w-4"></i> Acciones</div>
+              <i class="fas fa-chevron-down text-[10px]"></i>
+            </div>
+            <div class="pl-4 pr-1 py-1 space-y-1">
+              <div class="flex items-center justify-between p-2 bg-white/5 border border-white/10 rounded-md cursor-grab active:cursor-grabbing hover:border-primary/50 transition-colors opacity-90 hover:opacity-100" draggable="true" ondragstart="editorInstance.drag(event)" data-type="email">
+                <div class="flex items-center gap-2"><i class="fas fa-envelope text-red-400"></i> Email</div>
+                <span class="text-[9px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-300">smtp</span>
+              </div>
+              <div class="flex items-center justify-between p-2 bg-white/5 border border-white/10 rounded-md cursor-grab active:cursor-grabbing hover:border-primary/50 transition-colors opacity-90 hover:opacity-100" draggable="true" ondragstart="editorInstance.drag(event)" data-type="backup">
+                <div class="flex items-center gap-2"><i class="fas fa-database text-yellow-400"></i> Backup</div>
+                <span class="text-[9px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-300">ftp</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- User Footer -->
+        <div class="p-4 border-t border-white/10 flex items-center justify-between bg-black/20">
+          <div class="flex items-center gap-2 cursor-pointer hover:text-primary transition-colors">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-orange-500 flex items-center justify-center font-bold text-black border border-white/20 select-none">DU</div>
+            <span class="font-medium text-xs">Demo User</span>
+          </div>
+          <button id="theme-toggle" class="p-2 rounded-md hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
             <i class="fas fa-moon"></i>
           </button>
         </div>
       </div>
 
-      
-      <div class="main-content">
-        <div class="toolbar">
-          <div class="toolbar-left">
-            <button class="toolbar-btn" id="new-flow">
-              <i class="fas fa-file"></i>
-              <span>Nuevo</span>
-            </button>
-            <button class="toolbar-btn" id="save-flow">
-              <i class="fas fa-save"></i>
-              <span>Guardar</span>
-            </button>
-            <button class="toolbar-btn" id="execute-flow">
-              <i class="fas fa-play"></i>
-              <span>Ejecutar</span>
-            </button>
-            <button class="toolbar-btn" id="clone-flow">
-              <i class="fas fa-copy"></i>
-              <span>Clonar</span>
-            </button>
-          </div>
-
-          <div class="flow-name">
-            <i class="fas fa-pen"></i>
-            <input
-              type="text"
-              value="Mi automatización principal"
-              id="flow-name-input"
-            />
-          </div>
-
-          <div class="toolbar-right">
-            <span class="badge" id="node-count">0 nodos</span>
-            <span class="badge" id="connection-count">0 conexiones</span>
-            <button class="toolbar-btn" id="zoom-in">
-              <i class="fas fa-search-plus"></i>
-            </button>
-            <button class="toolbar-btn" id="zoom-out">
-              <i class="fas fa-search-minus"></i>
-            </button>
-            <button class="toolbar-btn" id="fit-view">
-              <i class="fas fa-expand"></i>
-            </button>
-          </div>
-        </div>
-
-        <div class="editor-container">
-          <div id="drawflow" class="drawflow"></div>
-
+      <!-- Main Editor Area -->
+      <div class="flex-1 flex flex-col relative min-w-0 bg-[#0e1015]">
+        
+        <!-- Top Toolbar -->
+        <div class="h-14 border-b border-white/10 bg-[#151821]/90 backdrop-blur-sm flex items-center justify-between px-4 z-10">
           
-          <div class="minimap" id="minimap">
-            <div class="minimap-header">
-              <i class="fas fa-map"></i>
-              <span>Navegador</span>
+          <div class="flex items-center gap-2">
+            <button class="px-3 py-1.5 text-xs font-medium rounded-md bg-white/5 hover:bg-white/10 border border-white/10 transition-colors flex items-center gap-2 text-gray-300 hover:text-white"><i class="fas fa-file"></i> Nuevo</button>
+            <button class="px-3 py-1.5 text-xs font-medium rounded-md bg-white/5 hover:bg-white/10 border border-white/10 transition-colors flex items-center gap-2 text-gray-300 hover:text-white"><i class="fas fa-save text-blue-400"></i> Guardar</button>
+            <button class="px-3 py-1.5 text-xs font-medium rounded-md bg-primary hover:bg-primary-light text-black border border-primary-dark transition-colors flex items-center gap-2"><i class="fas fa-play"></i> Ejecutar</button>
+          </div>
+
+          <div class="flex-1 flex justify-center items-center">
+            <div class="flex items-center gap-2 px-3 py-1 rounded-md hover:bg-white/5 transition-colors cursor-text group">
+              <i class="fas fa-pen text-gray-500 group-hover:text-primary text-[10px]"></i>
+              <input type="text" value="Mi automatización principal" class="bg-transparent border-none text-sm font-semibold focus:outline-none text-center w-48 text-white focus:text-primary" />
             </div>
-            <div class="minimap-content" id="minimap-content">
-              
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div class="flex gap-2">
+               <span class="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[10px] text-gray-400 flex items-center"><span class="w-1.5 h-1.5 rounded-full bg-blue-500 mr-1.5"></span><span id="node-count">0</span> n</span>
+               <span class="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[10px] text-gray-400 flex items-center"><span class="w-1.5 h-1.5 rounded-full bg-purple-500 mr-1.5"></span><span id="connection-count">0</span> c</span>
             </div>
+            <div class="h-6 w-[1px] bg-white/10 mx-1"></div>
+            <button class="text-gray-400 hover:text-white transition-colors" onclick="editorInstance.globalEditor.zoom_in()"><i class="fas fa-search-plus"></i></button>
+            <button class="text-gray-400 hover:text-white transition-colors" onclick="editorInstance.globalEditor.zoom_out()"><i class="fas fa-search-minus"></i></button>
+            <button class="text-gray-400 hover:text-white transition-colors" onclick="editorInstance.globalEditor.zoom_reset()"><i class="fas fa-expand text-xs"></i></button>
+          </div>
+        </div>
+
+        <!-- Drawflow Canvas Container -->
+        <div class="flex-1 relative" ondrop="editorInstance.drop(event)" ondragover="event.preventDefault()">
+          <div id="drawflow"></div>
+          
+          <!-- Example Mini-map overlay styling -->
+          <div class="absolute bottom-6 left-6 w-40 h-32 bg-[#151821]/80 backdrop-blur-md border border-white/10 rounded-lg shadow-xl flex flex-col overflow-hidden pointer-events-none opacity-50 hover:opacity-100 transition-opacity">
+            <div class="text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 border-b border-white/10 bg-black/40 flex items-center gap-2"><i class="fas fa-map text-primary"></i> Navegador</div>
+            <div class="flex-1 bg-black/20 p-2 relative" id="minimap-content"></div>
           </div>
         </div>
       </div>
 
-      
-      <div class="sidebar-right" id="sidebar-right">
-        <div class="sidebar-tabs">
-          <button class="tab-btn active" data-tab="config">
-            <i class="fas fa-cog"></i>
-            <span>Configuración</span>
-          </button>
-          <button class="tab-btn" data-tab="logs">
-            <i class="fas fa-history"></i>
-            <span>Historial</span>
-          </button>
-          <button class="tab-btn" data-tab="stats">
-            <i class="fas fa-chart-bar"></i>
-            <span>Estadísticas</span>
-          </button>
+      <!-- Sidebar Right (Config / Logs) -->
+      <div id="sidebar-right" class="w-72 bg-[#151821] border-l border-white/10 flex flex-col flex-shrink-0 z-20">
+        
+        <div class="flex border-b border-white/10 text-xs font-semibold">
+          <button class="flex-1 py-3 flex items-center justify-center gap-2 text-white border-b-2 border-primary bg-white/5"><i class="fas fa-cog text-primary"></i> Config</button>
+          <button class="flex-1 py-3 flex items-center justify-center gap-2 text-gray-400 hover:text-white hover:bg-white/5 transition-colors border-b-2 border-transparent"><i class="fas fa-history"></i> Logs</button>
+          <button class="flex-1 py-3 flex items-center justify-center gap-2 text-gray-400 hover:text-white hover:bg-white/5 transition-colors border-b-2 border-transparent"><i class="fas fa-chart-bar"></i> Stats</button>
         </div>
 
-        
-        <div class="tab-panel active" id="panel-config">
-          <div class="panel-content" id="node-config">
-            <div class="empty-state">
-              <i class="fas fa-arrow-left"></i>
-              <p>Selecciona un nodo para configurarlo</p>
-            </div>
-          </div>
-        </div>
-
-        
-        <div class="tab-panel" id="panel-logs">
-          <div class="panel-content">
-            <div class="log-filters">
-              <select id="log-filter">
-                <option value="all">Todos</option>
-                <option value="success">Éxito</option>
-                <option value="error">Error</option>
-              </select>
-            </div>
-            <div class="log-list" id="log-list">
-              
-            </div>
-          </div>
-        </div>
-
-        
-        <div class="tab-panel" id="panel-stats">
-          <div class="panel-content">
-            <canvas id="stats-chart"></canvas>
-            <div class="stats-numbers" id="stats-numbers">
-              
-            </div>
+        <div class="flex-1 p-4 overflow-y-auto">
+          <!-- Empty State Config -->
+          <div class="h-full flex flex-col items-center justify-center text-center opacity-50 select-none">
+            <i class="fas fa-mouse-pointer text-4xl mb-4 text-gray-500"></i>
+            <h4 class="text-white font-medium mb-1">Ningún nodo seleccionado</h4>
+            <p class="text-[10px] text-gray-400">Haz clic en un nodo del lienzo para configurar sus parámetros.</p>
           </div>
         </div>
       </div>
+
     </div>
 
-    
-    <div id="modal-container"></div>
-
-    
-    <div id="notification-container" class="notification-container"></div>
-
-    
     <script src="https://cdn.jsdelivr.net/npm/drawflow@0.0.58/dist/drawflow.min.js"></script>
-    <script src="../js/editor.js"></script>
-    <script src="../js/theme.js"></script>
-    <script src="../js/sounds.js"></script>
-    <script src="../js/stats.js"></script>
-    <script src="../js/app.js"></script>
+    <script>
+      // Mocking editor instantiation explicitly for layout preview purposes without breaking drawflow JS
+      const loadingScreen = document.getElementById('loading-screen');
+      const progressBar = document.getElementById('loading-progress-bar');
+      const app = document.getElementById('app');
+
+      // Bootstrap mockup flow
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += Math.random() * 30;
+        if(progress > 100) progress = 100;
+        progressBar.style.width = progress + "%";
+        
+        if (progress === 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            loadingScreen.style.opacity = '0';
+            setTimeout(() => {
+              loadingScreen.style.display = 'none';
+              app.classList.remove('hidden');
+              app.style.opacity = '0';
+              setTimeout(() => {
+                app.style.transition = 'opacity 0.5s ease';
+                app.style.opacity = '1';
+                
+                // Initialize Drawflow
+                const container = document.getElementById("drawflow");
+                window.editorInstance = {
+                  globalEditor: new Drawflow(container),
+                  drag: function(e) { e.dataTransfer.setData("node", e.target.getAttribute("data-type")); },
+                  drop: function(e) {
+                    e.preventDefault();
+                    let data = e.dataTransfer.getData("node");
+                    this.globalEditor.addNode('hello', 1, 1, e.clientX, e.clientY, data, data, {}, '<div>MOCK NODE</div>');
+                  }
+                };
+                editorInstance.globalEditor.start();
+
+              }, 50);
+            }, 500);
+          }, 300);
+        }
+      }, 200);
+
+    </script>
   </body>
 </html>

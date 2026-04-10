@@ -5,98 +5,89 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NodeWeaver - Automatización Visual Profesional</title>
 
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
-    />
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
-    />
-    <link rel="stylesheet" href="css/theme.css?v=14" />
-    <link rel="stylesheet" href="css/landing.css?v=14" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    <!-- Eliminamos Bootstrap y landing.css; cargamos Tailwind nativo -->
+    <link rel="stylesheet" href="css/tailwind.css" />
   </head>
-  <body>
-    <div class="hero-overlay"></div>
+  <body class="bg-[#0e1015] text-white min-h-screen font-sans antialiased overflow-x-hidden relative">
+    
+    <!-- Pseudo Hero Overlay -->
+    <div class="absolute inset-0 bg-[#0e1015] bg-opacity-80 mix-blend-multiply pointer-events-none z-[-1]"></div>
 
-    <nav class="custom-nav">
-      <a href="#" class="brand-logo">
-        <i class="fas fa-bolt" style="color: #ffd700"></i> NodeWeaver
+    <!-- Navegación Glassmorphism -->
+    <nav class="flex items-center justify-between px-6 py-4 lg:px-12 backdrop-blur-md bg-[#0e1015]/60 sticky top-0 z-50 border-b border-white/10">
+      <a href="#" class="text-xl font-bold flex items-center gap-2 text-white hover:text-white/90 transition">
+        <i class="fas fa-bolt text-primary"></i> NodeWeaver
       </a>
-      <div>
-        <a
-          href="#features"
-          class="btn btn-sm btn-outline-light rounded-pill px-3 me-2"
-        >
+      <div class="flex items-center gap-4">
+        <a href="#features" class="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/20 text-sm font-medium hover:bg-white/10 transition-colors">
           <i class="fas fa-star"></i> Características
         </a>
-        <a
-          id="nav-auth-btn"
-          href="pages/auth/login.html"
-          class="btn btn-sm btn-light rounded-pill px-3"
-        >
+        <a id="nav-auth-btn" href="pages/auth/login.html" class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white text-[#0e1015] font-semibold text-sm hover:bg-white/90 shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all hover:scale-105">
           <i class="fas fa-sign-in-alt"></i> Acceder
         </a>
       </div>
     </nav>
 
-    <div class="hero-content">
-      <h1 class="hero-title animate__animated animate__fadeInUp">
+    <!-- Contenido Principal -->
+    <div class="relative max-w-5xl mx-auto px-6 py-24 lg:py-32 flex flex-col items-center text-center">
+      <h1 class="text-5xl lg:text-7xl font-extrabold tracking-tight leading-tight animate__animated animate__fadeInUp">
         Automatiza tus tareas <br />
-        <span class="highlight">Sin escribir código</span>
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary-light drop-shadow-[0_0_15px_rgba(230,194,0,0.5)]">
+          Sin escribir código
+        </span>
       </h1>
-      <p class="hero-subtitle animate__animated animate__fadeInUp">
-        Conecta tus aplicaciones favoritas, automatiza flujos de trabajo y
-        ahorra horas de trabajo manual. Todo con un editor visual intuitivo.
+      <p class="mt-6 text-lg lg:text-xl text-gray-400 max-w-2xl animate__animated animate__fadeInUp animate__delay-1s">
+        Conecta tus aplicaciones favoritas, automatiza flujos de trabajo y ahorra horas de trabajo manual. Todo con un editor visual puramente dinámico.
       </p>
 
-      <div
-        id="hero-buttons"
-        class="d-flex flex-wrap justify-content-center w-100 animate__animated animate__fadeInUp"
-        style="opacity: 0; transition: opacity 0.5s ease-in"
-      >
-        <a href="pages/auth/register.html" class="btn-landing-primary">
+      <div id="hero-buttons" class="mt-10 flex flex-col sm:flex-row gap-4 w-full justify-center opacity-0 transition-opacity duration-500 ease-in animate__animated animate__fadeInUp animate__delay-1s">
+        <a href="pages/auth/register.html" class="flex items-center justify-center gap-2 px-8 py-3.5 rounded-full bg-primary text-[#0e1015] font-bold shadow-[0_0_20px_rgba(230,194,0,0.4)] hover:bg-primary-light hover:scale-105 transition-all">
           <i class="fas fa-user-plus"></i> Crear Cuenta Gratis
         </a>
-        <a href="pages/auth/login.html" class="btn-landing-outline">
+        <a href="pages/auth/login.html" class="flex items-center justify-center gap-2 px-8 py-3.5 rounded-full border border-white/20 text-white font-semibold hover:bg-white/10 hover:scale-105 transition-all">
           <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
         </a>
       </div>
 
-      <div id="features" class="features mt-5">
-        <div class="feature-item">
-          <i class="fas fa-cubes"></i>
-          <h4>Editor Visual</h4>
-          <p>Arrastra y conecta nodos para crear flujos complejos</p>
+      <!-- Tarjetas de Características -->
+      <div id="features" class="mt-28 grid grid-cols-1 md:grid-cols-3 gap-8 w-full z-10">
+        <div class="p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:-translate-y-2 hover:bg-white/10 hover:border-primary/50 transition-all duration-300">
+          <div class="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6 text-primary text-2xl shadow-[0_0_15px_rgba(230,194,0,0.3)]">
+            <i class="fas fa-cubes"></i>
+          </div>
+          <h4 class="text-xl font-semibold text-white mb-3">Editor Visual</h4>
+          <p class="text-gray-400 text-sm">Arrastra y conecta nodos para crear flujos complejos sin tocar ni una línea de código.</p>
         </div>
-        <div class="feature-item">
-          <i class="fas fa-bolt"></i>
-          <h4>IA Accesible</h4>
-          <p>Aprovecha nuestros nodos automatizados con IA</p>
+        
+        <div class="p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:-translate-y-2 hover:bg-white/10 hover:border-primary/50 transition-all duration-300 transform md:translate-y-[-10px]">
+          <div class="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6 text-primary text-2xl shadow-[0_0_15px_rgba(230,194,0,0.3)]">
+            <i class="fas fa-bolt"></i>
+          </div>
+          <h4 class="text-xl font-semibold text-white mb-3">IA Accesible</h4>
+          <p class="text-gray-400 text-sm">Aprovecha nuestros nodos accionados por IA nativa para decisiones inteligentes y dinámicas.</p>
         </div>
-        <div class="feature-item">
-          <i class="fas fa-chart-line"></i>
-          <h4>Estadísticas en tiempo real</h4>
-          <p>Monitoriza todas tus automatizaciones</p>
+        
+        <div class="p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:-translate-y-2 hover:bg-white/10 hover:border-primary/50 transition-all duration-300">
+          <div class="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6 text-primary text-2xl shadow-[0_0_15px_rgba(230,194,0,0.3)]">
+            <i class="fas fa-chart-line"></i>
+          </div>
+          <h4 class="text-xl font-semibold text-white mb-3">Estadísticas Pro</h4>
+          <p class="text-gray-400 text-sm">Monitoriza el rendimiento de tus automatizaciones en tiempo real con métricas perfectas.</p>
         </div>
       </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
+    <!-- Script de Auth de la página -->
     <script>
-      
       const token = localStorage.getItem("token");
       const heroButtons = document.getElementById("hero-buttons");
       const navBtn = document.getElementById("nav-auth-btn");
 
       if (token) {
         heroButtons.innerHTML = `
-          <a href="pages/dashboard.html" class="btn-landing-primary">
+          <a href="pages/dashboard.html" class="flex items-center justify-center gap-2 px-8 py-3.5 rounded-full bg-primary text-[#0e1015] font-bold shadow-[0_0_20px_rgba(230,194,0,0.4)] hover:bg-primary-light hover:scale-105 transition-all">
             <i class="fas fa-rocket"></i> Ir al Dashboard
           </a>
         `;

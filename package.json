@@ -1,0 +1,21 @@
+{
+  "name": "nodeweaver-",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev:css": "tailwindcss -i ./SERVER/css/input.css -o ./SERVER/css/tailwind.css --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com-personal:Rovias10/NodeWeaver-.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.2",
+    "tailwindcss": "^4.2.2"
+  }
+}

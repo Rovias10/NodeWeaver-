@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+/* Opcional: Aquí puedes meter las fuentes personalizadas o variables CSS globales */
+@theme {
+  --color-primary: #e6c200; /* Amarillento kyellow approx */
+  --color-primary-dark: #b39700;
+  --color-primary-light: #ffdc33;
+}
+
+body {
+  @apply bg-[#0e1015] text-white;
+}

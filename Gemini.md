@@ -27,12 +27,12 @@ The structure is highly modular based on the Single Responsibility Principle. Ev
 
 | NodeWeaver Directory | Classic MVC Concept | Core Responsibility |
 | :--- | :--- | :--- |
-| `backend/config/` | **DATA** | Global settings, Auth keys, and the standard PDO Database Connection configuration. |
-| `backend/models/` | **MODEL** | Pure Database interaction tier. Executes prepared SQL statements via PDO. *No business logic goes here.* |
-| `backend/router/` | **API (Routing)** | `api.php` maps endpoints (e.g. `/api?route=x`). The `Router.php` class parses the URL and dispatches the payload to the correct Controller. |
-| `backend/controllers/` | **API (Logic)** | The core business logic. Validates inputs, calls models, and decides whether to return `json_encode()` or `include '../views/x.php'`. |
-| `backend/views/` | **VIEW** | PHP files that generate HTML chunks conditionally. Uses `foreach` loops to print dynamic HTML tables, cards, etc. |
-| `public/` | **SERVER (Frontend)**| Contains static assets, CSS, and JS files. Acts as the UI entry point. |
+| `DATA/` | **DATA** | Global settings, Auth keys, and the standard PDO Database Connection configuration. |
+| `MODEL/` | **MODEL** | Pure Database interaction tier. Executes prepared SQL statements via PDO. *No business logic goes here.* |
+| `API/router/` | **API (Routing)** | `api.php` maps endpoints. The `Router.php` class parses the URL and dispatches the payload to the Controller. |
+| `API/controllers/` | **API (Logic)** | The core business logic. Validates inputs, calls models, and returns `json_encode()` or `require`. |
+| `VIEW/` | **VIEW** | PHP files that generate HTML chunks conditionally. Uses `foreach` loops to print dynamic HTML tables. |
+| `SERVER/` | **SERVER (Frontend)**| Contains static assets, CSS, and JS files. Acts as the UI entry point. |
 
 ---
 
@@ -53,8 +53,9 @@ To optimize token usage and avoid catastrophic code breaks, adhere to the follow
 - Use Vanilla JavaScript (`fetch`) and Vanilla CSS.
 - **Authentication:** Standard JWT token placed in the Authorization header via Javascript.
 
-### D. Token Optimization Protocol
+### D. Token Optimization & RTK Protocol
 - Use native API tools (like `view_file` or `multi_replace_file_content`) to target specific lines. 
-- **DO NOT** rewrite entire 200-line controller files if you are only fixing a syntax error on line 42.
+- **DO NOT** rewrite entire 200-line controller files if you are only fixing a syntax error.
+- **MANDATORY RTK USAGE:** The host machine has Rust Token Killer (RTK) installed. For ALL noisy terminal commands executed via the `run_command` tool (e.g., `git log`, `npm install`, `composer update`), you **MUST** prepend `rtk` to the command (Example: `rtk git status`). Failure to do so wastes tokens and is strictly forbidden.
 
 > *"My directive is to build NodeWeaver using Native PHP MVC, preserving extreme folder modularity, and answering strictly using these architectural boundaries."*

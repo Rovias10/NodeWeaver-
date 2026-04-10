@@ -5,430 +5,240 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Crear Cuenta - NodeWeaver</title>
 
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
-    />
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="../../css/theme.css?v=10" />
-    <link rel="stylesheet" href="../../css/auth.css?v=10" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="stylesheet" href="../../css/tailwind.css" />
+    <style>
+      @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+      @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+    </style>
   </head>
-  <body>
-    <div class="auth-card wide">
-      <div class="auth-header">
-        <i class="fas fa-bolt auth-logo"></i>
-        <h2>Crear tu cuenta</h2>
-        <p>Empieza a automatizar en segundos</p>
+  <body class="bg-[#0e1015] text-white min-h-screen font-sans antialiased flex items-center justify-center p-4 relative overflow-hidden">
+    
+    <!-- Decorators -->
+    <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/20 blur-[120px] pointer-events-none"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] rounded-full bg-primary-dark/20 blur-[100px] pointer-events-none"></div>
+
+    <div class="w-full max-w-2xl p-8 md:p-10 my-8 bg-[#151821]/80 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl z-10">
+      <div class="text-center mb-8">
+        <i class="fas fa-bolt text-4xl text-primary drop-shadow-[0_0_15px_rgba(230,194,0,0.5)] mb-4"></i>
+        <h2 class="text-2xl font-bold text-white mb-2">Crear tu cuenta</h2>
+        <p class="text-gray-400 text-sm">Empieza a automatizar en segundos</p>
       </div>
 
-      <form id="registerForm" novalidate>
-        <div class="register-grid">
-          <div class="mb-2">
-            <label class="form-label">Nombre completo</label>
-            <div class="position-relative">
-              <i class="fas fa-user input-icon"></i>
-              <input
-                type="text"
-                class="form-control input-with-icon"
-                id="name"
-                placeholder="Juan Pérez"
-                required
-              />
+      <form id="registerForm" novalidate class="flex flex-col gap-5">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <!-- Col 1 -->
+          <div class="flex flex-col gap-5">
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1.5">Nombre completo</label>
+              <div class="relative">
+                <i class="fas fa-user absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                <input type="text" id="name" class="w-full bg-gray-900/50 border border-white/10 rounded-lg pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" placeholder="Juan Pérez" required />
+              </div>
+              <div class="hidden text-red-500 text-xs mt-1" id="nameError">El nombre es requerido</div>
             </div>
-            <div class="error-message" id="nameError">
-              El nombre es requerido
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1.5">Email</label>
+              <div class="relative">
+                <i class="fas fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                <input type="email" id="email" class="w-full bg-gray-900/50 border border-white/10 rounded-lg pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" placeholder="tu@email.com" required />
+              </div>
+              <div class="hidden text-red-500 text-xs mt-1" id="emailError">Email inválido</div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1.5">Contraseña</label>
+              <div class="relative">
+                <i class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                <input type="password" id="password" class="w-full bg-gray-900/50 border border-white/10 rounded-lg pl-11 pr-10 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" placeholder="Mínimo 6 caracteres" required />
+                <i class="fas fa-eye absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer hover:text-white" onclick="togglePassword('password')"></i>
+              </div>
+              <div class="h-1 w-full bg-gray-800 rounded-full mt-2 overflow-hidden"><div class="h-full bg-red-500 w-0 transition-all duration-300" id="strengthBar"></div></div>
+              <div class="text-xs text-red-500 mt-1 font-medium" id="strengthText">Muy débil</div>
+              <div class="hidden text-red-500 text-xs mt-1" id="passwordError">Mín. 6 caracteres</div>
             </div>
           </div>
 
-          <div class="mb-2">
-            <label class="form-label">Email</label>
-            <div class="position-relative">
-              <i class="fas fa-envelope input-icon"></i>
-              <input
-                type="email"
-                class="form-control input-with-icon"
-                id="email"
-                placeholder="tu@email.com"
-                required
-              />
+          <!-- Col 2 -->
+          <div class="flex flex-col gap-5">
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1.5">Empresa (Opcional)</label>
+              <div class="relative">
+                <i class="fas fa-building absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                <input type="text" id="company" class="w-full bg-gray-900/50 border border-white/10 rounded-lg pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" placeholder="Mi Empresa S.L." />
+              </div>
             </div>
-            <div class="error-message" id="emailError">Email inválido</div>
-          </div>
-          <div class="mb-2">
-            <label class="form-label">Empresa (Opcional)</label>
-            <div class="position-relative">
-              <i class="fas fa-building input-icon"></i>
-              <input
-                type="text"
-                class="form-control input-with-icon"
-                id="company"
-                placeholder="Mi Empresa S.L."
-              />
-            </div>
-          </div>
 
-          <div class="mb-2">
-            <label class="form-label">Teléfono (Opcional)</label>
-            <div class="position-relative">
-              <i class="fas fa-phone input-icon"></i>
-              <input
-                type="tel"
-                class="form-control input-with-icon"
-                id="phone"
-                placeholder="+34 600 000 000"
-              />
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1.5">Teléfono (Opcional)</label>
+              <div class="relative">
+                <i class="fas fa-phone absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                <input type="tel" id="phone" class="w-full bg-gray-900/50 border border-white/10 rounded-lg pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" placeholder="+34 600 000 000" />
+              </div>
             </div>
-          </div>
 
-          <div class="mb-2">
-            <label class="form-label">Contraseña</label>
-            <div class="position-relative">
-              <i class="fas fa-lock input-icon"></i>
-              <input
-                type="password"
-                class="form-control input-with-icon"
-                id="password"
-                placeholder="Mínimo 6"
-                required
-              />
-              <i
-                class="fas fa-eye password-toggle"
-                onclick="togglePassword('password')"
-              ></i>
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1.5">Confirmar contraseña</label>
+              <div class="relative">
+                <i class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                <input type="password" id="confirmPassword" class="w-full bg-gray-900/50 border border-white/10 rounded-lg pl-11 pr-10 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" placeholder="Repite contraseña" required />
+                <i class="fas fa-eye absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer hover:text-white" onclick="togglePassword('confirmPassword')"></i>
+              </div>
+              <div class="hidden text-red-500 text-xs mt-1" id="confirmError">No coinciden</div>
+              <div class="hidden text-green-500 text-xs mt-1" id="confirmSuccess">✓ Coinciden</div>
             </div>
-            <div class="password-strength">
-              <div class="strength-bar" id="strengthBar"></div>
-            </div>
-            <div class="strength-text" id="strengthText">Muy débil</div>
-            <div class="error-message" id="passwordError">
-              Mín. 6 caracteres
-            </div>
-          </div>
-
-          <div class="mb-0">
-            <label class="form-label">Confirmar contraseña</label>
-            <div class="position-relative">
-              <i class="fas fa-lock input-icon"></i>
-              <input
-                type="password"
-                class="form-control input-with-icon"
-                id="confirmPassword"
-                placeholder="Repite contraseña"
-                required
-              />
-              <i
-                class="fas fa-eye password-toggle"
-                onclick="togglePassword('confirmPassword')"
-              ></i>
-            </div>
-            <div class="error-message" id="confirmError">No coinciden</div>
-            <div class="success-message" id="confirmSuccess">✓ Coinciden</div>
           </div>
         </div>
 
-        <div class="terms-check">
-          <input type="checkbox" id="terms" required />
-          <label for="terms">
-            Acepto los <a href="#" target="_blank">Términos y Condiciones</a> y
-            la
-            <a href="#" target="_blank">Política de Privacidad</a>
+        <div class="mt-2">
+          <label class="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" id="terms" class="mt-1 w-4 h-4 rounded border-gray-600 text-primary focus:ring-primary bg-gray-900" required />
+            <span class="text-sm text-gray-400">Acepto los <a href="#" class="text-primary hover:underline">Términos y Condiciones</a> y la <a href="#" class="text-primary hover:underline">Política de Privacidad</a></span>
           </label>
-        </div>
-        <div
-          class="error-message"
-          id="termsError"
-          style="margin-top: -10px; margin-bottom: 10px"
-        >
-          Debes aceptar los términos
+          <div class="hidden text-red-500 text-xs mt-1 ml-7" id="termsError">Debes aceptar los términos</div>
         </div>
 
-        <button type="submit" class="btn-auth mb-2" id="submitBtn">
-          <i class="fas fa-user-plus me-2"></i>Crear cuenta gratis
+        <button type="submit" id="submitBtn" class="w-full mt-2 bg-primary hover:bg-primary-light text-[#0e1015] font-bold py-3.5 rounded-lg flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(230,194,0,0.3)] hover:shadow-[0_0_20px_rgba(230,194,0,0.5)] transition-all hover:-translate-y-0.5">
+          <i class="fas fa-user-plus"></i> Crear cuenta gratis
         </button>
 
-        <div class="divider">
-          <span>o</span>
+        <div class="relative flex items-center py-2">
+          <div class="flex-grow border-t border-white/10"></div>
+          <span class="flex-shrink-0 mx-4 text-gray-500 text-sm">o</span>
+          <div class="flex-grow border-t border-white/10"></div>
         </div>
 
-        <button type="button" class="btn-google" onclick="loginWithGoogle()">
-          <i class="fab fa-google"></i>
-          Registrarse con Google
+        <button type="button" onclick="loginWithGoogle()" class="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium py-3 rounded-lg flex items-center justify-center gap-2 transition-all">
+          <i class="fab fa-google text-lg"></i> Registrarse con Google
         </button>
       </form>
 
-      <div class="auth-footer">
-        ¿Ya tienes una cuenta? <a href="login.html">Inicia sesión</a>
+      <div class="mt-8 text-center text-sm text-gray-400">
+        ¿Ya tienes una cuenta? <a href="login.html" class="text-primary hover:text-primary-light font-semibold ml-1">Inicia sesión</a>
       </div>
     </div>
 
-    <div id="notification-container" class="notification-container"></div>
+    <!-- Notification Engine -->
+    <div id="notification-container" class="fixed top-5 right-5 z-50 flex flex-col gap-3"></div>
 
     <script>
-      // Configuración
-      const API_URL = "../../../backend/public/index.php?route=auth/register";
-      const nameInput = document.getElementById("name");
-      const emailInput = document.getElementById("email");
-      const companyInput = document.getElementById("company");
-      const phoneInput = document.getElementById("phone");
-      const passwordInput = document.getElementById("password");
-      const confirmInput = document.getElementById("confirmPassword");
-      const termsCheck = document.getElementById("terms");
-      const submitBtn = document.getElementById("submitBtn");
+      const API_URL = "../../../API/index.php?route=auth/register";
+      
+      const inputs = {
+        name: document.getElementById("name"),
+        email: document.getElementById("email"),
+        company: document.getElementById("company"),
+        phone: document.getElementById("phone"),
+        password: document.getElementById("password"),
+        confirmText: document.getElementById("confirmPassword"),
+        terms: document.getElementById("terms")
+      };
 
-      // Toggle contraseña
       function togglePassword(fieldId) {
         const field = document.getElementById(fieldId);
         const icon = event.target;
         if (field.type === "password") {
           field.type = "text";
-          icon.classList.remove("fa-eye");
-          icon.classList.add("fa-eye-slash");
+          icon.classList.replace("fa-eye", "fa-eye-slash");
         } else {
           field.type = "password";
-          icon.classList.remove("fa-eye-slash");
-          icon.classList.add("fa-eye");
+          icon.classList.replace("fa-eye-slash", "fa-eye");
         }
       }
 
-      // Para ver si la contraseña es segura o una castaña
-      passwordInput.addEventListener("input", function () {
-        const password = this.value;
-        const strengthBar = document.getElementById("strengthBar");
-        const strengthText = document.getElementById("strengthText");
+      inputs.password.addEventListener("input", function () {
+        const pass = this.value;
+        const b = document.getElementById("strengthBar");
+        const t = document.getElementById("strengthText");
+        let s = 0, c = "#ef4444", txt = "Muy débil"; // Tailwind red-500
+        
+        if (pass.length >= 6) s++;
+        if (pass.length >= 10) s++;
+        if (/[A-Z]/.test(pass)) s++;
+        if (/[0-9]/.test(pass)) s++;
+        if (/[^A-Za-z0-9]/.test(pass)) s++;
 
-        let strength = 0;
-        let color = "#f44336";
-        let text = "Muy débil";
+        if (s===2) { c="#f97316"; txt="Débil"; } // orange-500
+        if (s===3) { c="#eab308"; txt="Media"; } // yellow-500
+        if (s===4) { c="#22c55e"; txt="Fuerte"; } // green-500
+        if (s===5) { c="#16a34a"; txt="Muy fuerte"; } // green-600
 
-        if (password.length >= 6) strength += 1;
-        if (password.length >= 10) strength += 1;
-        if (/[A-Z]/.test(password)) strength += 1;
-        if (/[0-9]/.test(password)) strength += 1;
-        if (/[^A-Za-z0-9]/.test(password)) strength += 1;
-
-        switch (strength) {
-          case 0:
-          case 1:
-            color = "#f44336";
-            text = "Muy débil";
-            break;
-          case 2:
-            color = "#ff9800";
-            text = "Débil";
-            break;
-          case 3:
-            color = "#ffc107";
-            text = "Media";
-            break;
-          case 4:
-            color = "#4caf50";
-            text = "Fuerte";
-            break;
-          case 5:
-            color = "#00c853";
-            text = "Muy fuerte";
-            break;
-        }
-
-        strengthBar.style.width = strength * 20 + "%";
-        strengthBar.style.backgroundColor = color;
-        strengthText.textContent = text;
-        strengthText.style.color = color;
+        b.style.width = (s * 20 || 5) + "%";
+        b.style.backgroundColor = c;
+        t.textContent = txt;
+        t.style.color = c;
       });
 
-      // Comprobamos que las contraseñas sean iguales
-      function validatePasswordMatch() {
-        const password = passwordInput.value;
-        const confirm = confirmInput.value;
-        const confirmError = document.getElementById("confirmError");
-        const confirmSuccess = document.getElementById("confirmSuccess");
-
-        if (confirm.length === 0) {
-          confirmError.classList.remove("show");
-          confirmSuccess.classList.remove("show");
-          return false;
-        }
-
-        if (password === confirm) {
-          confirmError.classList.remove("show");
-          confirmSuccess.classList.add("show");
-          return true;
-        } else {
-          confirmError.classList.add("show");
-          confirmSuccess.classList.remove("show");
-          return false;
-        }
+      function valMatch() {
+        const p = inputs.password.value, c = inputs.confirmText.value;
+        const err = document.getElementById("confirmError"), suc = document.getElementById("confirmSuccess");
+        if (!c) { err.classList.add("hidden"); suc.classList.add("hidden"); return false; }
+        if (p === c) { err.classList.add("hidden"); suc.classList.remove("hidden"); return true; } 
+        else { err.classList.remove("hidden"); suc.classList.add("hidden"); return false; }
       }
+      inputs.password.addEventListener("keyup", valMatch);
+      inputs.confirmText.addEventListener("keyup", valMatch);
 
-      passwordInput.addEventListener("keyup", validatePasswordMatch);
-      confirmInput.addEventListener("keyup", validatePasswordMatch);
-
-      // Validamos el email sobre la marcha
-      emailInput.addEventListener("input", function () {
-        const email = this.value;
-        const emailError = document.getElementById("emailError");
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-        if (email.length > 0 && !emailRegex.test(email)) {
-          emailError.classList.add("show");
-          this.classList.add("input-error");
+      inputs.email.addEventListener("input", function () {
+        const err = document.getElementById("emailError");
+        if (this.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.value)) {
+          err.classList.remove("hidden"); this.classList.add("border-red-500");
         } else {
-          emailError.classList.remove("show");
-          this.classList.remove("input-error");
+          err.classList.add("hidden"); this.classList.remove("border-red-500");
         }
       });
 
-      // Cuando le dan a enviar
-      document
-        .getElementById("registerForm")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
+      document.getElementById("registerForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        document.querySelectorAll("[id$='Error']").forEach(el => el.classList.add("hidden"));
+        document.querySelectorAll("input").forEach(el => el.classList.remove("border-red-500"));
+        
+        let valid = true;
+        
+        if (!inputs.name.value.trim()) { document.getElementById("nameError").classList.remove("hidden"); inputs.name.classList.add("border-red-500"); valid = false; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputs.email.value)) { document.getElementById("emailError").classList.remove("hidden"); inputs.email.classList.add("border-red-500"); valid = false; }
+        if (inputs.password.value.length < 6) { document.getElementById("passwordError").classList.remove("hidden"); inputs.password.classList.add("border-red-500"); valid = false; }
+        if (inputs.password.value !== inputs.confirmText.value) { document.getElementById("confirmError").classList.remove("hidden"); inputs.confirmText.classList.add("border-red-500"); valid = false; }
+        if (!inputs.terms.checked) { document.getElementById("termsError").classList.remove("hidden"); valid = false; }
 
-          // Resetear errores
-          document
-            .querySelectorAll(".error-message")
-            .forEach((el) => el.classList.remove("show"));
-          document
-            .querySelectorAll(".form-control")
-            .forEach((el) => el.classList.remove("input-error"));
+        if (!valid) return showNotification("Por favor, corrige los errores", "error");
 
-          let isValid = true;
+        const btn = document.getElementById("submitBtn");
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando cuenta...';
+        showNotification("Creando tu cuenta...", "info");
 
-          // Validar nombre
-          if (!nameInput.value.trim()) {
-            document.getElementById("nameError").classList.add("show");
-            nameInput.classList.add("input-error");
-            isValid = false;
+        try {
+          const res = await fetch(API_URL, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: inputs.name.value, email: inputs.email.value, password: inputs.password.value, company_name: inputs.company.value, phone: inputs.phone.value })
+          });
+          const data = await res.json();
+          if (data.success) {
+            localStorage.setItem("token", data.token); localStorage.setItem("user", JSON.stringify(data.user));
+            showNotification("¡Cuenta creada! Redirigiendo...", "success");
+            setTimeout(() => window.location.href = "../dashboard.html", 2000);
+          } else {
+            showNotification(data.message || "Error al crear la cuenta", "error");
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-plus"></i> Crear cuenta gratis';
           }
+        } catch (error) {
+          showNotification("Error de conexión", "error");
+          btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-plus"></i> Crear cuenta gratis';
+        }
+      });
 
-          // Validar email
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          if (!emailRegex.test(emailInput.value)) {
-            document.getElementById("emailError").classList.add("show");
-            emailInput.classList.add("input-error");
-            isValid = false;
-          }
-
-          // Validar contraseña
-          if (passwordInput.value.length < 6) {
-            document.getElementById("passwordError").classList.add("show");
-            passwordInput.classList.add("input-error");
-            isValid = false;
-          }
-
-          // Validar coincidencia
-          if (passwordInput.value !== confirmInput.value) {
-            document.getElementById("confirmError").classList.add("show");
-            confirmInput.classList.add("input-error");
-            isValid = false;
-          }
-
-          // Validar términos
-          if (!termsCheck.checked) {
-            document.getElementById("termsError").classList.add("show");
-            isValid = false;
-          }
-
-          if (!isValid) {
-            showNotification("Por favor, corrige los errores", "error");
-            return;
-          }
-
-          // Mostrar carga
-          submitBtn.disabled = true;
-          submitBtn.innerHTML =
-            '<i class="fas fa-spinner fa-spin me-2"></i>Creando cuenta...';
-
-          showNotification("Creando tu cuenta...", "info");
-
-          try {
-            const response = await fetch(API_URL, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                name: nameInput.value.trim(),
-                email: emailInput.value.trim(),
-                password: passwordInput.value,
-                company_name: companyInput.value.trim(),
-                phone: phoneInput.value.trim(),
-              }),
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-              // Guardar token y usuario
-              localStorage.setItem("token", data.token);
-              localStorage.setItem("user", JSON.stringify(data.user));
-
-              showNotification(
-                "¡Cuenta creada con éxito! Redirigiendo...",
-                "success",
-              );
-
-              // Redirigir al dashboard
-              setTimeout(() => {
-                window.location.href = "../dashboard.html";
-              }, 2000);
-            } else {
-              showNotification(
-                data.message || "Error al crear la cuenta",
-                "error",
-              );
-              submitBtn.disabled = false;
-              submitBtn.innerHTML =
-                '<i class="fas fa-user-plus me-2"></i>Crear cuenta gratis';
-            }
-          } catch (error) {
-            console.error("Error:", error);
-            showNotification("Error de conexión", "error");
-            submitBtn.disabled = false;
-            submitBtn.innerHTML =
-              '<i class="fas fa-user-plus me-2"></i>Crear cuenta gratis';
-          }
-        });
-
-      // Login con Google
-      function loginWithGoogle() {
-        showNotification("Redirigiendo a Google...", "info");
-
-        // En producción, usar CLIENT_ID real
-        const GOOGLE_CLIENT_ID = "TU_CLIENT_ID_AQUI.apps.googleusercontent.com";
-        const redirectUri = encodeURIComponent(
-          "http://localhost/NodeWeaver/pages/auth/google-callback.html",
-        );
-
-        const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${redirectUri}&response_type=token&scope=email%20profile%20openid`;
-
-        window.location.href = url;
-      }
-
-      // Las notificaciones esas bonitas
+      function loginWithGoogle() {}
+      
       function showNotification(message, type = "info") {
         const container = document.getElementById("notification-container");
-        const notification = document.createElement("div");
-        notification.className = `notification ${type}`;
-
-        const icon = {
-          success: "fa-check-circle",
-          error: "fa-exclamation-circle",
-          info: "fa-info-circle",
-        }[type];
-
-        notification.innerHTML = `
-                <i class="fas ${icon}"></i>
-                <span>${message}</span>
-            `;
-
-        container.appendChild(notification);
-
-        setTimeout(() => {
-          notification.style.animation = "slideOut 0.3s ease";
-          setTimeout(() => notification.remove(), 300);
-        }, 3000);
+        const notif = document.createElement("div");
+        let bg = type === "success" ? "bg-green-500/10 border-green-500/50 text-green-400" : type === "error" ? "bg-red-500/10 border-red-500/50 text-red-400" : "bg-blue-500/10 border-blue-500/50 text-blue-400";
+        let icon = type === "success" ? "fa-check-circle" : type === "error" ? "fa-exclamation-circle" : "fa-info-circle";
+        notif.className = `flex items-center gap-3 px-5 py-4 rounded-lg border backdrop-blur-md shadow-lg min-w-[300px] ${bg} animate-[slideIn_0.3s_ease-out_forwards]`;
+        notif.innerHTML = `<i class="fas ${icon} text-xl"></i><span class="font-medium text-sm text-white">${message}</span>`;
+        container.appendChild(notif);
+        setTimeout(() => { notif.style.animation = "slideOut 0.3s ease-in forwards"; setTimeout(() => notif.remove(), 300); }, 3000);
       }
     </script>
   </body>
