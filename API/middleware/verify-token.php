@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../config/jwt.php';
+require_once __DIR__ . '/../../DATA/jwt.php';
 
 class AuthMiddleware {
     

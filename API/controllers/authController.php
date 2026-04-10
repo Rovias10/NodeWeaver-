@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/../models/User.php';
-require_once __DIR__ . '/../config/jwt.php';
+require_once __DIR__ . '/../../MODEL/User.php';
+require_once __DIR__ . '/../../DATA/jwt.php';
 
 class AuthController {
     private $userModel;
@@ -94,7 +94,7 @@ class AuthController {
             
             $this->userModel->saveResetToken($user['id'], $reset_token, $expires);
             
-            require_once __DIR__ . '/../config/sendgrid.php';
+            require_once __DIR__ . '/../../DATA/sendgrid.php';
             $emailService = new EmailService();
             $emailService->sendPasswordReset($user['email'], $user['name'], $reset_token);
         }
