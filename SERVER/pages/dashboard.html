@@ -11,83 +11,109 @@
     <link rel="stylesheet" href="../css/tailwind.css" />
     
     <style>
-      /* Keeping custom animation keyframes and drawflow overrides */
       @keyframes spin { 100% { transform: rotate(360deg); } }
-      .loading-spinner { border: 4px solid rgba(255, 255, 255, 0.1); border-left-color: var(--color-primary); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+      .loading-spinner { border: 4px solid rgba(255, 255, 255, 0.1); border-left-color: #f59e0b; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
       
-      /* Drawflow custom fixes since we removed the old style.css */
-      #drawflow { width: 100%; height: 100%; background-color: #0e1015; background-size: 25px 25px; background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px); }
-      .drawflow .connection .main-path { stroke: var(--color-primary); stroke-width: 3px; }
-      .drawflow-node { background: #151821; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5); }
-      .drawflow-node .inputs .input { top: 50%; width: 14px; height: 14px; border-radius: 50%; background: #0e1015; border: 2px solid white; transform: translate(-10px, -50%); }
-      .drawflow-node .outputs .output { top: 50%; width: 14px; height: 14px; border-radius: 50%; background: var(--color-primary); border: 2px solid #0e1015; transform: translate(10px, -50%); }
+      /* Redesigned Premium Drawflow overrides */
+      #drawflow { 
+        width: 100%; height: 100%; 
+        background-color: transparent; 
+        background-image: radial-gradient(rgba(255,255,255,0.05) 1.5px, transparent 1.5px); 
+        background-size: 25px 25px; 
+      }
+      .drawflow .connection .main-path { stroke: #0ea5e9; stroke-width: 3.5px; filter: drop-shadow(0 0 5px rgba(14,165,233,0.3)); transition: all 0.3s ease; }
+      .drawflow .connection:hover .main-path { stroke: #ec4899; filter: drop-shadow(0 0 8px rgba(236,72,153,0.5)); stroke-width: 4.5px; }
+      
+      .drawflow-node { 
+        background: rgba(30, 41, 59, 0.85); /* slate-800 */
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255,255,255,0.1); 
+        border-radius: 16px; 
+        color: white; 
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5), 0 0 15px 0 rgba(245, 158, 11, 0.05); 
+        transition: box-shadow 0.3s ease;
+      }
+      .drawflow-node:hover {
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5), 0 0 20px 0 rgba(236, 72, 153, 0.15); 
+      }
+      .drawflow-node .inputs .input { top: 50%; width: 14px; height: 14px; border-radius: 50%; background: #0f172a; border: 2px solid #8b5cf6; transform: translate(-10px, -50%); box-shadow: 0 0 5px rgba(139,92,246,0.5); }
+      .drawflow-node .outputs .output { top: 50%; width: 14px; height: 14px; border-radius: 50%; background: #ec4899; border: 2px solid #0f172a; transform: translate(10px, -50%); box-shadow: 0 0 5px rgba(236,72,153,0.5); }
     </style>
   </head>
-  <body class="bg-[#0e1015] text-white h-screen overflow-hidden font-sans antialiased text-sm">
+  <body class="bg-slate-900 text-white h-screen overflow-hidden font-sans antialiased text-sm relative">
     
+    <!-- Warm Ambient Background Glows -->
+    <div class="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full bg-amber-500/10 blur-[140px] pointer-events-none"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-pink-600/15 blur-[120px] pointer-events-none"></div>
+    <div class="absolute top-[20%] right-[30%] w-[30%] h-[30%] rounded-full bg-cyan-500/10 blur-[130px] pointer-events-none"></div>
+
     <!-- Loading Screen -->
-    <div id="loading-screen" class="fixed inset-0 bg-[#0e1015] flex flex-col items-center justify-center z-[100] transition-opacity duration-500">
-      <div class="loading-spinner mb-6"></div>
-      <h2 class="text-xl font-bold tracking-wider animate-pulse mb-6">Inicializando NodeWeaver...</h2>
-      <div class="w-64 h-1.5 bg-gray-800 rounded-full overflow-hidden">
-        <div id="loading-progress-bar" class="h-full bg-primary w-0 transition-all duration-300 ease-out"></div>
+    <div id="loading-screen" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex flex-col items-center justify-center z-[100] transition-opacity duration-500">
+      <div class="relative w-24 h-24 mb-6 flex items-center justify-center">
+         <object type="image/svg+xml" data="../assets/nodeweaver-logo.svg" class="w-16 h-16 animate-pulse z-10 pointer-events-none"></object>
+         <div class="loading-spinner absolute inset-0"></div>
+      </div>
+      <h2 class="text-xl font-bold tracking-wider text-slate-200 mb-6 drop-shadow-md">NodeWeaver <span class="bg-gradient-to-r from-amber-500 to-pink-500 bg-clip-text text-transparent">Pro</span></h2>
+      <div class="w-64 h-1.5 bg-slate-800 rounded-full overflow-hidden shadow-inner">
+        <div id="loading-progress-bar" class="h-full bg-gradient-to-r from-amber-500 via-pink-500 to-cyan-500 w-0 transition-all duration-300 ease-out"></div>
       </div>
     </div>
 
-    <!-- App Layout -->
-    <div id="app" class="hidden h-full flex flex-row w-full">
+    <!-- Floating App Layout -->
+    <div id="app" class="hidden h-full p-4 lg:p-5 flex flex-row gap-4 relative z-10 box-border w-full">
       
-      <!-- Sidebar Left (Nodes) -->
-      <div id="sidebar-left" class="w-64 bg-[#151821] border-r border-white/10 flex flex-col flex-shrink-0 z-20">
-        <!-- Logo -->
-        <div class="px-5 py-4 border-b border-white/10 flex items-center justify-between">
-          <div class="flex items-center gap-2 font-bold text-lg">
-            <i class="fas fa-bolt text-primary"></i> <span class="tracking-wide">NodeWeaver</span>
+      <!-- Premium Sidebar Left -->
+      <div id="sidebar-left" class="w-64 bg-slate-800/40 backdrop-blur-2xl border border-white/10 rounded-3xl flex flex-col flex-shrink-0 shadow-2xl shadow-black/40 overflow-hidden">
+        
+        <!-- Logo Header -->
+        <div class="px-5 py-5 border-b border-white/5 flex items-center justify-between bg-white/5">
+          <div class="flex items-center gap-3 font-extrabold text-lg tracking-wide">
+            <object type="image/svg+xml" data="../assets/nodeweaver-logo.svg" class="w-7 h-7 drop-shadow-[0_0_8px_rgba(236,72,153,0.4)] pointer-events-none"></object>
+            <span>NodeWeaver</span>
           </div>
-          <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-primary/20 text-primary">v0.2</span>
         </div>
 
         <!-- Search -->
         <div class="p-4 border-b border-white/5">
           <div class="relative">
-            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
-            <input type="text" id="node-search" placeholder="Buscar nodos..." class="w-full bg-[#0e1015] border border-white/10 rounded-md py-2 pl-9 pr-3 text-xs focus:outline-none focus:border-primary/50 text-white placeholder-gray-500 transition-colors" />
+            <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" id="node-search" placeholder="Cerca un nodo..." class="w-full bg-slate-900/50 border border-white/10 rounded-xl py-2.5 pl-9 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-pink-500/50 text-white placeholder-slate-500 transition-all shadow-inner" />
           </div>
         </div>
 
         <!-- Categories -->
-        <div class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3">
           
           <div class="group">
-            <div class="flex items-center justify-between p-2 rounded-md hover:bg-white/5 cursor-pointer transition-colors text-xs font-semibold text-gray-400 hover:text-white uppercase tracking-wider select-none">
-              <div class="flex items-center gap-2"><i class="fas fa-bolt text-primary w-4"></i> Disparadores</div>
+            <div class="flex items-center justify-between p-2 rounded-xl hover:bg-slate-700/50 cursor-pointer transition-colors text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest select-none">
+              <div class="flex items-center gap-2"><i class="fas fa-bolt text-amber-500 w-4"></i> Disparadores</div>
               <i class="fas fa-chevron-down text-[10px]"></i>
             </div>
-            <div class="pl-4 pr-1 py-1 space-y-1">
-              <div class="flex items-center justify-between p-2 bg-white/5 border border-white/10 rounded-md cursor-grab active:cursor-grabbing hover:border-primary/50 transition-colors opacity-90 hover:opacity-100" draggable="true" ondragstart="editorInstance.drag(event)" data-type="schedule">
-                <div class="flex items-center gap-2"><i class="fas fa-clock text-blue-400"></i> Programación</div>
-                <span class="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">cron</span>
+            <div class="pl-4 pr-1 py-1.5 space-y-1.5">
+              <div class="flex items-center justify-between p-2.5 bg-slate-900/40 border border-white/5 rounded-xl cursor-grab active:cursor-grabbing hover:border-amber-500/30 hover:bg-slate-700/50 transition-all opacity-80 hover:opacity-100 shadow-sm" draggable="true" ondragstart="editorInstance.drag(event)" data-type="schedule">
+                <div class="flex items-center gap-2.5 text-slate-300 font-medium"><div class="p-1.5 rounded-md bg-blue-500/10 text-blue-400"><i class="fas fa-clock text-[10px]"></i></div> Programación</div>
+                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400">cron</span>
               </div>
-              <div class="flex items-center justify-between p-2 bg-white/5 border border-white/10 rounded-md cursor-grab active:cursor-grabbing hover:border-primary/50 transition-colors opacity-90 hover:opacity-100" draggable="true" ondragstart="editorInstance.drag(event)" data-type="webhook">
-                <div class="flex items-center gap-2"><i class="fas fa-globe text-purple-400"></i> Webhook</div>
-                <span class="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">http</span>
+              <div class="flex items-center justify-between p-2.5 bg-slate-900/40 border border-white/5 rounded-xl cursor-grab active:cursor-grabbing hover:border-purple-500/30 hover:bg-slate-700/50 transition-all opacity-80 hover:opacity-100 shadow-sm" draggable="true" ondragstart="editorInstance.drag(event)" data-type="webhook">
+                <div class="flex items-center gap-2.5 text-slate-300 font-medium"><div class="p-1.5 rounded-md bg-purple-500/10 text-purple-400"><i class="fas fa-globe text-[10px]"></i></div> Webhook</div>
+                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400">http</span>
               </div>
             </div>
           </div>
 
           <div class="group">
-            <div class="flex items-center justify-between p-2 rounded-md hover:bg-white/5 cursor-pointer transition-colors text-xs font-semibold text-gray-400 hover:text-white uppercase tracking-wider select-none">
-              <div class="flex items-center gap-2"><i class="fas fa-play text-green-400 w-4"></i> Acciones</div>
+            <div class="flex items-center justify-between p-2 rounded-xl hover:bg-slate-700/50 cursor-pointer transition-colors text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest select-none">
+              <div class="flex items-center gap-2"><i class="fas fa-play text-emerald-500 w-4"></i> Acciones</div>
               <i class="fas fa-chevron-down text-[10px]"></i>
             </div>
-            <div class="pl-4 pr-1 py-1 space-y-1">
-              <div class="flex items-center justify-between p-2 bg-white/5 border border-white/10 rounded-md cursor-grab active:cursor-grabbing hover:border-primary/50 transition-colors opacity-90 hover:opacity-100" draggable="true" ondragstart="editorInstance.drag(event)" data-type="email">
-                <div class="flex items-center gap-2"><i class="fas fa-envelope text-red-400"></i> Email</div>
-                <span class="text-[9px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-300">smtp</span>
+            <div class="pl-4 pr-1 py-1.5 space-y-1.5">
+              <div class="flex items-center justify-between p-2.5 bg-slate-900/40 border border-white/5 rounded-xl cursor-grab active:cursor-grabbing hover:border-pink-500/30 hover:bg-slate-700/50 transition-all opacity-80 hover:opacity-100 shadow-sm" draggable="true" ondragstart="editorInstance.drag(event)" data-type="email">
+                <div class="flex items-center gap-2.5 text-slate-300 font-medium"><div class="p-1.5 rounded-md bg-pink-500/10 text-pink-400"><i class="fas fa-envelope text-[10px]"></i></div> Email</div>
+                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400">smtp</span>
               </div>
-              <div class="flex items-center justify-between p-2 bg-white/5 border border-white/10 rounded-md cursor-grab active:cursor-grabbing hover:border-primary/50 transition-colors opacity-90 hover:opacity-100" draggable="true" ondragstart="editorInstance.drag(event)" data-type="backup">
-                <div class="flex items-center gap-2"><i class="fas fa-database text-yellow-400"></i> Backup</div>
-                <span class="text-[9px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-300">ftp</span>
+              <div class="flex items-center justify-between p-2.5 bg-slate-900/40 border border-white/5 rounded-xl cursor-grab active:cursor-grabbing hover:border-yellow-500/30 hover:bg-slate-700/50 transition-all opacity-80 hover:opacity-100 shadow-sm" draggable="true" ondragstart="editorInstance.drag(event)" data-type="backup">
+                <div class="flex items-center gap-2.5 text-slate-300 font-medium"><div class="p-1.5 rounded-md bg-yellow-500/10 text-yellow-500"><i class="fas fa-database text-[10px]"></i></div> Backup</div>
+                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400">ftp</span>
               </div>
             </div>
           </div>
@@ -95,75 +121,94 @@
         </div>
 
         <!-- User Footer -->
-        <div class="p-4 border-t border-white/10 flex items-center justify-between bg-black/20">
-          <div class="flex items-center gap-2 cursor-pointer hover:text-primary transition-colors">
-            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-orange-500 flex items-center justify-center font-bold text-black border border-white/20 select-none">DU</div>
-            <span class="font-medium text-xs">Demo User</span>
+        <div class="p-4 border-t border-white/5 flex items-center justify-between bg-black/10">
+          <div class="flex items-center gap-3 cursor-pointer group">
+            <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-600 flex items-center justify-center font-bold text-white border-2 border-slate-800 shadow-md group-hover:shadow-cyan-500/30 transition-all select-none">DU</div>
+            <div class="flex flex-col">
+              <span class="font-bold text-xs text-slate-200 group-hover:text-white transition-colors">Demo User</span>
+              <span class="text-[10px] text-emerald-400">Pro Plan</span>
+            </div>
           </div>
-          <button id="theme-toggle" class="p-2 rounded-md hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
-            <i class="fas fa-moon"></i>
+          <button id="theme-toggle" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-700 text-slate-400 hover:text-white transition-colors">
+            <i class="fas fa-moon text-xs"></i>
           </button>
         </div>
       </div>
 
       <!-- Main Editor Area -->
-      <div class="flex-1 flex flex-col relative min-w-0 bg-[#0e1015]">
+      <div class="flex-1 flex flex-col gap-4 min-w-0">
         
-        <!-- Top Toolbar -->
-        <div class="h-14 border-b border-white/10 bg-[#151821]/90 backdrop-blur-sm flex items-center justify-between px-4 z-10">
+        <!-- Premium Floating Topbar -->
+        <div class="h-16 bg-slate-800/40 backdrop-blur-2xl border border-white/10 rounded-3xl flex items-center justify-between px-5 z-10 shadow-2xl shadow-black/30">
           
-          <div class="flex items-center gap-2">
-            <button class="px-3 py-1.5 text-xs font-medium rounded-md bg-white/5 hover:bg-white/10 border border-white/10 transition-colors flex items-center gap-2 text-gray-300 hover:text-white"><i class="fas fa-file"></i> Nuevo</button>
-            <button class="px-3 py-1.5 text-xs font-medium rounded-md bg-white/5 hover:bg-white/10 border border-white/10 transition-colors flex items-center gap-2 text-gray-300 hover:text-white"><i class="fas fa-save text-blue-400"></i> Guardar</button>
-            <button class="px-3 py-1.5 text-xs font-medium rounded-md bg-primary hover:bg-primary-light text-black border border-primary-dark transition-colors flex items-center gap-2"><i class="fas fa-play"></i> Ejecutar</button>
+          <div class="flex items-center gap-2.5">
+            <button class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-700/30 hover:bg-slate-700/80 border border-white/5 transition-all flex items-center gap-2 text-slate-300 hover:text-white hover:shadow-lg"><i class="fas fa-file-alt"></i> Nuevo</button>
+            <button class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-700/30 hover:bg-slate-700/80 border border-white/5 transition-all flex items-center gap-2 text-slate-300 hover:text-white hover:shadow-lg"><i class="fas fa-save text-cyan-400"></i> Guardar</button>
           </div>
 
           <div class="flex-1 flex justify-center items-center">
-            <div class="flex items-center gap-2 px-3 py-1 rounded-md hover:bg-white/5 transition-colors cursor-text group">
-              <i class="fas fa-pen text-gray-500 group-hover:text-primary text-[10px]"></i>
-              <input type="text" value="Mi automatización principal" class="bg-transparent border-none text-sm font-semibold focus:outline-none text-center w-48 text-white focus:text-primary" />
+            <div class="flex items-center gap-2 px-4 py-1.5 rounded-full hover:bg-white/5 transition-colors cursor-text group border border-transparent hover:border-white/5">
+              <input type="text" value="Mi Automática Vibrante" class="bg-transparent border-none text-[15px] font-bold focus:outline-none text-center w-56 text-slate-100 focus:text-pink-400 transition-colors" />
+              <i class="fas fa-pen text-slate-600 group-hover:text-pink-400 text-[10px] transition-colors"></i>
             </div>
           </div>
 
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-4">
             <div class="flex gap-2">
-               <span class="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[10px] text-gray-400 flex items-center"><span class="w-1.5 h-1.5 rounded-full bg-blue-500 mr-1.5"></span><span id="node-count">0</span> n</span>
-               <span class="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[10px] text-gray-400 flex items-center"><span class="w-1.5 h-1.5 rounded-full bg-purple-500 mr-1.5"></span><span id="connection-count">0</span> c</span>
+               <span class="px-2.5 py-1 rounded-full bg-slate-900/50 border border-white/5 text-[10px] font-bold text-slate-400 flex items-center shadow-inner"><span class="w-1.5 h-1.5 rounded-full bg-purple-500 mr-1.5 shadow-[0_0_5px_rgba(168,85,247,0.8)]"></span><span id="node-count" class="text-slate-200 mr-0.5">0</span> nd</span>
+               <span class="px-2.5 py-1 rounded-full bg-slate-900/50 border border-white/5 text-[10px] font-bold text-slate-400 flex items-center shadow-inner"><span class="w-1.5 h-1.5 rounded-full bg-cyan-500 mr-1.5 shadow-[0_0_5px_rgba(6,182,212,0.8)]"></span><span id="connection-count" class="text-slate-200 mr-0.5">0</span> cx</span>
             </div>
-            <div class="h-6 w-[1px] bg-white/10 mx-1"></div>
-            <button class="text-gray-400 hover:text-white transition-colors" onclick="editorInstance.globalEditor.zoom_in()"><i class="fas fa-search-plus"></i></button>
-            <button class="text-gray-400 hover:text-white transition-colors" onclick="editorInstance.globalEditor.zoom_out()"><i class="fas fa-search-minus"></i></button>
-            <button class="text-gray-400 hover:text-white transition-colors" onclick="editorInstance.globalEditor.zoom_reset()"><i class="fas fa-expand text-xs"></i></button>
+            
+            <div class="flex items-center bg-slate-900/50 rounded-full border border-white/5 p-1">
+              <button class="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all" onclick="editorInstance.globalEditor.zoom_in()"><i class="fas fa-plus text-[10px]"></i></button>
+              <button class="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all" onclick="editorInstance.globalEditor.zoom_reset()"><i class="fas fa-compress text-[10px]"></i></button>
+              <button class="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all" onclick="editorInstance.globalEditor.zoom_out()"><i class="fas fa-minus text-[10px]"></i></button>
+            </div>
+
+            <button class="px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-amber-500 via-pink-500 to-purple-500 hover:from-amber-400 hover:via-pink-400 hover:to-purple-400 text-white shadow-lg shadow-pink-500/25 hover:shadow-pink-500/40 transition-all flex items-center gap-2 transform hover:-translate-y-0.5">
+              <i class="fas fa-rocket"></i> Desplegar
+            </button>
           </div>
         </div>
 
-        <!-- Drawflow Canvas Container -->
-        <div class="flex-1 relative" ondrop="editorInstance.drop(event)" ondragover="event.preventDefault()">
+        <!-- Drawflow Canvas Container (Glass) -->
+        <div class="flex-1 bg-slate-800/20 backdrop-blur-md rounded-3xl border border-white/5 relative shadow-inner overflow-hidden" ondrop="editorInstance.drop(event)" ondragover="event.preventDefault()">
           <div id="drawflow"></div>
           
-          <!-- Example Mini-map overlay styling -->
-          <div class="absolute bottom-6 left-6 w-40 h-32 bg-[#151821]/80 backdrop-blur-md border border-white/10 rounded-lg shadow-xl flex flex-col overflow-hidden pointer-events-none opacity-50 hover:opacity-100 transition-opacity">
-            <div class="text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 border-b border-white/10 bg-black/40 flex items-center gap-2"><i class="fas fa-map text-primary"></i> Navegador</div>
-            <div class="flex-1 bg-black/20 p-2 relative" id="minimap-content"></div>
+          <!-- Mini-map overlay -->
+          <div class="absolute bottom-5 left-5 w-48 h-32 bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl flex flex-col overflow-hidden opacity-40 hover:opacity-100 transition-opacity duration-300">
+            <div class="text-[9px] font-bold uppercase tracking-widest px-3 py-2 border-b border-white/10 bg-black/20 flex items-center gap-2 text-slate-300">
+              <i class="fas fa-crosshairs text-cyan-400"></i> Radar
+            </div>
+            <div class="flex-1 p-2 relative" id="minimap-content">
+              <div class="absolute top-1/2 left-1/2 w-4 h-3 border border-pink-500 rounded bg-pink-500/20 -translate-x-1/2 -translate-y-1/2"></div>
+            </div>
           </div>
+
         </div>
       </div>
 
-      <!-- Sidebar Right (Config / Logs) -->
-      <div id="sidebar-right" class="w-72 bg-[#151821] border-l border-white/10 flex flex-col flex-shrink-0 z-20">
+      <!-- Premium Sidebar Right -->
+      <div id="sidebar-right" class="w-72 bg-slate-800/40 backdrop-blur-2xl border border-white/10 rounded-3xl flex flex-col flex-shrink-0 shadow-2xl shadow-black/40 overflow-hidden">
         
-        <div class="flex border-b border-white/10 text-xs font-semibold">
-          <button class="flex-1 py-3 flex items-center justify-center gap-2 text-white border-b-2 border-primary bg-white/5"><i class="fas fa-cog text-primary"></i> Config</button>
-          <button class="flex-1 py-3 flex items-center justify-center gap-2 text-gray-400 hover:text-white hover:bg-white/5 transition-colors border-b-2 border-transparent"><i class="fas fa-history"></i> Logs</button>
-          <button class="flex-1 py-3 flex items-center justify-center gap-2 text-gray-400 hover:text-white hover:bg-white/5 transition-colors border-b-2 border-transparent"><i class="fas fa-chart-bar"></i> Stats</button>
+        <div class="flex p-2 bg-black/10">
+          <div class="flex-1 bg-slate-900/60 rounded-xl flex items-center p-1 border border-white/5">
+             <button class="flex-1 py-1.5 flex items-center justify-center gap-1.5 text-white bg-slate-700/80 rounded-lg shadow font-semibold text-[11px] transition-all"><i class="fas fa-sliders-h text-pink-400"></i> Nivel</button>
+             <button class="flex-1 py-1.5 flex items-center justify-center gap-1.5 text-slate-400 hover:text-white rounded-lg font-medium text-[11px] transition-all"><i class="fas fa-terminal"></i> Logs</button>
+          </div>
         </div>
 
-        <div class="flex-1 p-4 overflow-y-auto">
+        <div class="flex-1 p-5 overflow-y-auto custom-scrollbar relative">
+          <!-- Ambient internal glow -->
+          <div class="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 blur-[50px] rounded-full pointer-events-none"></div>
+
           <!-- Empty State Config -->
-          <div class="h-full flex flex-col items-center justify-center text-center opacity-50 select-none">
-            <i class="fas fa-mouse-pointer text-4xl mb-4 text-gray-500"></i>
-            <h4 class="text-white font-medium mb-1">Ningún nodo seleccionado</h4>
-            <p class="text-[10px] text-gray-400">Haz clic en un nodo del lienzo para configurar sus parámetros.</p>
+          <div class="h-full flex flex-col items-center justify-center text-center opacity-60 select-none relative z-10">
+             <div class="w-16 h-16 rounded-full bg-slate-800 border border-white/5 flex items-center justify-center mb-4 shadow-inner">
+                 <i class="fas fa-hand-pointer text-2xl text-slate-500"></i>
+             </div>
+            <h4 class="text-white font-bold mb-1 text-sm">Selección inactiva</h4>
+            <p class="text-[11px] text-slate-400 leading-relaxed px-4">Toca un nodo brillante en el lienzo de la izquierda para calibrar sus frecuencias.</p>
           </div>
         </div>
       </div>
@@ -172,12 +217,10 @@
 
     <script src="https://cdn.jsdelivr.net/npm/drawflow@0.0.58/dist/drawflow.min.js"></script>
     <script>
-      // Mocking editor instantiation explicitly for layout preview purposes without breaking drawflow JS
       const loadingScreen = document.getElementById('loading-screen');
       const progressBar = document.getElementById('loading-progress-bar');
       const app = document.getElementById('app');
 
-      // Bootstrap mockup flow
       let progress = 0;
       const interval = setInterval(() => {
         progress += Math.random() * 30;
@@ -193,7 +236,7 @@
               app.classList.remove('hidden');
               app.style.opacity = '0';
               setTimeout(() => {
-                app.style.transition = 'opacity 0.5s ease';
+                app.style.transition = 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
                 app.style.opacity = '1';
                 
                 // Initialize Drawflow
@@ -204,17 +247,26 @@
                   drop: function(e) {
                     e.preventDefault();
                     let data = e.dataTransfer.getData("node");
-                    this.globalEditor.addNode('hello', 1, 1, e.clientX, e.clientY, data, data, {}, '<div>MOCK NODE</div>');
+                    
+                    // Add mock visually improved node
+                    let content = `
+                      <div class="p-3">
+                         <div class="flex items-center gap-2 font-bold mb-2 text-xs">
+                           <i class="fas fa-cube text-pink-400"></i> ${data.toUpperCase()}
+                         </div>
+                         <div class="text-[10px] text-slate-400">Node Active</div>
+                      </div>
+                    `;
+                    this.globalEditor.addNode(data, 1, 1, e.clientX, e.clientY, data, data, {}, content);
                   }
                 };
                 editorInstance.globalEditor.start();
 
               }, 50);
             }, 500);
-          }, 300);
+          }, 400);
         }
       }, 200);
-
     </script>
   </body>
 </html>

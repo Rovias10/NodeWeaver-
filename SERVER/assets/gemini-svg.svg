@@ -1,0 +1,137 @@
+<svg width="320" height="320" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="thread1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8b5cf6" />
+      <stop offset="50%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#c084fc" />
+    </linearGradient>
+    <linearGradient id="thread2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="50%" stop-color="#0ea5e9" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+    <linearGradient id="thread3" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="50%" stop-color="#14b8a6" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+    <linearGradient id="thread4" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="50%" stop-color="#ec4899" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <path d="M 40 80 Q 80 75 120 80 Q 160 85 200 80 Q 240 75 280 80" stroke="url(#thread1)" stroke-width="2.5" fill="none" opacity="0.5" stroke-dasharray="5,5">
+    <animate attributeName="stroke-dashoffset" values="0;10" dur="1s" repeatCount="indefinite" />
+  </path>
+  <path d="M 40 160 Q 80 155 120 160 Q 160 165 200 160 Q 240 155 280 160" stroke="url(#thread2)" stroke-width="2.5" fill="none" opacity="0.5" stroke-dasharray="5,5">
+    <animate attributeName="stroke-dashoffset" values="10;0" dur="1.2s" repeatCount="indefinite" />
+  </path>
+  <path d="M 40 240 Q 80 235 120 240 Q 160 245 200 240 Q 240 235 280 240" stroke="url(#thread3)" stroke-width="2.5" fill="none" opacity="0.5" stroke-dasharray="5,5">
+    <animate attributeName="stroke-dashoffset" values="0;10" dur="1.4s" repeatCount="indefinite" />
+  </path>
+
+  <path d="M 80 40 Q 75 80 80 120 Q 85 160 80 200 Q 75 240 80 280" stroke="url(#thread4)" stroke-width="2.5" fill="none" opacity="0.4" stroke-dasharray="5,5">
+    <animate attributeName="stroke-dashoffset" values="10;0" dur="1.1s" repeatCount="indefinite" />
+  </path>
+  <path d="M 160 40 Q 155 80 160 120 Q 165 160 160 200 Q 155 240 160 280" stroke="url(#thread1)" stroke-width="2.5" fill="none" opacity="0.4" stroke-dasharray="5,5">
+    <animate attributeName="stroke-dashoffset" values="0;10" dur="1.3s" repeatCount="indefinite" />
+  </path>
+  <path d="M 240 40 Q 235 80 240 120 Q 245 160 240 200 Q 235 240 240 280" stroke="url(#thread2)" stroke-width="2.5" fill="none" opacity="0.4" stroke-dasharray="5,5">
+    <animate attributeName="stroke-dashoffset" values="10;0" dur="1.5s" repeatCount="indefinite" />
+  </path>
+
+  <path d="M 80 80 Q 120 100 160 80 Q 200 60 240 80" stroke="url(#thread1)" stroke-width="3" fill="none" opacity="0.7" filter="url(#glow)" />
+  <path d="M 80 160 Q 120 140 160 160 Q 200 180 240 160" stroke="url(#thread2)" stroke-width="3" fill="none" opacity="0.7" filter="url(#glow)" />
+  <path d="M 80 240 Q 120 220 160 240 Q 200 260 240 240" stroke="url(#thread3)" stroke-width="3" fill="none" opacity="0.7" filter="url(#glow)" />
+
+  <g filter="url(#softGlow)">
+    <circle cx="80" cy="80" r="18" fill="url(#thread1)" opacity="0.3"/>
+    <circle cx="80" cy="80" r="12" fill="#1e293b" stroke="url(#thread1)" stroke-width="2.5"/>
+    <circle cx="80" cy="80" r="5" fill="url(#thread1)">
+      <animate attributeName="r" values="4;6;4" dur="2s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <g filter="url(#softGlow)">
+    <circle cx="160" cy="80" r="18" fill="url(#thread2)" opacity="0.3"/>
+    <circle cx="160" cy="80" r="12" fill="#1e293b" stroke="url(#thread2)" stroke-width="2.5"/>
+    <rect x="155" y="75" width="10" height="10" fill="url(#thread2)" rx="2"/>
+  </g>
+
+  <g filter="url(#softGlow)">
+    <circle cx="240" cy="80" r="18" fill="url(#thread3)" opacity="0.3"/>
+    <circle cx="240" cy="80" r="12" fill="#1e293b" stroke="url(#thread3)" stroke-width="2.5"/>
+    <path d="M 233 80 L 240 73 L 247 80 L 240 87 Z" fill="url(#thread3)"/>
+  </g>
+
+  <g filter="url(#softGlow)">
+    <circle cx="80" cy="160" r="20" fill="url(#thread4)" opacity="0.3"/>
+    <circle cx="80" cy="160" r="14" fill="#1e293b" stroke="url(#thread4)" stroke-width="2.5"/>
+    <circle cx="80" cy="160" r="6" fill="url(#thread4)"/>
+    <circle cx="80" cy="160" r="3" fill="#1e293b"/>
+  </g>
+
+  <g filter="url(#softGlow)">
+    <circle cx="160" cy="160" r="24" fill="url(#thread1)" opacity="0.3"/>
+    <circle cx="160" cy="160" r="16" fill="#1e293b" stroke="url(#thread1)" stroke-width="3"/>
+    <circle cx="160" cy="160" r="8" fill="url(#thread1)">
+      <animate attributeName="r" values="6;10;6" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="160" cy="160" r="3" fill="#1e293b"/>
+  </g>
+
+  <g filter="url(#softGlow)">
+    <circle cx="240" cy="160" r="20" fill="url(#thread2)" opacity="0.3"/>
+    <circle cx="240" cy="160" r="14" fill="#1e293b" stroke="url(#thread2)" stroke-width="2.5"/>
+    <path d="M 232 160 L 240 152 L 248 160 L 240 168 Z" fill="url(#thread2)"/>
+  </g>
+
+  <g filter="url(#softGlow)">
+    <circle cx="80" cy="240" r="18" fill="url(#thread2)" opacity="0.3"/>
+    <circle cx="80" cy="240" r="12" fill="#1e293b" stroke="url(#thread2)" stroke-width="2.5"/>
+    <rect x="76" y="236" width="8" height="8" fill="url(#thread2)" rx="1.5"/>
+  </g>
+
+  <g filter="url(#softGlow)">
+    <circle cx="160" cy="240" r="18" fill="url(#thread3)" opacity="0.3"/>
+    <circle cx="160" cy="240" r="12" fill="#1e293b" stroke="url(#thread3)" stroke-width="2.5"/>
+    <circle cx="160" cy="240" r="5" fill="url(#thread3)">
+      <animate attributeName="r" values="4;6;4" dur="1.8s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <g filter="url(#softGlow)">
+    <circle cx="240" cy="240" r="18" fill="url(#thread4)" opacity="0.3"/>
+    <circle cx="240" cy="240" r="12" fill="#1e293b" stroke="url(#thread4)" stroke-width="2.5"/>
+    <path d="M 235 235 L 245 235 L 245 245 L 235 245 Z" fill="url(#thread4)"/>
+  </g>
+
+  <circle cx="120" cy="100" r="2" fill="#8b5cf6" opacity="0.8">
+    <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="200" cy="140" r="2" fill="#06b6d4" opacity="0.8">
+    <animate attributeName="opacity" values="0.3;1;0.3" dur="2.3s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="120" cy="220" r="2" fill="#10b981" opacity="0.8">
+    <animate attributeName="opacity" values="0.3;1;0.3" dur="1.7s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="200" cy="100" r="2" fill="#ec4899" opacity="0.8">
+    <animate attributeName="opacity" values="0.3;1;0.3" dur="2.5s" repeatCount="indefinite"/>
+  </circle>
+</svg>

@@ -1,103 +1,595 @@
 <!doctype html>
-<html lang="es" data-theme="dark">
+<html lang="es" class="scroll-smooth">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NodeWeaver - Automatización Visual Profesional</title>
-
+    <title>NodeWeaver - Automatización Inteligente</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
-    <!-- Eliminamos Bootstrap y landing.css; cargamos Tailwind nativo -->
     <link rel="stylesheet" href="css/tailwind.css" />
-  </head>
-  <body class="bg-[#0e1015] text-white min-h-screen font-sans antialiased overflow-x-hidden relative">
+    <style>
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @keyframes slideDown {
+        from {
+          transform: translateY(-100%);
+        }
+        to {
+          transform: translateY(0);
+        }
+      }
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(12px);
+        }
+      }
+      @keyframes pulse-glow {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 0.5;
+        }
+        50% {
+          transform: scale(1.2);
+          opacity: 1;
+        }
+      }
+
+      .animate-fade-up {
+        animation: fadeInUp 0.8s ease-out forwards;
+      }
+      .animate-slide-down {
+        animation: slideDown 0.6s ease-out forwards;
+      }
+      .animate-float {
+        animation: float 2s ease-in-out infinite;
+      }
+      .animate-pulse-glow {
+        animation: pulse-glow 3s ease-in-out infinite;
+      }
+
+      .delay-200 {
+        animation-delay: 0.2s;
+      }
+      .delay-400 {
+        animation-delay: 0.4s;
+      }
+      .delay-600 {
+        animation-delay: 0.6s;
+      }
+
+      .grid-pattern {
+        background-image:
+          linear-gradient(rgba(139, 92, 246, 0.1) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(139, 92, 246, 0.1) 1px, transparent 1px);
+        background-size: 80px 80px;
+      }
+    </style>
+  <body class="text-white overflow-x-hidden font-sans bg-[#0a0a0f] isolate">
     
-    <!-- Pseudo Hero Overlay -->
-    <div class="absolute inset-0 bg-[#0e1015] bg-opacity-80 mix-blend-multiply pointer-events-none z-[-1]"></div>
+    <!-- Seamless Flowing Background Elements - GLOBAL PARA TODO EL SITIO -->
+    <div class="fixed inset-0 bg-[#0a0a0f] z-[-10] pointer-events-none"></div>
+    <div class="fixed inset-0 bg-gradient-to-b from-purple-900/20 via-pink-900/10 to-[#0a0a0f] z-[-9] pointer-events-none"></div>
+    <div class="fixed inset-0 grid-pattern opacity-25 z-[-8] pointer-events-none"></div>
 
-    <!-- Navegación Glassmorphism -->
-    <nav class="flex items-center justify-between px-6 py-4 lg:px-12 backdrop-blur-md bg-[#0e1015]/60 sticky top-0 z-50 border-b border-white/10">
-      <a href="#" class="text-xl font-bold flex items-center gap-2 text-white hover:text-white/90 transition">
-        <i class="fas fa-bolt text-primary"></i> NodeWeaver
-      </a>
-      <div class="flex items-center gap-4">
-        <a href="#features" class="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/20 text-sm font-medium hover:bg-white/10 transition-colors">
-          <i class="fas fa-star"></i> Características
-        </a>
-        <a id="nav-auth-btn" href="pages/auth/login.html" class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white text-[#0e1015] font-semibold text-sm hover:bg-white/90 shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all hover:scale-105">
-          <i class="fas fa-sign-in-alt"></i> Acceder
-        </a>
-      </div>
-    </nav>
+    <header id="main-nav" class="fixed top-0 left-0 right-0 z-50 px-6 py-4 animate-slide-down transition-all duration-500">
+      <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 flex items-center justify-center">
+            <svg class="w-full h-full drop-shadow-[0_0_8px_rgba(236,72,153,0.3)] overflow-visible" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    @keyframes dashFwd { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 10; } }
+    @keyframes dashBwd { from { stroke-dashoffset: 10; } to { stroke-dashoffset: 0; } }
+    
+    .path-1 { animation: dashFwd 1s linear infinite; }
+    .path-2 { animation: dashBwd 1.2s linear infinite; }
+    .path-3 { animation: dashFwd 1.4s linear infinite; }
+    .path-4 { animation: dashBwd 1.1s linear infinite; }
+    .path-5 { animation: dashFwd 1.3s linear infinite; }
+    .path-6 { animation: dashBwd 1.5s linear infinite; }
 
-    <!-- Contenido Principal -->
-    <div class="relative max-w-5xl mx-auto px-6 py-24 lg:py-32 flex flex-col items-center text-center">
-      <h1 class="text-5xl lg:text-7xl font-extrabold tracking-tight leading-tight animate__animated animate__fadeInUp">
-        Automatiza tus tareas <br />
-        <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary-light drop-shadow-[0_0_15px_rgba(230,194,0,0.5)]">
-          Sin escribir código
-        </span>
-      </h1>
-      <p class="mt-6 text-lg lg:text-xl text-gray-400 max-w-2xl animate__animated animate__fadeInUp animate__delay-1s">
-        Conecta tus aplicaciones favoritas, automatiza flujos de trabajo y ahorra horas de trabajo manual. Todo con un editor visual puramente dinámico.
-      </p>
+    @keyframes pulseR1 { 0%, 100% { r: 4px; } 50% { r: 6px; } }
+    @keyframes pulseR2 { 0%, 100% { r: 6px; } 50% { r: 10px; } }
+    @keyframes pulseR3 { 0%, 100% { r: 4px; } 50% { r: 6px; } }
+    
+    .circle-1 { animation: pulseR1 2s ease-in-out infinite; }
+    .circle-2 { animation: pulseR2 2.5s ease-in-out infinite; }
+    .circle-3 { animation: pulseR3 1.8s ease-in-out infinite; }
 
-      <div id="hero-buttons" class="mt-10 flex flex-col sm:flex-row gap-4 w-full justify-center opacity-0 transition-opacity duration-500 ease-in animate__animated animate__fadeInUp animate__delay-1s">
-        <a href="pages/auth/register.html" class="flex items-center justify-center gap-2 px-8 py-3.5 rounded-full bg-primary text-[#0e1015] font-bold shadow-[0_0_20px_rgba(230,194,0,0.4)] hover:bg-primary-light hover:scale-105 transition-all">
-          <i class="fas fa-user-plus"></i> Crear Cuenta Gratis
-        </a>
-        <a href="pages/auth/login.html" class="flex items-center justify-center gap-2 px-8 py-3.5 rounded-full border border-white/20 text-white font-semibold hover:bg-white/10 hover:scale-105 transition-all">
-          <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
-        </a>
-      </div>
+    @keyframes pulseOp { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+    
+    .dot-1 { animation: pulseOp 2s ease-in-out infinite; }
+    .dot-2 { animation: pulseOp 2.3s ease-in-out infinite; }
+    .dot-3 { animation: pulseOp 1.7s ease-in-out infinite; }
+    .dot-4 { animation: pulseOp 2.5s ease-in-out infinite; }
+  </style>
+  <defs>
+    <linearGradient id="thread1" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#8b5cf6" /><stop offset="50%" stop-color="#a855f7" /><stop offset="100%" stop-color="#c084fc" /></linearGradient>
+    <linearGradient id="thread2" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#06b6d4" /><stop offset="50%" stop-color="#0ea5e9" /><stop offset="100%" stop-color="#3b82f6" /></linearGradient>
+    <linearGradient id="thread3" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#10b981" /><stop offset="50%" stop-color="#14b8a6" /><stop offset="100%" stop-color="#06b6d4" /></linearGradient>
+    <linearGradient id="thread4" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#f59e0b" /><stop offset="50%" stop-color="#ec4899" /><stop offset="100%" stop-color="#8b5cf6" /></linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="2.5" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="softGlow"><feGaussianBlur stdDeviation="4" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
 
-      <!-- Tarjetas de Características -->
-      <div id="features" class="mt-28 grid grid-cols-1 md:grid-cols-3 gap-8 w-full z-10">
-        <div class="p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:-translate-y-2 hover:bg-white/10 hover:border-primary/50 transition-all duration-300">
-          <div class="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6 text-primary text-2xl shadow-[0_0_15px_rgba(230,194,0,0.3)]">
-            <i class="fas fa-cubes"></i>
+  <path class="path-1" d="M 40 80 Q 80 75 120 80 Q 160 85 200 80 Q 240 75 280 80" stroke="url(#thread1)" stroke-width="2.5" fill="none" opacity="0.5" stroke-dasharray="5,5" />
+  <path class="path-2" d="M 40 160 Q 80 155 120 160 Q 160 165 200 160 Q 240 155 280 160" stroke="url(#thread2)" stroke-width="2.5" fill="none" opacity="0.5" stroke-dasharray="5,5" />
+  <path class="path-3" d="M 40 240 Q 80 235 120 240 Q 160 245 200 240 Q 240 235 280 240" stroke="url(#thread3)" stroke-width="2.5" fill="none" opacity="0.5" stroke-dasharray="5,5" />
+
+  <path class="path-4" d="M 80 40 Q 75 80 80 120 Q 85 160 80 200 Q 75 240 80 280" stroke="url(#thread4)" stroke-width="2.5" fill="none" opacity="0.4" stroke-dasharray="5,5" />
+  <path class="path-5" d="M 160 40 Q 155 80 160 120 Q 165 160 160 200 Q 155 240 160 280" stroke="url(#thread1)" stroke-width="2.5" fill="none" opacity="0.4" stroke-dasharray="5,5" />
+  <path class="path-6" d="M 240 40 Q 235 80 240 120 Q 245 160 240 200 Q 235 240 240 280" stroke="url(#thread2)" stroke-width="2.5" fill="none" opacity="0.4" stroke-dasharray="5,5" />
+
+  <path d="M 80 80 Q 120 100 160 80 Q 200 60 240 80" stroke="url(#thread1)" stroke-width="3" fill="none" opacity="0.7" filter="url(#glow)"/>
+  <path d="M 80 160 Q 120 140 160 160 Q 200 180 240 160" stroke="url(#thread2)" stroke-width="3" fill="none" opacity="0.7" filter="url(#glow)"/>
+  <path d="M 80 240 Q 120 220 160 240 Q 200 260 240 240" stroke="url(#thread3)" stroke-width="3" fill="none" opacity="0.7" filter="url(#glow)"/>
+
+  <g filter="url(#softGlow)">
+    <circle cx="80" cy="80" r="18" fill="url(#thread1)" opacity="0.3"/>
+    <circle cx="80" cy="80" r="12" fill="#1e293b" stroke="url(#thread1)" stroke-width="2.5"/>
+    <circle class="circle-1" cx="80" cy="80" r="5" fill="url(#thread1)" />
+  </g>
+
+  <g filter="url(#softGlow)">
+    <circle cx="160" cy="80" r="18" fill="url(#thread2)" opacity="0.3"/>
+    <circle cx="160" cy="80" r="12" fill="#1e293b" stroke="url(#thread2)" stroke-width="2.5"/>
+    <rect x="155" y="75" width="10" height="10" fill="url(#thread2)" rx="2"/>
+  </g>
+
+  <g filter="url(#softGlow)">
+    <circle cx="240" cy="80" r="18" fill="url(#thread3)" opacity="0.3"/>
+    <circle cx="240" cy="80" r="12" fill="#1e293b" stroke="url(#thread3)" stroke-width="2.5"/>
+    <path d="M 233 80 L 240 73 L 247 80 L 240 87 Z" fill="url(#thread3)"/>
+  </g>
+
+  <g filter="url(#softGlow)">
+    <circle cx="80" cy="160" r="20" fill="url(#thread4)" opacity="0.3"/>
+    <circle cx="80" cy="160" r="14" fill="#1e293b" stroke="url(#thread4)" stroke-width="2.5"/>
+    <circle cx="80" cy="160" r="6" fill="url(#thread4)"/>
+    <circle cx="80" cy="160" r="3" fill="#1e293b"/>
+  </g>
+
+  <g filter="url(#softGlow)">
+    <circle cx="160" cy="160" r="24" fill="url(#thread1)" opacity="0.3"/>
+    <circle cx="160" cy="160" r="16" fill="#1e293b" stroke="url(#thread1)" stroke-width="3"/>
+    <circle class="circle-2" cx="160" cy="160" r="8" fill="url(#thread1)" />
+    <circle cx="160" cy="160" r="3" fill="#1e293b"/>
+  </g>
+
+  <g filter="url(#softGlow)">
+    <circle cx="240" cy="160" r="20" fill="url(#thread2)" opacity="0.3"/>
+    <circle cx="240" cy="160" r="14" fill="#1e293b" stroke="url(#thread2)" stroke-width="2.5"/>
+    <path d="M 232 160 L 240 152 L 248 160 L 240 168 Z" fill="url(#thread2)"/>
+  </g>
+
+  <g filter="url(#softGlow)">
+    <circle cx="80" cy="240" r="18" fill="url(#thread2)" opacity="0.3"/>
+    <circle cx="80" cy="240" r="12" fill="#1e293b" stroke="url(#thread2)" stroke-width="2.5"/>
+    <rect x="76" y="236" width="8" height="8" fill="url(#thread2)" rx="1.5"/>
+  </g>
+
+  <g filter="url(#softGlow)">
+    <circle cx="160" cy="240" r="18" fill="url(#thread3)" opacity="0.3"/>
+    <circle cx="160" cy="240" r="12" fill="#1e293b" stroke="url(#thread3)" stroke-width="2.5"/>
+    <circle class="circle-3" cx="160" cy="240" r="5" fill="url(#thread3)" />
+  </g>
+
+  <g filter="url(#softGlow)">
+    <circle cx="240" cy="240" r="18" fill="url(#thread4)" opacity="0.3"/>
+    <circle cx="240" cy="240" r="12" fill="#1e293b" stroke="url(#thread4)" stroke-width="2.5"/>
+    <path d="M 235 235 L 245 235 L 245 245 L 235 245 Z" fill="url(#thread4)"/>
+  </g>
+
+  <circle class="dot-1" cx="120" cy="100" r="2" fill="#8b5cf6" />
+  <circle class="dot-2" cx="200" cy="140" r="2" fill="#06b6d4" />
+  <circle class="dot-3" cx="120" cy="220" r="2" fill="#10b981" />
+  <circle class="dot-4" cx="200" cy="100" r="2" fill="#ec4899" />
+</svg>
           </div>
-          <h4 class="text-xl font-semibold text-white mb-3">Editor Visual</h4>
-          <p class="text-gray-400 text-sm">Arrastra y conecta nodos para crear flujos complejos sin tocar ni una línea de código.</p>
+          <span class="text-xl tracking-tight font-extrabold text-white">NodeWeaver</span>
         </div>
-        
-        <div class="p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:-translate-y-2 hover:bg-white/10 hover:border-primary/50 transition-all duration-300 transform md:translate-y-[-10px]">
-          <div class="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6 text-primary text-2xl shadow-[0_0_15px_rgba(230,194,0,0.3)]">
-            <i class="fas fa-bolt"></i>
+
+        <nav class="hidden md:flex items-center gap-8">
+          <a
+            href="#features"
+            class="text-sm font-semibold text-gray-400 hover:text-white transition-colors"
+            >Características</a
+          >
+          <a
+            href="#workflow"
+            class="text-sm font-semibold text-gray-400 hover:text-white transition-colors"
+            >Módulos</a
+          >
+          <a
+            id="nav-auth-btn"
+            href="pages/auth/login.html"
+            class="px-6 py-2 rounded-full bg-gradient-to-r from-purple-600 to-cyan-500 hover:shadow-lg hover:shadow-purple-500/50 transition-all text-sm font-bold text-white tracking-wide"
+          >
+            Acceder
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <section class="relative min-h-screen flex items-center">
+      <div
+        class="relative w-full max-w-7xl mx-auto px-6 py-32 grid lg:grid-cols-2 gap-16 items-center z-10"
+      >
+        <div class="space-y-8">
+          <div class="opacity-0 animate-fade-up delay-200">
+            <div
+              class="inline-block px-4 py-1.5 rounded-full bg-gradient-to-r from-purple-600/20 to-cyan-600/20 border border-purple-500/30 mb-6"
+            >
+              <span
+                class="text-sm bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent font-medium"
+              >
+                Automatización Inteligente
+              </span>
+            </div>
+
+            <h1
+              class="text-6xl lg:text-7xl font-bold leading-tight tracking-tight"
+            >
+              Automatiza tus tareas
+              <span
+                class="block mt-2 bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent leading-relaxed"
+              >
+                sin escribir código
+              </span>
+            </h1>
           </div>
-          <h4 class="text-xl font-semibold text-white mb-3">IA Accesible</h4>
-          <p class="text-gray-400 text-sm">Aprovecha nuestros nodos accionados por IA nativa para decisiones inteligentes y dinámicas.</p>
+
+          <p
+            class="text-xl text-gray-400 max-w-lg opacity-0 animate-fade-up delay-400"
+          >
+            Conecta aplicaciones, automatiza flujos de trabajo y ahorra horas de
+            trabajo manual con nuestra plataforma inteligente.
+          </p>
+
+          <div id="hero-buttons" class="flex flex-wrap gap-4 opacity-0 animate-fade-up delay-600">
+            <a
+              href="pages/auth/register.html"
+              class="group px-8 py-4 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-2xl hover:shadow-purple-500/50 transition-all flex items-center gap-2 font-bold text-white"
+            >
+              <span>Empieza gratis</span>
+              <svg
+                class="w-5 h-5 group-hover:translate-x-1 transition-transform"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M17 8l4 4m0 0l-4 4m4-4H3"
+                />
+              </svg>
+            </a>
+
+            <a
+              href="pages/auth/login.html"
+              class="px-8 py-4 rounded-full border border-gray-700 hover:border-purple-500/50 hover:bg-purple-500/10 transition-all font-semibold"
+            >
+              Iniciar sesión
+            </a>
+          </div>
         </div>
-        
-        <div class="p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:-translate-y-2 hover:bg-white/10 hover:border-primary/50 transition-all duration-300">
-          <div class="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6 text-primary text-2xl shadow-[0_0_15px_rgba(230,194,0,0.3)]">
-            <i class="fas fa-chart-line"></i>
+
+        <div
+          class="relative opacity-0 animate-fade-up delay-400 hidden lg:block"
+        >
+          <div
+            class="absolute inset-0 bg-gradient-to-r from-purple-600/30 to-cyan-600/30 blur-3xl rounded-full"
+          ></div>
+          <div
+            class="relative p-12 bg-[#0f0f17]/50 border border-gray-800 rounded-3xl backdrop-blur-sm"
+          >
+            <div class="w-full aspect-square flex items-center justify-center">
+              <div
+                class="w-32 h-32 bg-gradient-to-br from-purple-500 to-cyan-500 rounded-2xl rotate-12 shadow-2xl flex items-center justify-center transform hover:rotate-0 transition-transform duration-500"
+              >
+                <svg
+                  class="w-16 h-16 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"
+                  />
+                </svg>
+              </div>
+            </div>
           </div>
-          <h4 class="text-xl font-semibold text-white mb-3">Estadísticas Pro</h4>
-          <p class="text-gray-400 text-sm">Monitoriza el rendimiento de tus automatizaciones en tiempo real con métricas perfectas.</p>
         </div>
       </div>
-    </div>
 
-    <!-- Script de Auth de la página -->
+      <div class="absolute bottom-12 left-1/2 -translate-x-1/2 z-20">
+        <div
+          class="w-6 h-10 border-2 border-purple-500/50 rounded-full flex items-start justify-center p-2"
+        >
+          <div
+            class="w-1.5 h-1.5 bg-purple-400 rounded-full animate-float"
+          ></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="relative py-32 px-6 overflow-hidden">
+      <!-- Feature Ambient Glows to maintain aesthetic continuity -->
+      <div class="absolute top-[30%] left-[-20%] w-[60%] h-[60%] bg-purple-900/15 blur-[150px] rounded-full pointer-events-none z-0"></div>
+      <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-cyan-900/10 blur-[140px] rounded-full pointer-events-none z-0"></div>
+
+      <div class="max-w-7xl mx-auto relative z-10">
+        <div class="text-center mb-20">
+          <h2 class="text-5xl font-bold mb-4">Poder sin complejidad</h2>
+          <p class="text-xl text-gray-400">
+            Todo lo que necesitas para automatizar tu trabajo
+          </p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-8">
+          <div
+            class="group relative p-8 rounded-2xl border border-gray-800 hover:border-gray-700 transition-all bg-[#0f0f17] hover:-translate-y-2"
+          >
+            <div
+              class="absolute inset-0 bg-gradient-to-r from-purple-600 to-violet-600 opacity-0 group-hover:opacity-10 blur-2xl transition-opacity duration-500 rounded-2xl"
+            ></div>
+            <div class="relative">
+              <div
+                class="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-600 to-violet-600 flex items-center justify-center mb-6"
+              >
+                <svg
+                  class="w-7 h-7 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                  />
+                </svg>
+              </div>
+              <h3 class="text-2xl mb-3">Ejecución Instantánea</h3>
+              <p class="text-gray-400 leading-relaxed">
+                Activa automatizaciones en milisegundos. Sin demoras, sin
+                esperas.
+              </p>
+            </div>
+          </div>
+
+          <div
+            class="group relative p-8 rounded-2xl border border-gray-800 hover:border-gray-700 transition-all bg-[#0f0f17] hover:-translate-y-2"
+          >
+            <div
+              class="absolute inset-0 bg-gradient-to-r from-cyan-600 to-blue-600 opacity-0 group-hover:opacity-10 blur-2xl transition-opacity duration-500 rounded-2xl"
+            ></div>
+            <div class="relative">
+              <div
+                class="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center mb-6"
+              >
+                <svg
+                  class="w-7 h-7 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"
+                  />
+                </svg>
+              </div>
+              <h3 class="text-2xl mb-3">Conexiones Ilimitadas</h3>
+              <p class="text-gray-400 leading-relaxed">
+                Conecta todas tus herramientas favoritas en un solo flujo de
+                trabajo.
+              </p>
+            </div>
+          </div>
+
+          <div
+            class="group relative p-8 rounded-2xl border border-gray-800 hover:border-gray-700 transition-all bg-[#0f0f17] hover:-translate-y-2"
+          >
+            <div
+              class="absolute inset-0 bg-gradient-to-r from-pink-600 to-purple-600 opacity-0 group-hover:opacity-10 blur-2xl transition-opacity duration-500 rounded-2xl"
+            ></div>
+            <div class="relative">
+              <div
+                class="w-14 h-14 rounded-xl bg-gradient-to-br from-pink-600 to-purple-600 flex items-center justify-center mb-6"
+              >
+                <svg
+                  class="w-7 h-7 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+              </div>
+              <h3 class="text-2xl mb-3">Flujos Inteligentes</h3>
+              <p class="text-gray-400 leading-relaxed">
+                Workflows que aprenden y se adaptan a tus necesidades.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="workflow" class="relative py-32 px-6">
+      <div class="max-w-7xl mx-auto">
+        <div class="grid lg:grid-cols-2 gap-16 items-center">
+          <div>
+            <h2 class="text-5xl font-bold mb-6">
+              Visualiza tu
+              <span
+                class="block bg-gradient-to-r from-green-400 to-cyan-400 bg-clip-text text-transparent"
+                >flujo de trabajo</span
+              >
+            </h2>
+            <p class="text-xl text-gray-400 mb-8">
+              Arrastra, conecta y activa. Cada nodo representa una acción, cada
+              conexión un flujo de datos en tiempo real.
+            </p>
+
+            <ul class="space-y-4">
+              <li class="flex items-center gap-3 text-gray-300">
+                <div
+                  class="w-6 h-6 rounded-full bg-gradient-to-r from-green-600 to-cyan-600 flex items-center justify-center"
+                >
+                  <div class="w-2 h-2 bg-white rounded-full"></div>
+                </div>
+                Editor visual intuitivo
+              </li>
+              <li class="flex items-center gap-3 text-gray-300">
+                <div
+                  class="w-6 h-6 rounded-full bg-gradient-to-r from-green-600 to-cyan-600 flex items-center justify-center"
+                >
+                  <div class="w-2 h-2 bg-white rounded-full"></div>
+                </div>
+                Monitoreo en tiempo real
+              </li>
+              <li class="flex items-center gap-3 text-gray-300">
+                <div
+                  class="w-6 h-6 rounded-full bg-gradient-to-r from-green-600 to-cyan-600 flex items-center justify-center"
+                >
+                  <div class="w-2 h-2 bg-white rounded-full"></div>
+                </div>
+                Historial completo de ejecuciones
+              </li>
+            </ul>
+          </div>
+
+          <div
+            class="relative aspect-square bg-gradient-to-br from-green-900/20 to-cyan-900/20 rounded-3xl overflow-hidden p-8"
+          >
+            <div
+              class="absolute top-[20%] left-[20%] w-16 h-16 rounded-full bg-green-500/20 border border-green-500/50 animate-pulse-glow"
+            ></div>
+            <div
+              class="absolute top-[20%] left-[60%] w-16 h-16 rounded-full bg-cyan-500/20 border border-cyan-500/50 animate-pulse-glow"
+              style="animation-delay: 0.5s"
+            ></div>
+            <div
+              class="absolute top-[60%] left-[40%] w-16 h-16 rounded-full bg-blue-500/20 border border-blue-500/50 animate-pulse-glow"
+              style="animation-delay: 1s"
+            ></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="relative py-32 px-6">
+      <div class="max-w-4xl mx-auto text-center">
+        <div
+          class="relative p-12 rounded-3xl border border-purple-500/30 bg-gradient-to-br from-purple-950/50 to-cyan-950/50 overflow-hidden"
+        >
+          <div
+            class="absolute inset-0 bg-gradient-to-r from-purple-600/10 via-pink-600/10 to-cyan-600/10 blur-3xl"
+          ></div>
+          <div class="relative z-10">
+            <h2 class="text-5xl font-bold mb-6">Empieza a automatizar hoy</h2>
+            <p class="text-xl text-gray-400 mb-8 max-w-2xl mx-auto">
+              Únete a miles de equipos que ya confían en NodeWeaver para
+              automatizar sus procesos.
+            </p>
+            <a
+              href="pages/auth/register.html"
+              class="group px-10 py-5 rounded-full bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-600 hover:shadow-2xl hover:shadow-purple-500/50 transition-all inline-flex items-center gap-3 text-lg font-bold text-white"
+            >
+              Crear cuenta gratis
+              <svg
+                class="w-6 h-6 group-hover:translate-x-1 transition-transform"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M17 8l4 4m0 0l-4 4m4-4H3"
+                />
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="border-t border-gray-800 py-12 px-6">
+      <div
+        class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6"
+      >
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 flex items-center justify-center">
+            <object type="image/svg+xml" data="assets/nodeweaver-logo.svg" class="w-8 h-8 pointer-events-none opacity-50"></object>
+          </div>
+          <span class="text-gray-400 font-bold tracking-wider">© 2026 NodeWeaver</span>
+        </div>
+        <div class="flex gap-8 text-sm text-gray-400">
+          <a href="#" class="hover:text-white transition-colors">Términos</a>
+          <a href="#" class="hover:text-white transition-colors">Privacidad</a>
+          <a href="#" class="hover:text-white transition-colors">Soporte</a>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Script de Auth y Eventos de la página -->
     <script>
+      // 1. Script de fondo dinámico Navbar al hacer Scroll
+      // Navbar scroll effect
+      const nav = document.getElementById("main-nav");
+      window.addEventListener("scroll", () => {
+        if (window.scrollY > 50) {
+          // AÑADE el modo cristal puro
+          nav.classList.add("bg-white/5", "backdrop-blur-xl", "shadow-xl");
+        } else {
+          // RETIRA el modo cristal al volver arriba
+          nav.classList.remove("bg-white/5", "backdrop-blur-xl", "shadow-xl");
+        }
+      });
+
+      // 2. Script de Sesión Guardada
       const token = localStorage.getItem("token");
       const heroButtons = document.getElementById("hero-buttons");
       const navBtn = document.getElementById("nav-auth-btn");
 
       if (token) {
         heroButtons.innerHTML = `
-          <a href="pages/dashboard.html" class="flex items-center justify-center gap-2 px-8 py-3.5 rounded-full bg-primary text-[#0e1015] font-bold shadow-[0_0_20px_rgba(230,194,0,0.4)] hover:bg-primary-light hover:scale-105 transition-all">
-            <i class="fas fa-rocket"></i> Ir al Dashboard
+          <a href="pages/dashboard.html" class="flex items-center justify-center gap-3 px-10 py-4 rounded-full bg-gradient-to-r from-amber-500 via-pink-500 to-cyan-500 text-white font-bold shadow-[0_0_30px_rgba(236,72,153,0.3)] hover:shadow-[0_0_40px_rgba(236,72,153,0.5)] transform hover:-translate-y-1 transition-all text-xl w-full">
+            <i class="fas fa-bolt"></i> Entrar al Panel Pro
           </a>
         `;
         navBtn.href = "pages/dashboard.html";
-        navBtn.innerHTML = '<i class="fas fa-th-large"></i> Mi Dashboard';
+        navBtn.innerHTML = 'Mi Panel';
       }
-
-      setTimeout(() => {
-        heroButtons.style.opacity = "1";
-      }, 100);
     </script>
   </body>
 </html>
