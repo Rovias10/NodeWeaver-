@@ -10,19 +10,31 @@
     <style>
       @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
       @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+      .grid-pattern {
+        background-image:
+          linear-gradient(rgba(139, 92, 246, 0.1) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(139, 92, 246, 0.1) 1px, transparent 1px);
+        background-size: 80px 80px;
+      }
     </style>
   </head>
-  <body class="bg-[#0e1015] text-white min-h-screen font-sans antialiased flex items-center justify-center p-4 relative overflow-hidden">
+  <body class="bg-[#0a0a0f] text-white min-h-screen font-sans antialiased flex items-center justify-center p-4 relative overflow-hidden isolate">
     
-    <!-- Decorators -->
-    <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/20 blur-[120px] pointer-events-none"></div>
-    <div class="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] rounded-full bg-primary-dark/20 blur-[100px] pointer-events-none"></div>
+    <!-- Seamless Flowing Background Elements - GLOBAL PARA TODO EL SITIO -->
+    <div class="fixed inset-0 bg-[#0a0a0f] z-[-10] pointer-events-none"></div>
+    <div class="fixed inset-0 bg-gradient-to-b from-purple-900/20 via-pink-900/10 to-[#0a0a0f] z-[-9] pointer-events-none"></div>
+    <div class="fixed inset-0 grid-pattern opacity-25 z-[-8] pointer-events-none"></div>
 
-    <div class="w-full max-w-2xl p-8 md:p-10 my-8 bg-[#151821]/80 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl z-10">
+    <!-- Warm Ambient Background Glows -->
+    <div class="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full bg-amber-500/10 blur-[140px] pointer-events-none z-[-7]"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-pink-600/15 blur-[120px] pointer-events-none z-[-7]"></div>
+    <div class="absolute top-[20%] right-[30%] w-[30%] h-[30%] rounded-full bg-cyan-500/10 blur-[130px] pointer-events-none z-[-7]"></div>
+
+    <div class="w-full max-w-2xl p-8 md:p-10 my-8 bg-slate-800/40 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl shadow-black/40 z-10">
       <div class="text-center mb-8">
-        <i class="fas fa-bolt text-4xl text-primary drop-shadow-[0_0_15px_rgba(230,194,0,0.5)] mb-4"></i>
+        <object type="image/svg+xml" data="../../assets/nodeweaver-logo.svg" class="w-16 h-16 mx-auto mb-4 drop-shadow-[0_0_15px_rgba(236,72,153,0.4)] pointer-events-none"></object>
         <h2 class="text-2xl font-bold text-white mb-2">Crear tu cuenta</h2>
-        <p class="text-gray-400 text-sm">Empieza a automatizar en segundos</p>
+        <p class="text-slate-400 text-sm">Empieza a automatizar en segundos</p>
       </div>
 
       <form id="registerForm" novalidate class="flex flex-col gap-5">
@@ -30,31 +42,31 @@
           <!-- Col 1 -->
           <div class="flex flex-col gap-5">
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-1.5">Nombre completo</label>
+              <label class="block text-sm font-medium text-slate-300 mb-1.5">Nombre completo</label>
               <div class="relative">
-                <i class="fas fa-user absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
-                <input type="text" id="name" class="w-full bg-gray-900/50 border border-white/10 rounded-lg pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" placeholder="Juan Pérez" required />
+                <i class="fas fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                <input type="text" id="name" class="w-full bg-slate-900/50 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all shadow-inner" placeholder="Juan Pérez" required />
               </div>
               <div class="hidden text-red-500 text-xs mt-1" id="nameError">El nombre es requerido</div>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-1.5">Email</label>
+              <label class="block text-sm font-medium text-slate-300 mb-1.5">Email</label>
               <div class="relative">
-                <i class="fas fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
-                <input type="email" id="email" class="w-full bg-gray-900/50 border border-white/10 rounded-lg pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" placeholder="tu@email.com" required />
+                <i class="fas fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                <input type="email" id="email" class="w-full bg-slate-900/50 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all shadow-inner" placeholder="tu@email.com" required />
               </div>
               <div class="hidden text-red-500 text-xs mt-1" id="emailError">Email inválido</div>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-1.5">Contraseña</label>
+              <label class="block text-sm font-medium text-slate-300 mb-1.5">Contraseña</label>
               <div class="relative">
-                <i class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
-                <input type="password" id="password" class="w-full bg-gray-900/50 border border-white/10 rounded-lg pl-11 pr-10 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" placeholder="Mínimo 6 caracteres" required />
-                <i class="fas fa-eye absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer hover:text-white" onclick="togglePassword('password')"></i>
+                <i class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                <input type="password" id="password" class="w-full bg-slate-900/50 border border-white/10 rounded-xl pl-11 pr-10 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all shadow-inner" placeholder="Mínimo 6 caracteres" required />
+                <i class="fas fa-eye absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 cursor-pointer hover:text-white" onclick="togglePassword('password')"></i>
               </div>
-              <div class="h-1 w-full bg-gray-800 rounded-full mt-2 overflow-hidden"><div class="h-full bg-red-500 w-0 transition-all duration-300" id="strengthBar"></div></div>
+              <div class="h-1 w-full bg-slate-800 rounded-full mt-2 overflow-hidden"><div class="h-full bg-red-500 w-0 transition-all duration-300" id="strengthBar"></div></div>
               <div class="text-xs text-red-500 mt-1 font-medium" id="strengthText">Muy débil</div>
               <div class="hidden text-red-500 text-xs mt-1" id="passwordError">Mín. 6 caracteres</div>
             </div>
@@ -63,59 +75,59 @@
           <!-- Col 2 -->
           <div class="flex flex-col gap-5">
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-1.5">Empresa (Opcional)</label>
+              <label class="block text-sm font-medium text-slate-300 mb-1.5">Empresa (Opcional)</label>
               <div class="relative">
-                <i class="fas fa-building absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
-                <input type="text" id="company" class="w-full bg-gray-900/50 border border-white/10 rounded-lg pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" placeholder="Mi Empresa S.L." />
+                <i class="fas fa-building absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                <input type="text" id="company" class="w-full bg-slate-900/50 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all shadow-inner" placeholder="Mi Empresa S.L." />
               </div>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-1.5">Teléfono (Opcional)</label>
+              <label class="block text-sm font-medium text-slate-300 mb-1.5">Teléfono (Opcional)</label>
               <div class="relative">
-                <i class="fas fa-phone absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
-                <input type="tel" id="phone" class="w-full bg-gray-900/50 border border-white/10 rounded-lg pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" placeholder="+34 600 000 000" />
+                <i class="fas fa-phone absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                <input type="tel" id="phone" class="w-full bg-slate-900/50 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all shadow-inner" placeholder="+34 600 000 000" />
               </div>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-1.5">Confirmar contraseña</label>
+              <label class="block text-sm font-medium text-slate-300 mb-1.5">Confirmar contraseña</label>
               <div class="relative">
-                <i class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
-                <input type="password" id="confirmPassword" class="w-full bg-gray-900/50 border border-white/10 rounded-lg pl-11 pr-10 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" placeholder="Repite contraseña" required />
-                <i class="fas fa-eye absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer hover:text-white" onclick="togglePassword('confirmPassword')"></i>
+                <i class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                <input type="password" id="confirmPassword" class="w-full bg-slate-900/50 border border-white/10 rounded-xl pl-11 pr-10 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all shadow-inner" placeholder="Repite contraseña" required />
+                <i class="fas fa-eye absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 cursor-pointer hover:text-white" onclick="togglePassword('confirmPassword')"></i>
               </div>
               <div class="hidden text-red-500 text-xs mt-1" id="confirmError">No coinciden</div>
-              <div class="hidden text-green-500 text-xs mt-1" id="confirmSuccess">✓ Coinciden</div>
+              <div class="hidden text-emerald-500 text-xs mt-1" id="confirmSuccess">✓ Coinciden</div>
             </div>
           </div>
         </div>
 
         <div class="mt-2">
           <label class="flex items-start gap-3 cursor-pointer">
-            <input type="checkbox" id="terms" class="mt-1 w-4 h-4 rounded border-gray-600 text-primary focus:ring-primary bg-gray-900" required />
-            <span class="text-sm text-gray-400">Acepto los <a href="#" class="text-primary hover:underline">Términos y Condiciones</a> y la <a href="#" class="text-primary hover:underline">Política de Privacidad</a></span>
+            <input type="checkbox" id="terms" class="mt-1 w-4 h-4 rounded border-slate-600 text-pink-500 focus:ring-pink-500 focus:ring-2 focus:ring-offset-0 bg-slate-900 appearance-none checked:bg-pink-500" required />
+            <span class="text-sm text-slate-400">Acepto los <a href="#" class="text-pink-400 hover:text-pink-300 hover:underline">Términos y Condiciones</a> y la <a href="#" class="text-pink-400 hover:text-pink-300 hover:underline">Política de Privacidad</a></span>
           </label>
           <div class="hidden text-red-500 text-xs mt-1 ml-7" id="termsError">Debes aceptar los términos</div>
         </div>
 
-        <button type="submit" id="submitBtn" class="w-full mt-2 bg-primary hover:bg-primary-light text-[#0e1015] font-bold py-3.5 rounded-lg flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(230,194,0,0.3)] hover:shadow-[0_0_20px_rgba(230,194,0,0.5)] transition-all hover:-translate-y-0.5">
+        <button type="submit" id="submitBtn" class="w-full mt-2 bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-600 hover:shadow-lg hover:shadow-purple-500/50 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5">
           <i class="fas fa-user-plus"></i> Crear cuenta gratis
         </button>
 
         <div class="relative flex items-center py-2">
           <div class="flex-grow border-t border-white/10"></div>
-          <span class="flex-shrink-0 mx-4 text-gray-500 text-sm">o</span>
+          <span class="flex-shrink-0 mx-4 text-slate-500 text-sm">o</span>
           <div class="flex-grow border-t border-white/10"></div>
         </div>
 
-        <button type="button" onclick="loginWithGoogle()" class="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium py-3 rounded-lg flex items-center justify-center gap-2 transition-all">
+        <button type="button" onclick="loginWithGoogle()" class="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium py-3 rounded-xl flex items-center justify-center gap-2 transition-all">
           <i class="fab fa-google text-lg"></i> Registrarse con Google
         </button>
       </form>
 
-      <div class="mt-8 text-center text-sm text-gray-400">
-        ¿Ya tienes una cuenta? <a href="login.html" class="text-primary hover:text-primary-light font-semibold ml-1">Inicia sesión</a>
+      <div class="mt-8 text-center text-sm text-slate-400">
+        ¿Ya tienes una cuenta? <a href="login.html" class="bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent hover:from-purple-300 hover:to-cyan-300 font-bold ml-1 transition-all">Inicia sesión</a>
       </div>
     </div>
 
@@ -161,8 +173,8 @@
 
         if (s===2) { c="#f97316"; txt="Débil"; } // orange-500
         if (s===3) { c="#eab308"; txt="Media"; } // yellow-500
-        if (s===4) { c="#22c55e"; txt="Fuerte"; } // green-500
-        if (s===5) { c="#16a34a"; txt="Muy fuerte"; } // green-600
+        if (s===4) { c="#10b981"; txt="Fuerte"; } // emerald-500
+        if (s===5) { c="#059669"; txt="Muy fuerte"; } // emerald-600
 
         b.style.width = (s * 20 || 5) + "%";
         b.style.backgroundColor = c;
@@ -233,9 +245,9 @@
       function showNotification(message, type = "info") {
         const container = document.getElementById("notification-container");
         const notif = document.createElement("div");
-        let bg = type === "success" ? "bg-green-500/10 border-green-500/50 text-green-400" : type === "error" ? "bg-red-500/10 border-red-500/50 text-red-400" : "bg-blue-500/10 border-blue-500/50 text-blue-400";
+        let bg = type === "success" ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-400" : type === "error" ? "bg-red-500/10 border-red-500/50 text-red-400" : "bg-cyan-500/10 border-cyan-500/50 text-cyan-400";
         let icon = type === "success" ? "fa-check-circle" : type === "error" ? "fa-exclamation-circle" : "fa-info-circle";
-        notif.className = `flex items-center gap-3 px-5 py-4 rounded-lg border backdrop-blur-md shadow-lg min-w-[300px] ${bg} animate-[slideIn_0.3s_ease-out_forwards]`;
+        notif.className = `flex items-center gap-3 px-5 py-4 rounded-xl border backdrop-blur-md shadow-lg min-w-[300px] ${bg} animate-[slideIn_0.3s_ease-out_forwards]`;
         notif.innerHTML = `<i class="fas ${icon} text-xl"></i><span class="font-medium text-sm text-white">${message}</span>`;
         container.appendChild(notif);
         setTimeout(() => { notif.style.animation = "slideOut 0.3s ease-in forwards"; setTimeout(() => notif.remove(), 300); }, 3000);

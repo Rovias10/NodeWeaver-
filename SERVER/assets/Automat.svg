@@ -1,0 +1,62 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      /* Animaciones más lentas y sutiles */
+      @keyframes slowSpin { 
+        from { transform: rotate(0deg); } 
+        to { transform: rotate(360deg); } 
+      }
+      @keyframes softPulse { 
+        0%, 100% { transform: scale(1); opacity: 0.9; } 
+        50% { transform: scale(1.05); opacity: 1; } 
+      }
+      @keyframes dataFlow { 
+        from { stroke-dashoffset: 24; } 
+        to { stroke-dashoffset: 0; } 
+      }
+      
+      .gear-ring { transform-origin: 100px 100px; animation: slowSpin 16s linear infinite; }
+      .core-node { transform-origin: 100px 100px; animation: softPulse 4s ease-in-out infinite; }
+      .pipeline { animation: dataFlow 1.5s linear infinite; }
+    </style>
+    
+    <filter id="glow-magenta" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="glow-cyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <path d="M 20 100 L 180 100" stroke="#334155" stroke-width="2" stroke-dasharray="6 6" opacity="0.4" />
+  
+  <path d="M 20 100 L 70 100" stroke="#06b6d4" stroke-width="2" stroke-dasharray="6 6" class="pipeline" opacity="0.8" />
+  <path d="M 130 100 L 180 100" stroke="#a855f7" stroke-width="2" stroke-dasharray="6 6" class="pipeline" opacity="0.8" />
+
+  <g class="gear-ring" filter="url(#glow-magenta)">
+    
+    <circle cx="100" cy="100" r="45" fill="none" stroke="#ec4899" stroke-width="12" stroke-dasharray="17.67 17.67" stroke-dashoffset="8.8" opacity="0.8" />
+    
+    <circle cx="100" cy="100" r="39" fill="none" stroke="#ec4899" stroke-width="3" opacity="0.9" />
+    
+    <line x1="100" y1="61" x2="100" y2="139" stroke="#ec4899" stroke-width="2" opacity="0.4" />
+    <line x1="61" y1="100" x2="139" y2="100" stroke="#ec4899" stroke-width="2" opacity="0.4" />
+    <line x1="72" y1="72" x2="128" y2="128" stroke="#ec4899" stroke-width="2" opacity="0.2" />
+    <line x1="72" y1="128" x2="128" y2="72" stroke="#ec4899" stroke-width="2" opacity="0.2" />
+  </g>
+
+  <g class="core-node" filter="url(#glow-cyan)">
+    <circle cx="100" cy="100" r="22" fill="#0f172a" stroke="#06b6d4" stroke-width="3" />
+    <circle cx="100" cy="100" r="14" fill="#1e293b" stroke="#a855f7" stroke-width="2" />
+    <circle cx="100" cy="100" r="5" fill="#ec4899" />
+  </g>
+
+</svg>

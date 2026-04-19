@@ -17,6 +17,11 @@ class AuthController {
         $user = $this->userModel->findByEmail($data['email']);
 
         if ($user && password_verify($data['password'], $user['password'])) {
+            if (!empty($user['verification_token'])) {
+                echo json_encode(['success' => false, 'message' => 'Por favor, verifica tu cuenta en el email que te enviamos antes de iniciar sesión.']);
+                return;
+            }
+
             $token = JWT::generate([
                 'id' => $user['id'],
                 'name' => $user['name'],
@@ -60,6 +65,10 @@ class AuthController {
         );
 
         if ($user_id) {
+            require_once __DIR__ . '/../../DATA/sendgrid.php';
+            $emailService = new EmailService();
+            $emailService->sendAccountConfirmation($data['email'], $data['name'], $verification_token);
+            
             $token = JWT::generate([
                 'id' => $user_id, 
                 'name' => $data['name'], 
@@ -68,7 +77,7 @@ class AuthController {
             
             echo json_encode([
                 'success' => true, 
-                'message' => 'Usuario registrado correctamente', 
+                'message' => '¡Cuenta creada! Redirigiendo al dashboard...', 
                 'token' => $token, 
                 'user' => [
                     'id' => $user_id, 
@@ -129,6 +138,26 @@ class AuthController {
             echo json_encode(['success' => true, 'message' => 'Contraseña actualizada correctamente']);
         } else {
             echo json_encode(['success' => false, 'message' => 'Error al actualizar contraseña']);
+        }
+    }
+
+    public function confirmAccount($data) {
+        if (empty($data['token'])) {
+            echo json_encode(['success' => false, 'message' => 'Token requerido']);
+            return;
+        }
+
+        $user = $this->userModel->findByVerificationToken($data['token']);
+
+        if (!$user) {
+            echo json_encode(['success' => false, 'message' => 'Token inválido o cuenta ya verificada']);
+            return;
+        }
+
+        if ($this->userModel->verifyAccount($user['id'])) {
+            echo json_encode(['success' => true, 'message' => 'Cuenta confirmada correctamente. Ya puedes iniciar sesión.']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Error al confirmar la cuenta']);
         }
     }
 

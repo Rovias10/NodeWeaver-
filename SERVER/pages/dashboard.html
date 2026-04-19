@@ -11,9 +11,8 @@
     <link rel="stylesheet" href="../css/tailwind.css" />
     
     <style>
-      @keyframes spin { 100% { transform: rotate(360deg); } }
-      .loading-spinner { border: 4px solid rgba(255, 255, 255, 0.1); border-left-color: #f59e0b; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
-      
+
+
       /* Redesigned Premium Drawflow overrides */
       #drawflow { 
         width: 100%; height: 100%; 
@@ -48,15 +47,22 @@
     <div class="absolute top-[20%] right-[30%] w-[30%] h-[30%] rounded-full bg-cyan-500/10 blur-[130px] pointer-events-none"></div>
 
     <!-- Loading Screen -->
-    <div id="loading-screen" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex flex-col items-center justify-center z-[100] transition-opacity duration-500">
-      <div class="relative w-24 h-24 mb-6 flex items-center justify-center">
-         <object type="image/svg+xml" data="../assets/nodeweaver-logo.svg" class="w-16 h-16 animate-pulse z-10 pointer-events-none"></object>
-         <div class="loading-spinner absolute inset-0"></div>
+    <div id="loading-screen" class="fixed inset-0 bg-[#0a0a0f]/95 backdrop-blur-md flex flex-col items-center justify-center z-[100] transition-opacity duration-500">
+      
+      <!-- Supersized Animated Logo -->
+      <div class="relative w-72 h-72 mb-12 flex items-center justify-center">
+         <div class="absolute inset-0 rounded-full bg-pink-500/10 blur-[80px] animate-pulse"></div>
+         <object type="image/svg+xml" data="../assets/nodeweaver-logo.svg" class="w-64 h-64 z-10 pointer-events-none"></object>
       </div>
-      <h2 class="text-xl font-bold tracking-wider text-slate-200 mb-6 drop-shadow-md">NodeWeaver <span class="bg-gradient-to-r from-amber-500 to-pink-500 bg-clip-text text-transparent">Pro</span></h2>
-      <div class="w-64 h-1.5 bg-slate-800 rounded-full overflow-hidden shadow-inner">
-        <div id="loading-progress-bar" class="h-full bg-gradient-to-r from-amber-500 via-pink-500 to-cyan-500 w-0 transition-all duration-300 ease-out"></div>
+      
+      <!-- Supersized Progress Bar with Glow -->
+      <div class="relative w-80 md:w-[450px] h-2.5 bg-slate-800/80 rounded-full overflow-hidden shadow-inner border border-white/5">
+        <!-- Core Bar -->
+        <div id="loading-progress-bar" class="h-full bg-gradient-to-r from-amber-500 via-pink-500 to-cyan-500 w-0 transition-all duration-300 ease-out relative">
+            <div class="absolute inset-0 bg-gradient-to-r from-amber-500 via-pink-500 to-cyan-500 blur shadow-[0_0_15px_rgba(236,72,153,0.8)] opacity-80"></div>
+        </div>
       </div>
+      <div class="mt-4 text-xs text-slate-500 font-medium tracking-widest uppercase animate-pulse">Iniciando espacio de trabajo...</div>
     </div>
 
     <!-- Floating App Layout -->
