@@ -69,21 +69,9 @@ class AuthController {
             $emailService = new EmailService();
             $emailService->sendAccountConfirmation($data['email'], $data['name'], $verification_token);
             
-            $token = JWT::generate([
-                'id' => $user_id, 
-                'name' => $data['name'], 
-                'email' => $data['email']
-            ]);
-            
             echo json_encode([
                 'success' => true, 
-                'message' => '¡Cuenta creada! Redirigiendo al dashboard...', 
-                'token' => $token, 
-                'user' => [
-                    'id' => $user_id, 
-                    'name' => $data['name'], 
-                    'email' => $data['email']
-                ]
+                'message' => 'Usuario registrado. Revisa tu correo de confirmación.'
             ]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Error al registrar usuario']);
