@@ -18,7 +18,7 @@ class EmailService {
         $email->setSubject('Recuperación de contraseña - NodeWeaver');
         $email->addTo($to_email, $to_name);
         
-        $reset_link = "http://localhost/public/pages/auth/reset-password.html?token=" . $reset_token;
+        $reset_link = "http://localhost/SERVER/pages/auth/reset-password.html?token=" . $reset_token;
         
         $email->addContent(
             "text/html",
@@ -82,7 +82,7 @@ class EmailService {
         $email->setSubject('Confirmación de cuenta - NodeWeaver');
         $email->addTo($to_email, $to_name);
         
-        $confirm_link = "http://localhost/public/pages/auth/confirm-account.html?token=" . $verification_token;
+        $confirm_link = "http://localhost/SERVER/pages/auth/confirm-account.html?token=" . $verification_token;
         
         $email->addContent(
             "text/html",

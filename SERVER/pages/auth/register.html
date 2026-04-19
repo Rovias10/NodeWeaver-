@@ -227,9 +227,8 @@
           });
           const data = await res.json();
           if (data.success) {
-            localStorage.setItem("token", data.token); localStorage.setItem("user", JSON.stringify(data.user));
-            showNotification("¡Cuenta creada! Redirigiendo...", "success");
-            setTimeout(() => window.location.href = "../dashboard.html", 2000);
+            showNotification(data.message, "success");
+            setTimeout(() => window.location.href = "wait-confirmation.html", 2000);
           } else {
             showNotification(data.message || "Error al crear la cuenta", "error");
             btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-plus"></i> Crear cuenta gratis';
