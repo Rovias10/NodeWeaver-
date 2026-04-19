@@ -26,6 +26,19 @@ class User {
         }
         return false;
     }
+
+    public function findByVerificationToken($token) {
+        $query = "SELECT id, email FROM " . $this->table_name . " WHERE verification_token = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute([$token]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function verifyAccount($id) {
+        $query = "UPDATE " . $this->table_name . " SET verification_token = NULL, verified_at = NOW(), status = 'active' WHERE id = ?";
+        $stmt = $this->conn->prepare($query);
+        return $stmt->execute([$id]);
+    }
     public function findByResetToken($token) {
         $query = "SELECT id, email FROM " . $this->table_name . " WHERE reset_token = ? AND reset_expires > NOW()";
         $stmt = $this->conn->prepare($query);
