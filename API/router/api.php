@@ -18,6 +18,11 @@ $router->post('auth/reset-password', 'authController', 'resetPassword');
 $router->post('auth/confirm-account', 'authController', 'confirmAccount');
 $router->post('auth/google', 'authController', 'googleLogin');
 
+// Profile Routes
+$router->get('profile/me', 'profileController', 'getProfile');
+$router->post('profile/update', 'profileController', 'updateProfile');
+$router->post('profile/password', 'profileController', 'changePassword');
+$router->post('profile/avatar', 'profileController', 'uploadAvatar');
 
 // Receive the incoming request variables
 $route = $_GET['route'] ?? '';
