@@ -54,8 +54,12 @@ class User {
     }
 
 
-    public function updatePassword($id, $new_password) {
-        $query = "UPDATE " . $this->table_name . " SET password = ?, reset_token = NULL, reset_expires = NULL WHERE id = ?";
+    public function updatePassword($id, $new_password, $clearResetToken = true) {
+        if ($clearResetToken) {
+            $query = "UPDATE " . $this->table_name . " SET password = ?, reset_token = NULL, reset_expires = NULL, updated_at = NOW() WHERE id = ?";
+        } else {
+            $query = "UPDATE " . $this->table_name . " SET password = ?, updated_at = NOW() WHERE id = ?";
+        }
         $stmt = $this->conn->prepare($query);
         return $stmt->execute([$new_password, $id]);
     }
@@ -67,6 +71,25 @@ class User {
             return $this->conn->lastInsertId();
         }
         return false;
+    }
+
+    public function searchById($id) {
+        $query = "SELECT * FROM " . $this->table_name . " WHERE id = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function updateProfile($id, $name, $phone, $company_name, $locale, $timezone) {
+        $query = "UPDATE " . $this->table_name . " SET name = ?, phone = ?, company_name = ?, locale = ?, timezone = ? WHERE id = ?";
+        $stmt = $this->conn->prepare($query);
+        return $stmt->execute([$name, $phone, $company_name, $locale, $timezone, $id]);
+    }
+
+    public function updateAvatarUrl($id, $url) {
+        $query = "UPDATE " . $this->table_name . " SET avatar_url = ? WHERE id = ?";
+        $stmt = $this->conn->prepare($query);
+        return $stmt->execute([$url, $id]);
     }
 }
 ?>
