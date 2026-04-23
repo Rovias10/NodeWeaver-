@@ -6,38 +6,11 @@
     <title>NodeWeaver - Panel Pro</title>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/drawflow@0.0.58/dist/drawflow.min.css" />
+    <link rel="stylesheet" href="../libs/drawflow/drawflow.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/tailwind.css" />
-    
-    <style>
-
-
-      /* Redesigned Premium Drawflow overrides */
-      #drawflow { 
-        width: 100%; height: 100%; 
-        background-color: transparent; 
-        background-image: radial-gradient(rgba(255,255,255,0.05) 1.5px, transparent 1.5px); 
-        background-size: 25px 25px; 
-      }
-      .drawflow .connection .main-path { stroke: #0ea5e9; stroke-width: 3.5px; filter: drop-shadow(0 0 5px rgba(14,165,233,0.3)); transition: all 0.3s ease; }
-      .drawflow .connection:hover .main-path { stroke: #ec4899; filter: drop-shadow(0 0 8px rgba(236,72,153,0.5)); stroke-width: 4.5px; }
-      
-      .drawflow-node { 
-        background: rgba(30, 41, 59, 0.85); /* slate-800 */
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255,255,255,0.1); 
-        border-radius: 16px; 
-        color: white; 
-        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5), 0 0 15px 0 rgba(245, 158, 11, 0.05); 
-        transition: box-shadow 0.3s ease;
-      }
-      .drawflow-node:hover {
-        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5), 0 0 20px 0 rgba(236, 72, 153, 0.15); 
-      }
-      .drawflow-node .inputs .input { top: 50%; width: 14px; height: 14px; border-radius: 50%; background: #0f172a; border: 2px solid #8b5cf6; transform: translate(-10px, -50%); box-shadow: 0 0 5px rgba(139,92,246,0.5); }
-      .drawflow-node .outputs .output { top: 50%; width: 14px; height: 14px; border-radius: 50%; background: #ec4899; border: 2px solid #0f172a; transform: translate(10px, -50%); box-shadow: 0 0 5px rgba(236,72,153,0.5); }
-    </style>
+    <link rel="stylesheet" href="../css/drawflow.css" />
   </head>
   <body class="bg-slate-900 text-white h-screen overflow-hidden font-sans antialiased text-sm relative">
     
@@ -57,7 +30,6 @@
       
       <!-- Supersized Progress Bar with Glow -->
       <div class="relative w-80 md:w-[450px] h-2.5 bg-slate-800/80 rounded-full overflow-hidden shadow-inner border border-white/5">
-        <!-- Core Bar -->
         <div id="loading-progress-bar" class="h-full bg-gradient-to-r from-amber-500 via-pink-500 to-cyan-500 w-0 transition-all duration-300 ease-out relative">
             <div class="absolute inset-0 bg-gradient-to-r from-amber-500 via-pink-500 to-cyan-500 blur shadow-[0_0_15px_rgba(236,72,153,0.8)] opacity-80"></div>
         </div>
@@ -79,47 +51,53 @@
           </div>
         </div>
 
-        <!-- Search -->
-        <div class="p-4 border-b border-white/5">
-          <div class="relative">
-            <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-            <input type="text" id="node-search" placeholder="Cerca un nodo..." class="w-full bg-slate-900/50 border border-white/10 rounded-xl py-2.5 pl-9 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-pink-500/50 text-white placeholder-slate-500 transition-all shadow-inner" />
-          </div>
-        </div>
-
         <!-- Categories -->
         <div class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3">
           
           <div class="group">
-            <div class="flex items-center justify-between p-2 rounded-xl hover:bg-slate-700/50 cursor-pointer transition-colors text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest select-none">
+            <div onclick="this.nextElementSibling.classList.toggle('hidden')" class="flex items-center justify-between p-2 rounded-xl hover:bg-slate-700/50 cursor-pointer transition-colors text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest select-none">
               <div class="flex items-center gap-2"><i class="fas fa-bolt text-amber-500 w-4"></i> Disparadores</div>
               <i class="fas fa-chevron-down text-[10px]"></i>
             </div>
             <div class="pl-4 pr-1 py-1.5 space-y-1.5">
-              <div class="flex items-center justify-between p-2.5 bg-slate-900/40 border border-white/5 rounded-xl cursor-grab active:cursor-grabbing hover:border-amber-500/30 hover:bg-slate-700/50 transition-all opacity-80 hover:opacity-100 shadow-sm" draggable="true" ondragstart="editorInstance.drag(event)" data-type="schedule">
+              <div class="flex items-center justify-between p-2.5 bg-slate-900/40 border border-white/5 rounded-xl cursor-grab active:cursor-grabbing hover:border-amber-500/30 hover:bg-slate-700/50 transition-all shadow-sm" draggable="true" ondragstart="editorInstance.drag(event)" data-type="schedule">
                 <div class="flex items-center gap-2.5 text-slate-300 font-medium"><div class="p-1.5 rounded-md bg-blue-500/10 text-blue-400"><i class="fas fa-clock text-[10px]"></i></div> Programación</div>
-                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400">cron</span>
               </div>
-              <div class="flex items-center justify-between p-2.5 bg-slate-900/40 border border-white/5 rounded-xl cursor-grab active:cursor-grabbing hover:border-purple-500/30 hover:bg-slate-700/50 transition-all opacity-80 hover:opacity-100 shadow-sm" draggable="true" ondragstart="editorInstance.drag(event)" data-type="webhook">
+              <div class="flex items-center justify-between p-2.5 bg-slate-900/40 border border-white/5 rounded-xl cursor-grab active:cursor-grabbing hover:border-purple-500/30 hover:bg-slate-700/50 transition-all shadow-sm" draggable="true" ondragstart="editorInstance.drag(event)" data-type="webhook">
                 <div class="flex items-center gap-2.5 text-slate-300 font-medium"><div class="p-1.5 rounded-md bg-purple-500/10 text-purple-400"><i class="fas fa-globe text-[10px]"></i></div> Webhook</div>
-                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400">http</span>
               </div>
             </div>
           </div>
 
           <div class="group">
-            <div class="flex items-center justify-between p-2 rounded-xl hover:bg-slate-700/50 cursor-pointer transition-colors text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest select-none">
+            <div onclick="this.nextElementSibling.classList.toggle('hidden')" class="flex items-center justify-between p-2 rounded-xl hover:bg-slate-700/50 cursor-pointer transition-colors text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest select-none">
               <div class="flex items-center gap-2"><i class="fas fa-play text-emerald-500 w-4"></i> Acciones</div>
               <i class="fas fa-chevron-down text-[10px]"></i>
             </div>
             <div class="pl-4 pr-1 py-1.5 space-y-1.5">
-              <div class="flex items-center justify-between p-2.5 bg-slate-900/40 border border-white/5 rounded-xl cursor-grab active:cursor-grabbing hover:border-pink-500/30 hover:bg-slate-700/50 transition-all opacity-80 hover:opacity-100 shadow-sm" draggable="true" ondragstart="editorInstance.drag(event)" data-type="email">
+              <div class="flex items-center justify-between p-2.5 bg-slate-900/40 border border-white/5 rounded-xl cursor-grab active:cursor-grabbing hover:border-pink-500/30 hover:bg-slate-700/50 transition-all shadow-sm" draggable="true" ondragstart="editorInstance.drag(event)" data-type="email">
                 <div class="flex items-center gap-2.5 text-slate-300 font-medium"><div class="p-1.5 rounded-md bg-pink-500/10 text-pink-400"><i class="fas fa-envelope text-[10px]"></i></div> Email</div>
-                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400">smtp</span>
               </div>
-              <div class="flex items-center justify-between p-2.5 bg-slate-900/40 border border-white/5 rounded-xl cursor-grab active:cursor-grabbing hover:border-yellow-500/30 hover:bg-slate-700/50 transition-all opacity-80 hover:opacity-100 shadow-sm" draggable="true" ondragstart="editorInstance.drag(event)" data-type="backup">
+              <div class="flex items-center justify-between p-2.5 bg-slate-900/40 border border-white/5 rounded-xl cursor-grab active:cursor-grabbing hover:border-blue-500/30 hover:bg-slate-700/50 transition-all shadow-sm" draggable="true" ondragstart="editorInstance.drag(event)" data-type="log">
+                <div class="flex items-center gap-2.5 text-slate-300 font-medium"><div class="p-1.5 rounded-md bg-blue-500/10 text-blue-400"><i class="fas fa-terminal text-[10px]"></i></div> Log</div>
+              </div>
+              <div class="flex items-center justify-between p-2.5 bg-slate-900/40 border border-white/5 rounded-xl cursor-grab active:cursor-grabbing hover:border-yellow-500/30 hover:bg-slate-700/50 transition-all shadow-sm" draggable="true" ondragstart="editorInstance.drag(event)" data-type="backup">
                 <div class="flex items-center gap-2.5 text-slate-300 font-medium"><div class="p-1.5 rounded-md bg-yellow-500/10 text-yellow-500"><i class="fas fa-database text-[10px]"></i></div> Backup</div>
-                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400">ftp</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="group">
+            <div onclick="this.nextElementSibling.classList.toggle('hidden')" class="flex items-center justify-between p-2 rounded-xl hover:bg-slate-700/50 cursor-pointer transition-colors text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest select-none">
+              <div class="flex items-center gap-2"><i class="fas fa-project-diagram text-cyan-500 w-4"></i> Lógica</div>
+              <i class="fas fa-chevron-down text-[10px]"></i>
+            </div>
+            <div class="pl-4 pr-1 py-1.5 space-y-1.5">
+              <div class="flex items-center justify-between p-2.5 bg-slate-900/40 border border-white/5 rounded-xl cursor-grab active:cursor-grabbing hover:border-cyan-500/30 hover:bg-slate-700/50 transition-all shadow-sm" draggable="true" ondragstart="editorInstance.drag(event)" data-type="http_request">
+                <div class="flex items-center gap-2.5 text-slate-300 font-medium"><div class="p-1.5 rounded-md bg-cyan-500/10 text-cyan-400"><i class="fas fa-network-wired text-[10px]"></i></div> HTTP Req</div>
+              </div>
+              <div class="flex items-center justify-between p-2.5 bg-slate-900/40 border border-white/5 rounded-xl cursor-grab active:cursor-grabbing hover:border-purple-500/30 hover:bg-slate-700/50 transition-all shadow-sm" draggable="true" ondragstart="editorInstance.drag(event)" data-type="condition">
+                <div class="flex items-center gap-2.5 text-slate-300 font-medium"><div class="p-1.5 rounded-md bg-purple-500/10 text-purple-400"><i class="fas fa-code-branch text-[10px]"></i></div> Condición</div>
               </div>
             </div>
           </div>
@@ -150,8 +128,8 @@
         <div class="h-16 bg-slate-800/40 backdrop-blur-2xl border border-white/10 rounded-3xl flex items-center justify-between px-5 z-10 shadow-2xl shadow-black/30">
           
           <div class="flex items-center gap-2.5">
-            <button class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-700/30 hover:bg-slate-700/80 border border-white/5 transition-all flex items-center gap-2 text-slate-300 hover:text-white hover:shadow-lg"><i class="fas fa-file-alt"></i> Nuevo</button>
-            <button class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-700/30 hover:bg-slate-700/80 border border-white/5 transition-all flex items-center gap-2 text-slate-300 hover:text-white hover:shadow-lg"><i class="fas fa-save text-cyan-400"></i> Guardar</button>
+            <button onclick="editorInstance.clear()" class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-700/30 hover:bg-slate-700/80 border border-white/5 transition-all flex items-center gap-2 text-slate-300 hover:text-white hover:shadow-lg"><i class="fas fa-file-alt"></i> Nuevo</button>
+            <button onclick="editorInstance.save()" class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-700/30 hover:bg-slate-700/80 border border-white/5 transition-all flex items-center gap-2 text-slate-300 hover:text-white hover:shadow-lg"><i class="fas fa-save text-cyan-400"></i> Guardar</button>
           </div>
 
           <div class="flex-1 flex justify-center items-center">
@@ -168,9 +146,9 @@
             </div>
             
             <div class="flex items-center bg-slate-900/50 rounded-full border border-white/5 p-1">
-              <button class="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all" onclick="editorInstance.globalEditor.zoom_in()"><i class="fas fa-plus text-[10px]"></i></button>
-              <button class="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all" onclick="editorInstance.globalEditor.zoom_reset()"><i class="fas fa-compress text-[10px]"></i></button>
-              <button class="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all" onclick="editorInstance.globalEditor.zoom_out()"><i class="fas fa-minus text-[10px]"></i></button>
+              <button class="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all" onclick="editorInstance.editor.zoom_in()"><i class="fas fa-plus text-[10px]"></i></button>
+              <button class="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all" onclick="editorInstance.editor.zoom_reset()"><i class="fas fa-compress text-[10px]"></i></button>
+              <button class="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all" onclick="editorInstance.editor.zoom_out()"><i class="fas fa-minus text-[10px]"></i></button>
             </div>
 
             <button class="px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-amber-500 via-pink-500 to-purple-500 hover:from-amber-400 hover:via-pink-400 hover:to-purple-400 text-white shadow-lg shadow-pink-500/25 hover:shadow-pink-500/40 transition-all flex items-center gap-2 transform hover:-translate-y-0.5">
@@ -180,50 +158,26 @@
         </div>
 
         <!-- Drawflow Canvas Container (Glass) -->
-        <div class="flex-1 bg-slate-800/20 backdrop-blur-md rounded-3xl border border-white/5 relative shadow-inner overflow-hidden" ondrop="editorInstance.drop(event)" ondragover="event.preventDefault()">
+        <div class="flex-1 bg-slate-800/20 rounded-3xl border border-white/5 relative shadow-inner overflow-hidden" ondrop="editorInstance.drop(event)" ondragover="event.preventDefault()">
           <div id="drawflow"></div>
-          
-          <!-- Mini-map overlay -->
-          <div class="absolute bottom-5 left-5 w-48 h-32 bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl flex flex-col overflow-hidden opacity-40 hover:opacity-100 transition-opacity duration-300">
-            <div class="text-[9px] font-bold uppercase tracking-widest px-3 py-2 border-b border-white/10 bg-black/20 flex items-center gap-2 text-slate-300">
-              <i class="fas fa-crosshairs text-cyan-400"></i> Radar
-            </div>
-            <div class="flex-1 p-2 relative" id="minimap-content">
-              <div class="absolute top-1/2 left-1/2 w-4 h-3 border border-pink-500 rounded bg-pink-500/20 -translate-x-1/2 -translate-y-1/2"></div>
-            </div>
-          </div>
-
         </div>
       </div>
 
       <!-- Premium Sidebar Right -->
       <div id="sidebar-right" class="w-72 bg-slate-800/40 backdrop-blur-2xl border border-white/10 rounded-3xl flex flex-col flex-shrink-0 shadow-2xl shadow-black/40 overflow-hidden">
-        
-        <div class="flex p-2 bg-black/10">
-          <div class="flex-1 bg-slate-900/60 rounded-xl flex items-center p-1 border border-white/5">
-             <button class="flex-1 py-1.5 flex items-center justify-center gap-1.5 text-white bg-slate-700/80 rounded-lg shadow font-semibold text-[11px] transition-all"><i class="fas fa-sliders-h text-pink-400"></i> Nivel</button>
-             <button class="flex-1 py-1.5 flex items-center justify-center gap-1.5 text-slate-400 hover:text-white rounded-lg font-medium text-[11px] transition-all"><i class="fas fa-terminal"></i> Logs</button>
-          </div>
-        </div>
-
-        <div class="flex-1 p-5 overflow-y-auto custom-scrollbar relative">
-          <!-- Ambient internal glow -->
-          <div class="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 blur-[50px] rounded-full pointer-events-none"></div>
-
-          <!-- Empty State Config -->
-          <div class="h-full flex flex-col items-center justify-center text-center opacity-60 select-none relative z-10">
-             <div class="w-16 h-16 rounded-full bg-slate-800 border border-white/5 flex items-center justify-center mb-4 shadow-inner">
-                 <i class="fas fa-hand-pointer text-2xl text-slate-500"></i>
-             </div>
+          <div class="h-full flex flex-col items-center justify-center text-center opacity-60 select-none">
+            <div class="w-16 h-16 rounded-full bg-slate-800 border border-white/5 flex items-center justify-center mb-4 shadow-inner">
+                <i class="fas fa-hand-pointer text-2xl text-slate-500"></i>
+            </div>
             <h4 class="text-white font-bold mb-1 text-sm">Selección inactiva</h4>
             <p class="text-[11px] text-slate-400 leading-relaxed px-4">Toca un nodo brillante en el lienzo de la izquierda para calibrar sus frecuencias.</p>
           </div>
-        </div>
       </div>
 
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/drawflow@0.0.58/dist/drawflow.min.js"></script>
+    <script src="../libs/drawflow/drawflow.min.js"></script>
+    <script src="../js/editor.js"></script>
     <script>
       const loadingScreen = document.getElementById('loading-screen');
       const progressBar = document.getElementById('loading-progress-bar');
@@ -247,28 +201,9 @@
                 app.style.transition = 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
                 app.style.opacity = '1';
                 
-                // Initialize Drawflow
-                const container = document.getElementById("drawflow");
-                window.editorInstance = {
-                  globalEditor: new Drawflow(container),
-                  drag: function(e) { e.dataTransfer.setData("node", e.target.getAttribute("data-type")); },
-                  drop: function(e) {
-                    e.preventDefault();
-                    let data = e.dataTransfer.getData("node");
-                    
-                    // Add mock visually improved node
-                    let content = `
-                      <div class="p-3">
-                         <div class="flex items-center gap-2 font-bold mb-2 text-xs">
-                           <i class="fas fa-cube text-pink-400"></i> ${data.toUpperCase()}
-                         </div>
-                         <div class="text-[10px] text-slate-400">Node Active</div>
-                      </div>
-                    `;
-                    this.globalEditor.addNode(data, 1, 1, e.clientX, e.clientY, data, data, {}, content);
-                  }
-                };
-                editorInstance.globalEditor.start();
+                // Initialize Upgraded FlowEditor
+                window.editorInstance = new FlowEditor("drawflow");
+                editorInstance.loadLast(); // Load saved flow if exists
 
               }, 50);
             }, 500);
@@ -276,9 +211,7 @@
         }
       }, 200);
 
-      // ============================
-      // AUTH GUARD & USER SIDEBAR
-      // ============================
+      // AUTH GUARD & PROFILE FETCH
       const token = localStorage.getItem('token');
       if (!token) {
         window.location.href = 'auth/login.html';
@@ -286,41 +219,15 @@
         fetch('../../API/index.php?route=profile/me', {
           headers: { 'Authorization': 'Bearer ' + token }
         })
-        .then(r => {
-          console.log('[Dashboard] Profile API status:', r.status);
-          return r.json();
-        })
+        .then(r => r.json())
         .then(data => {
-          console.log('[Dashboard] Profile API response:', data);
           if (data.success) {
             const u = data.user;
-            const initials = (u.name || 'NW').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
-            document.getElementById('dash-initials').textContent = initials;
+            document.getElementById('dash-initials').textContent = (u.name || 'NW').substring(0,2).toUpperCase();
             document.getElementById('dash-username').textContent = u.name || 'Usuario';
-            document.getElementById('dash-role').textContent = (u.role || 'free').charAt(0).toUpperCase() + (u.role || 'free').slice(1) + ' Plan';
-
-            if (u.avatar_url) {
-              const avatar = document.getElementById('dash-avatar');
-              avatar.innerHTML = `<img src="${u.avatar_url}" class="w-full h-full object-cover" />`;
-            }
-          } else {
-            console.warn('[Dashboard] API returned error:', data.message);
-            // Token invalid/expired — try fallback from localStorage
-            const savedUser = JSON.parse(localStorage.getItem('user') || 'null');
-            if (savedUser) {
-              const initials = (savedUser.name || 'NW').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
-              document.getElementById('dash-initials').textContent = initials;
-              document.getElementById('dash-username').textContent = savedUser.name || 'Usuario';
-            } else {
-              // No fallback available — redirect to login
-              localStorage.removeItem('token');
-              window.location.href = 'auth/login.html';
-            }
+            document.getElementById('dash-role').textContent = (u.role || 'free').toUpperCase() + ' Plan';
+            if (u.avatar_url) document.getElementById('dash-avatar').innerHTML = `<img src="${u.avatar_url}" class="w-full h-full object-cover" />`;
           }
-        })
-        .catch(err => {
-          console.error('[Dashboard] Fetch error:', err);
-          document.getElementById('dash-username').textContent = 'Sin conexión';
         });
       }
     </script>
