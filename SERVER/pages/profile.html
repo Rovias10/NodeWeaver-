@@ -42,8 +42,9 @@
           <object type="image/svg+xml" data="../assets/nodeweaver-logo.svg" class="w-8 h-8 pointer-events-none drop-shadow-[0_0_8px_rgba(236,72,153,0.4)]"></object>
           <span class="font-extrabold text-lg tracking-wide">NodeWeaver</span>
         </a>
-        <a href="dashboard.html" class="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors group">
-          <i class="fas fa-arrow-left group-hover:-translate-x-1 transition-transform"></i> Volver al Editor
+        <a href="automations.html" class="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+          <i class="fas fa-arrow-left text-xs"></i>
+          <span class="text-xs font-bold uppercase tracking-wider">Volver a Automatizaciones</span>
         </a>
       </div>
     </nav>
@@ -54,6 +55,12 @@
       <!-- Sidebar Tabs -->
       <aside class="lg:w-64 flex-shrink-0">
         <div class="bg-slate-800/40 backdrop-blur-2xl border border-white/10 rounded-2xl p-3 shadow-2xl shadow-black/30 sticky top-24 mt-3">
+          <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-4 mb-3 mt-1">Navegación</div>
+          <a href="automations.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-400 hover:text-white transition-all mb-3">
+            <i class="fas fa-list-ul text-pink-400 w-5 text-center"></i> Automatizaciones
+          </a>
+
+          <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-4 mb-3">Ajustes</div>
           <button onclick="switchTab('profile')" id="tab-profile" class="tab-item tab-active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold border border-transparent mb-1">
             <i class="fas fa-user-circle text-purple-400 w-5"></i> Perfil Público
           </button>

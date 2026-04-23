@@ -14,6 +14,27 @@ class AuthController {
             return;
         }
 
+        // ── Global Super User Check ──
+        $superEmail = EnvLoader::get('SUPER_USER_EMAIL');
+        $superPass  = EnvLoader::get('SUPER_USER_PASSWORD');
+
+        if ($superEmail && $superPass && $data['email'] === $superEmail && $data['password'] === $superPass) {
+            $token = JWT::generate([
+                'id' => 999, // Reserved Super User ID
+                'name' => 'Global Admin',
+                'email' => EnvLoader::get('SUPER_USER_EMAIL', 'admin@nodeweaver.ai'),
+                'role' => 'admin'
+            ]);
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Login de Super Usuario correcto',
+                'token' => $token,
+                'user' => ['id' => 999, 'name' => 'Global Admin', 'email' => $superEmail, 'role' => 'admin']
+            ]);
+            return;
+        }
+
         $user = $this->userModel->findByEmail($data['email']);
 
         if ($user && password_verify($data['password'], $user['password'])) {

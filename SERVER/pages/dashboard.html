@@ -51,6 +51,12 @@
           </div>
         </div>
 
+        <div class="px-3 py-4 space-y-1 border-b border-white/5">
+          <a href="automations.html" class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 text-slate-400 hover:text-white font-bold text-xs transition-all">
+            <i class="fas fa-list-ul text-pink-400 w-4 text-center"></i> Mis Automatizaciones
+          </a>
+        </div>
+
         <!-- Categories -->
         <div class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3">
           
@@ -203,7 +209,15 @@
                 
                 // Initialize Upgraded FlowEditor
                 window.editorInstance = new FlowEditor("drawflow");
-                editorInstance.loadLast(); // Load saved flow if exists
+
+                // Route: load specific automation if ?id= present, else load last
+                const urlParams = new URLSearchParams(window.location.search);
+                const automationId = urlParams.get('id');
+                if (automationId) {
+                  editorInstance.load(automationId);
+                } else {
+                  editorInstance.loadLast();
+                }
 
               }, 50);
             }, 500);
