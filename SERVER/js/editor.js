@@ -273,6 +273,33 @@ class FlowEditor {
     }
   }
 
+  async load(id) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const response = await fetch(`../../API/index.php?route=automation/get&id=${id}`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const data = await response.json();
+
+      if (data.success && data.automation) {
+        const a = data.automation;
+        this.automationId = a.id;
+        this.automationName = a.name;
+        this.editor.import(JSON.parse(a.flow_data));
+        this.updateCounters();
+
+        const nameInput = document.querySelector('.h-16 input[type="text"]');
+        if (nameInput) nameInput.value = this.automationName;
+      } else {
+        console.warn("[NodeWeaver] load() — automation not found, starting blank.");
+      }
+    } catch (error) {
+      console.warn("[NodeWeaver] load() error:", error);
+    }
+  }
+
   clear() {
     if (confirm("¿Estás seguro de que deseas limpiar el lienzo?")) {
       this.editor.clearModuleSelected();

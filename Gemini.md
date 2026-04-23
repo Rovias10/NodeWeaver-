@@ -58,4 +58,8 @@ To optimize token usage and avoid catastrophic code breaks, adhere to the follow
 - **DO NOT** rewrite entire 200-line controller files if you are only fixing a syntax error.
 - **MANDATORY RTK USAGE:** The host machine has Rust Token Killer (RTK) installed. For ALL noisy terminal commands executed via the `run_command` tool (e.g., `git log`, `npm install`, `composer update`), you **MUST** prepend `rtk` to the command (Example: `rtk git status`). Failure to do so wastes tokens and is strictly forbidden.
 
-> *"My directive is to build NodeWeaver using Native PHP MVC, preserving extreme folder modularity, and answering strictly using these architectural boundaries."*
+### E. AI Privacy & Security
+- **STRICT PROHIBITION**: AI agents (Gemini, Antigravity, Cursor, etc.) are **NOT ALLOWED** to read or modify the `.env` file under any circumstances. 
+- All sensitive credentials (API Keys, DB Passwords, Super User credentials) must stay in `.env`.
+- Use `.env.example` as a template for environment variables structure.
+- If you need to know which environment variables are available, look at `DATA/env.php` or `.env.example`.
