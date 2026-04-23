@@ -1,0 +1,146 @@
+/* 
+ * NodeWeaver - Drawflow Premium Theme
+ * Configurado dinámicamente según theme.css
+ */
+
+:root {
+    /* --- DRAWFLOW VARIABLES (MAPPED TO PROJECT DESIGN SYSTEM) --- */
+    
+    /* Container & Canvas */
+    --dfBackgroundColor: transparent;
+    --dfBackgroundSize: 25px;
+    --dfBackgroundImage: linear-gradient(to right, var(--grid-major) 1px, transparent 1px), 
+                         linear-gradient(to bottom, var(--grid-major) 1px, transparent 1px);
+
+    /* Nodes Appearance */
+    --dfNodeBackgroundColor: rgba(15, 23, 42, 0.8); /* Inherited with alpha for glass effect */
+    --dfNodeTextColor: var(--text-primary);
+    --dfNodeBorderSize: 1px;
+    --dfNodeBorderColor: var(--border-color);
+    --dfNodeBorderRadius: 16px;
+    --dfNodeMinHeight: 40px;
+    --dfNodeMinWidth: 180px;
+    --dfNodePaddingTop: 15px;
+    --dfNodePaddingBottom: 15px;
+    
+    /* Box Shadow for Nodes */
+    --dfNodeBoxShadowBlur: 32px;
+    --dfNodeBoxShadowSpread: 0px;
+    --dfNodeBoxShadowColor: rgba(0, 0, 0, 0.4);
+
+    /* Connections (Bezier Lines) */
+    --dfLineColor: var(--accent-color);
+    --dfLineWidth: 3.5px;
+    --dfLineHoverColor: var(--accent-color-hover);
+    --dfLineSelectedColor: var(--accent-color);
+
+    /* Selection & Hover States */
+    --dfNodeHoverBackgroundColor: var(--bg-tertiary);
+    --dfNodeHoverBorderColor: var(--accent-color);
+    
+    --dfNodeSelectedBackgroundColor: var(--bg-tertiary);
+    --dfNodeSelectedBorderColor: var(--accent-color);
+    --dfNodeSelectedBoxShadowColor: var(--accent-glow);
+
+    /* Ports (Connectors) */
+    --dfInputBackgroundColor: var(--bg-primary);
+    --dfInputBorderSize: 2px;
+    --dfInputBorderColor: var(--accent-color);
+    
+    --dfOutputBackgroundColor: var(--accent-color);
+    --dfOutputBorderSize: 2px;
+    --dfOutputBorderColor: var(--bg-primary);
+}
+
+/* --- THEME IMPLEMENTATION --- */
+
+#drawflow {
+    width: 100%;
+    height: 100%;
+    background-color: var(--dfBackgroundColor);
+    background-image: var(--dfBackgroundImage);
+    background-size: var(--dfBackgroundSize) var(--dfBackgroundSize);
+}
+
+.drawflow .drawflow-node {
+    background: var(--dfNodeBackgroundColor);
+    border: var(--dfNodeBorderSize) solid var(--dfNodeBorderColor);
+    border-radius: var(--dfNodeBorderRadius);
+    color: var(--dfNodeTextColor);
+    box-shadow: 0 10px var(--dfNodeBoxShadowBlur) var(--dfNodeBoxShadowSpread) var(--dfNodeBoxShadowColor);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2;
+    will-change: transform, left, top;
+    contain: layout style;
+}
+
+.drawflow .drawflow-node:hover {
+    background: var(--dfNodeHoverBackgroundColor);
+    border-color: var(--dfNodeHoverBorderColor);
+    transform: translateY(-2px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+}
+
+.drawflow .drawflow-node.selected {
+    background: var(--dfNodeSelectedBackgroundColor);
+    border-color: var(--dfNodeSelectedBorderColor);
+    box-shadow: 0 0 25px var(--dfNodeSelectedBoxShadowColor);
+}
+
+.drawflow .connection .main-path {
+    stroke: var(--dfLineColor);
+    stroke-width: var(--dfLineWidth);
+    /* PERF: Removed filter:drop-shadow — causes full repaint on every frame */
+    transition: stroke-width 0.2s ease, stroke 0.2s ease;
+    will-change: transform;
+}
+
+.drawflow .connection:hover .main-path {
+    stroke: var(--dfLineHoverColor);
+    stroke-width: calc(var(--dfLineWidth) + 1.5px);
+}
+
+.drawflow .connection.selected .main-path {
+    stroke: var(--dfLineSelectedColor);
+    stroke-width: calc(var(--dfLineWidth) + 1px);
+}
+
+/* Ports Styling */
+.drawflow .drawflow-node .input, 
+.drawflow .drawflow-node .output {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease;
+    z-index: 4;
+}
+
+.drawflow .drawflow-node .input:hover, 
+.drawflow .drawflow-node .output:hover {
+    transform: scale(1.4);
+    box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.drawflow .drawflow-node .input {
+    background: var(--dfInputBackgroundColor);
+    border: var(--dfInputBorderSize) solid var(--dfInputBorderColor);
+    left: -8px;
+}
+
+.drawflow .drawflow-node .output {
+    background: var(--dfOutputBackgroundColor);
+    border: var(--dfOutputBorderSize) solid var(--dfOutputBorderColor);
+    right: -8px;
+}
+
+/* Content adjustment */
+.drawflow .drawflow-node .drawflow_content_node {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+}
