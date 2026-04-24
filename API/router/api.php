@@ -25,10 +25,17 @@ $router->post('profile/password', 'profileController', 'changePassword');
 $router->post('profile/avatar', 'profileController', 'uploadAvatar');
 
 // Automation Routes
-$router->get('automation/list', 'automationController', 'list');
-$router->get('automation/get', 'automationController', 'get');
-$router->post('automation/save', 'automationController', 'save');
-$router->post('automation/delete', 'automationController', 'delete');
+$router->get('automation/list',         'automationController', 'list');
+$router->get('automation/get',          'automationController', 'get');
+$router->post('automation/save',        'automationController', 'save');
+$router->post('automation/delete',      'automationController', 'delete');
+$router->post('automation/activate',    'automationController', 'activate');
+$router->post('automation/deactivate',  'automationController', 'deactivate');
+$router->post('automation/resync',      'automationController', 'resync');
+$router->post('automation/execute',     'automationController', 'execute');     // Fase 5
+$router->post('automation/report-log',  'automationController', 'reportLog');   // Fase 6 (callback n8n)
+$router->get ('automation/logs',        'automationController', 'logs');        // Fase 6 (listado real)
+$router->get ('automation/stats',       'automationController', 'stats');       // Fase 6 (agregados)
 
 // Receive the incoming request variables
 $route = $_GET['route'] ?? '';

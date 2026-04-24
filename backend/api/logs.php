@@ -1,91 +1,53 @@
 <?php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+/**
+ * backend/api/logs.php — DEPRECATED (proxy legacy)
+ * ------------------------------------------------------------------
+ * Reemplaza el antiguo endpoint que generaba logs SIMULADOS con
+ * array_rand(). Desde Fase 6 leemos de execution_logs real.
+ *
+ *   GET /backend/api/logs.php?filter=all   →  proxy a
+ *   GET /API/index.php?route=automation/logs&status=all&limit=50
+ *
+ * El frontend recibe el payload envuelto en `logs[]`; para mantener la
+ * forma antigua (array plano), desempaquetamos aquí.
+ * Se eliminará en Fase 8.
+ */
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
+require_once __DIR__ . '/../../DATA/cors.php';
 
-session_start();
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit; }
 
 $filter = $_GET['filter'] ?? 'all';
-$logs = $_SESSION['execution_logs'] ?? [];
+$limit  = (int) ($_GET['limit'] ?? 50);
 
-$successMessages = [
-    'Backup diario completado correctamente',
-    'Email de bienvenida enviado a nuevo usuario',
-    'Sincronización con FTP finalizada',
-    'Webhook ejecutado sin errores',
-    'Base de datos actualizada con éxito',
-    'Notificación de Telegram enviada',
-    'Archivos comprimidos y subidos',
-    'Copia de seguridad realizada',
-    'Reporte generado automáticamente',
-    'API externa respondió correctamente'
-];
+$scheme = !empty($_SERVER['HTTPS']) ? 'https' : 'http';
+$host   = $_SERVER['HTTP_HOST']     ?? 'localhost';
+$base   = dirname(dirname($_SERVER['SCRIPT_NAME']));
+$target = $scheme . '://' . $host . rtrim($base, '/') . '/API/index.php?route=automation/logs'
+        . '&status=' . urlencode($filter) . '&limit=' . $limit;
 
-$errorMessages = [
-    'Error de conexión con servidor SMTP',
-    'Fallo al conectar con FTP: timeout',
-    'API respondió con código 500',
-    'Credenciales inválidas',
-    'Archivo no encontrado en la ruta especificada',
-    'Error de autenticación en Telegram',
-    'Límite de peticiones excedido',
-    'Timeout en la ejecución',
-    'Memoria insuficiente',
-    'Formato de datos inválido'
-];
+$auth = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? null;
 
-$automationNames = [
-    'Backup Diario - Servidor',
-    'Email Marketing - Campaña',
-    'Telegram Bot - Alertas',
-    'Sincronización FTP',
-    'Webhook API - Pagos',
-    'Backup BBDD - Automático',
-    'Notificación Slack',
-    'Reporte Semanal'
-];
+$ch = curl_init($target);
+$headers = ['Accept: application/json'];
+if ($auth) $headers[] = 'Authorization: ' . $auth;
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HTTPHEADER     => $headers,
+    CURLOPT_TIMEOUT        => 30,
+]);
+$resp   = curl_exec($ch);
+$status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
 
-if (empty($logs)) {
-    for ($i = 0; $i < 30; $i++) {
-        $status = rand(0, 10) > 2 ? 'success' : 'error';
-        $message = $status === 'success' 
-            ? $successMessages[array_rand($successMessages)]
-            : $errorMessages[array_rand($errorMessages)];
-        
-        // Ajusto las fechas para que parezcan recientes
-        $hoursAgo = $i * rand(1, 3);
-        
-        $logs[] = [
-            'id' => $i + 1,
-            'automation_id' => rand(1, 8),
-            'automation_name' => $automationNames[array_rand($automationNames)],
-            'status' => $status,
-            'message' => $message,
-            'executed_at' => date('Y-m-d H:i:s', strtotime("-{$hoursAgo} hours")),
-            'execution_time' => rand(1, 12) . 's',
-            'details' => [
-                'nodes' => rand(2, 8),
-                'data_size' => rand(10, 500) . 'MB'
-            ]
-        ];
-    }
+header('Content-Type: application/json');
+header('X-Deprecated: Use GET /API/index.php?route=automation/logs instead.');
+http_response_code($status);
+
+// Formato legacy: array plano. Desempaquetar { success, logs: [...] }.
+$decoded = json_decode($resp ?: '{}', true);
+if (is_array($decoded) && ($decoded['success'] ?? false) && isset($decoded['logs'])) {
+    echo json_encode($decoded['logs'], JSON_PRETTY_PRINT);
+} else {
+    echo $resp ?: '[]';
 }
-
-// Si hay filtro, lo aplicamos
-if ($filter !== 'all') {
-    $logs = array_filter($logs, function($log) use ($filter) {
-        return $log['status'] === $filter;
-    });
-}
-
-// Ordenamos por fecha y nos quedamos con los últimos 50
-$logs = array_slice(array_reverse($logs), 0, 50);
-
-echo json_encode(array_values($logs), JSON_PRETTY_PRINT);
-?>

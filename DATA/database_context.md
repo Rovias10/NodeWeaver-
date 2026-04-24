@@ -94,6 +94,10 @@ Flujos de Drawflow del usuario.
 | `trigger_type`       | ENUM         | `manual` \| `webhook` \| `schedule` \| `event` \| `email`                |
 | `schedule_expression`| VARCHAR(100) | Cron (p. ej. `*/5 * * * *`) cuando `trigger_type='schedule'`             |
 | `flow_data`          | JSON         | **Resultado de `drawflow.export()`**. Estructura: `{drawflow: {Home: {data: {nodeId: {...}}}}}` |
+| `n8n_workflow_id`    | VARCHAR(64)  | UNIQUE. ID del workflow gemelo en n8n. NULL hasta el primer sync         |
+| `n8n_sync_status`    | ENUM         | `unsynced` \| `syncing` \| `synced` \| `error`. Estado del puente PHP↔n8n|
+| `n8n_sync_error`     | TEXT         | Último error devuelto por la API de n8n (stacktrace/JSON)                |
+| `n8n_last_sync_at`   | TIMESTAMP    | Marca temporal del último push exitoso a n8n                             |
 | `tags`               | JSON         | Array de strings para filtrar en la UI                                   |
 | `version`            | INT UNSIGNED | Versionado incremental en cada `update`                                  |
 | `is_active`          | TINYINT(1)   | 0 = en borrador, 1 = escucha triggers                                    |
@@ -107,6 +111,7 @@ Flujos de Drawflow del usuario.
 - `AutomationController::save` hace upsert: sin `id` → `create`, con `id` → `update` (el modelo lo restringe por `user_id` para evitar IDOR).
 - `flow_data` se guarda **tal cual** llega del frontend (ya es JSON válido).
 - `last_run_*` y los contadores se actualizan desde el worker de ejecución (ver `execution_logs`).
+- **Puente n8n**: tras persistir `flow_data` el controlador invoca `DrawflowToN8nParser` + `N8nClient`. Si `n8n_workflow_id IS NULL` → `POST /workflows` (crear) y luego `UPDATE` con el id devuelto. Si ya existía → `PUT /workflows/{id}`. El `n8n_sync_status` refleja el estado del puente (`synced` feliz path, `error` con mensaje en `n8n_sync_error`).
 
 ---
 
@@ -192,6 +197,7 @@ Log maestro de cada ejecución (una fila por run).
 | `id`                | BIGINT PK       |                                                                    |
 | `automation_id`     | INT FK          |                                                                    |
 | `user_id`           | INT FK          | Denormalizado (mismo owner que la automation)                      |
+| `n8n_execution_id`  | VARCHAR(64)    | ID generado por n8n para esa corrida. Permite cruzar con la UI/API de n8n |
 | `trigger_source`    | ENUM            | `manual` \| `webhook` \| `schedule` \| `api` \| `retry`            |
 | `trigger_reference` | VARCHAR(128)    | ID del webhook, cron job o la ejecución padre (si es retry)        |
 | `status`            | ENUM            | `queued` \| `running` \| `success` \| `error` \| `timeout` \| `cancelled` |
@@ -331,3 +337,126 @@ Cuando necesites:
 - **Optimizar consultas** → revisa §5; si tu query no pega contra un índice, justifica añadir uno nuevo.
 
 > **Regla de oro**: si modificas `schema.sql`, **tienes que actualizar este documento en el mismo commit**. Los agentes de IA confían en este archivo como fuente de verdad sin abrir la DB.
+
+---
+
+## 8. Puente n8n (plano de ejecución)
+
+NodeWeaver es el **plano de control** (usuario, UI, persistencia) y n8n el **plano de ejecución** (motor real de workflows). Ambos planos están vinculados por tres columnas clave:
+
+- `automations.n8n_workflow_id`   — 1:1 con un workflow en n8n.
+- `execution_logs.n8n_execution_id` — 1:1 con una corrida en n8n.
+- `webhooks.slug` — espejo de la URL pública que genera n8n para los nodos `n8n-nodes-base.webhook`.
+
+### Variables de entorno (`.env`)
+
+| Clave                      | Ejemplo                                  | Uso                                                |
+| -------------------------- | ---------------------------------------- | -------------------------------------------------- |
+| `NODEWEAVER_N8N_API_KEY`   | `eyJhbGciOi...`                          | JWT de la Public API de n8n. Enviado en cabecera `X-N8N-API-KEY` |
+| `N8N_URL`                  | `http://localhost:5678/api/v1`           | Base de la API REST de n8n                         |
+| `N8N_WEBHOOK_BASE`         | `http://localhost:5678/webhook`          | Prefijo público de los webhooks que dispara n8n    |
+| `N8N_CALLBACK_SECRET`      | `<string>`                               | HMAC-SHA256 para validar el Response Manager       |
+| `NODEWEAVER_CALLBACK_URL`  | `http://host.docker.internal/.../report-log` | URL a la que el Response Manager llamará al cerrar cada ejecución. Se empotra en cada workflow de n8n por el parser |
+
+> El nombre `NODEWEAVER_N8N_API_KEY` lleva prefijo intencionadamente para no colisionar con un `N8N_API_KEY` que pueda inyectar el propio contenedor de n8n.
+
+### Ciclo de vida de una automatización
+
+```
+UI (Drawflow) ──save()──► AutomationController
+                              │
+                              ├─ INSERT/UPDATE automations  (plano de control)
+                              ├─ DrawflowToN8nParser::translate(flow_data)
+                              ├─ N8nClient::createWorkflow / updateWorkflow
+                              ├─ N8nClient::activateWorkflow    (si is_active=1)
+                              ├─ UPDATE automations SET n8n_workflow_id, n8n_sync_status='synced'
+                              └─ UPSERT webhooks (slug+secret por nodo webhook)
+```
+
+### Ciclo de vida de una ejecución
+
+```
+Trigger (manual/webhook/schedule)
+    │
+    ├─ INSERT execution_logs (status='queued', n8n_execution_id=NULL)   ← manual
+    ├─ AutomationController::execute() POST al webhook público de n8n
+    │        └─ marca execution_logs SET status='running'
+    │
+    ├─ n8n ejecuta el workflow
+    ├─ El último nodo es "NodeWeaver Response Manager" (tipo Code):
+    │        ├─ construye body JSON { automation_id, n8n_execution_id,
+    │        │   status, started_at, completed_at, nodes_executed, output_payload }
+    │        ├─ calcula HMAC-SHA256(body, N8N_CALLBACK_SECRET)
+    │        └─ POST NODEWEAVER_CALLBACK_URL con header X-NodeWeaver-Signature
+    │
+    └─ AutomationController::reportLog()
+            ├─ lee raw body de php://input (para firmar bytes exactos)
+            ├─ valida X-NodeWeaver-Signature con hash_equals() (timing-safe)
+            ├─ busca execution_logs en 'running'/'queued' para ese n8n_execution_id
+            │   (si no existe → crea la fila con trigger_source='schedule')
+            ├─ UPDATE execution_logs SET status, output_payload, duration_ms,
+            │          nodes_executed, completed_at, n8n_execution_id
+            ├─ touchLastRun(automations) → last_run_at, total_runs, total_errors
+            └─ UPSERT automation_stats del día (runs_success/error/timeout,
+                       avg/max/total_duration_ms)
+```
+
+### Endpoints del puente
+
+| Método | Ruta MVC                                        | Quién lo llama         | Auth                        |
+| ------ | ----------------------------------------------- | ---------------------- | --------------------------- |
+| POST   | `/API/index.php?route=automation/save`          | Editor UI              | JWT                         |
+| POST   | `/API/index.php?route=automation/execute`       | UI (botón Ejecutar)    | JWT                         |
+| POST   | `/API/index.php?route=automation/activate`      | UI                     | JWT                         |
+| POST   | `/API/index.php?route=automation/deactivate`    | UI                     | JWT                         |
+| POST   | `/API/index.php?route=automation/resync`        | UI                     | JWT                         |
+| POST   | `/API/index.php?route=automation/report-log`    | **n8n Response Manager** | HMAC header (NO JWT)      |
+| GET    | `/API/index.php?route=automation/logs`          | UI (pantalla Logs)     | JWT                         |
+| GET    | `/API/index.php?route=automation/stats`         | UI (Dashboard)         | JWT                         |
+
+### Enriquecimiento de webhooks en respuestas API (Fase 7)
+
+La tabla `webhooks` solo persiste `slug`, `http_method` y `secret`. El controller enriquece cada webhook devuelto al frontend (en `save`, `get`, `resync`) con dos campos derivados **que NO están en la DB**:
+
+| Campo derivado | Fuente                                              | Uso en frontend                         |
+| -------------- | --------------------------------------------------- | ---------------------------------------- |
+| `url`          | `N8N_WEBHOOK_BASE + '/' + slug`                     | Mostrar URL pública real en el editor   |
+| `drawflow_id`  | Regex `^nw-\d+-(\d+)-` sobre el slug determinístico | Asociar el webhook a su nodo Drawflow   |
+
+Esto evita tener que añadir una columna `drawflow_id` a `webhooks` (el slug ya la contiene por construcción del parser en `DrawflowToN8nParser::buildWebhookSlug`).
+
+---
+
+## 9. Seguridad y hardening (Fase 8)
+
+### 9.1 SystemVault (AES-256-GCM)
+
+Los secretos de sistema que eran texto plano en `.env` se mueven a `DATA/.secrets.enc` cifrados con AES-256-GCM.
+
+- Clave maestra: `VAULT_MASTER_KEY` en `.env` (32 bytes base64).
+- Archivo cifrado: `DATA/.secrets.enc` (en `.gitignore`).
+- Claves actualmente almacenadas: `NODEWEAVER_N8N_API_KEY`, `N8N_CALLBACK_SECRET`.
+- API: `SystemVault::get(key)` (con fallback automático a `.env`), `put`, `forget`, `keys`.
+- Script CLI: `scripts/vault-migrate.php` (con `--genkey` y `--list`).
+
+**Modelo de amenaza cubierto**: leak del `.env` **o** del archivo cifrado por separado. No cubierto: compromiso total del servidor (ambos archivos filtrados) — requeriría KMS externo.
+
+### 9.2 Rate limiting
+
+Tabla `rate_limits` (se crea automáticamente desde `RateLimiter::ensureSchema`), con clave compuesta `(rl_key, window_start)` y purga de ventanas > 1 h cada 50 llamadas.
+
+| Endpoint           | Límite         | Clave                     |
+| ------------------ | -------------- | ------------------------- |
+| `automation/report-log` | 120 req/min | `report-log:{ip_remota}` |
+
+Respuesta al superar el límite: HTTP 429 con cabeceras `Retry-After`, `X-RateLimit-*` y body JSON con `retry_after` en segundos.
+
+### 9.3 Borrado remoto (cascade cross-plane)
+
+`AutomationController::delete()` llama `N8nClient::deleteWorkflow()` antes de borrar el registro local. Si n8n no responde el error se anota en `n8n_sync_error` pero la eliminación local prosigue (fail-soft).
+
+### 9.4 Suite de tests
+
+- `tests/ParserTest.php` (13 tests) — valida invariantes del `DrawflowToN8nParser`: schema válido, `{}` para parámetros vacíos, slugs deterministas, conexiones por nombre, inyección condicional del Response Manager.
+- `tests/E2ETest.php` (5 tests) — valida la capa PHP integrada: vault round-trip, rate limiter, callback HMAC aceptado/rechazado, persistencia en `execution_logs` y `automations`.
+- `tests/run.php` — runner unificado (`php tests/run.php [parser|e2e]`).
