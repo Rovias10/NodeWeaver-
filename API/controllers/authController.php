@@ -36,28 +36,48 @@ class AuthController {
         }
 
         $user = $this->userModel->findByEmail($data['email']);
+        $clientIp = $_SERVER['REMOTE_ADDR'] ?? null;
 
-        if ($user && password_verify($data['password'], $user['password'])) {
-            if (!empty($user['verification_token'])) {
-                echo json_encode(['success' => false, 'message' => 'Por favor, verifica tu cuenta en el email que te enviamos antes de iniciar sesión.']);
-                return;
-            }
-
-            $token = JWT::generate([
-                'id' => $user['id'],
-                'name' => $user['name'],
-                'email' => $user['email']
-            ]);
-            
-            echo json_encode([
-                'success' => true,
-                'message' => 'Login correcto',
-                'token' => $token,
-                'user' => ['id' => $user['id'], 'name' => $user['name'], 'email' => $user['email']]
-            ]);
-        } else {
+        if (!$user) {
             echo json_encode(['success' => false, 'message' => 'Credenciales inválidas']);
+            return;
         }
+
+        // Bloqueo temporal tras intentos fallidos consecutivos
+        if (!empty($user['locked_until']) && strtotime($user['locked_until']) > time()) {
+            $minutesLeft = (int) ceil((strtotime($user['locked_until']) - time()) / 60);
+            echo json_encode([
+                'success' => false,
+                'message' => "Cuenta bloqueada temporalmente por intentos fallidos. Vuelve a intentarlo en {$minutesLeft} minuto(s)."
+            ]);
+            return;
+        }
+
+        if (!password_verify($data['password'], $user['password'])) {
+            $this->userModel->recordFailedLogin($user['id']);
+            echo json_encode(['success' => false, 'message' => 'Credenciales inválidas']);
+            return;
+        }
+
+        if (!empty($user['verification_token'])) {
+            echo json_encode(['success' => false, 'message' => 'Por favor, verifica tu cuenta en el email que te enviamos antes de iniciar sesión.']);
+            return;
+        }
+
+        $this->userModel->recordSuccessfulLogin($user['id'], $clientIp);
+
+        $token = JWT::generate([
+            'id' => $user['id'],
+            'name' => $user['name'],
+            'email' => $user['email']
+        ]);
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Login correcto',
+            'token' => $token,
+            'user' => ['id' => $user['id'], 'name' => $user['name'], 'email' => $user['email']]
+        ]);
     }
     public function register($data) {
         if (empty($data['name']) || empty($data['email']) || empty($data['password'])) {
