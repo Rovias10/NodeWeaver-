@@ -3,6 +3,10 @@
 .env.local
 *.env
 
+# SystemVault — cifrado AES-256-GCM, pero nunca debe subirse al repo
+DATA/.secrets.enc
+DATA/.secrets.enc.tmp
+
 # Ignorar dependencias
 vendor/
 node_modules/

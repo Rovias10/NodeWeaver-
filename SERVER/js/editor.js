@@ -5,6 +5,16 @@ class FlowEditor {
     this.automationId = null;
     this.automationName = "Mi Automática Vibrante";
 
+    // n8n bridge state (Fase 7)
+    // Refrescado tras save/load/activate/resync. La UI lo consume para
+    // pintar el badge de sync, habilitar el botón Ejecutar y construir
+    // la URL real de los nodos webhook.
+    this.n8nWorkflowId = null;     // string|null — id del workflow en n8n
+    this.n8nSyncStatus = 'unsynced'; // 'unsynced'|'syncing'|'synced'|'error'
+    this.n8nSyncError  = null;     // string|null — detalle si status='error'
+    this.isActive      = true;     // bool — espejo local de automations.is_active
+    this.webhooks      = [];       // [{ slug, url, http_method, drawflow_id, ... }]
+
     // Performance state
     this._counterRAF = null;       // rAF ID for debounced counter updates
     this._interactionTimer = null; // Timer ID for interaction class cleanup
@@ -148,6 +158,9 @@ class FlowEditor {
     if (this._counterRAF) return; // Already scheduled
     this._counterRAF = requestAnimationFrame(() => {
       this.updateCounters();
+      // Refresca botones del puente: al quitar el último webhook el botón
+      // Ejecutar debe deshabilitarse, y viceversa.
+      this.updateBridgeUI();
       this._counterRAF = null;
     });
   }
@@ -213,22 +226,30 @@ class FlowEditor {
   }
 
   // --- Persistent Storage (API) ---
+
+  /**
+   * Llama a /automation/save. El backend sincroniza con n8n y devuelve
+   * el estado del puente (n8n_workflow_id, sync_status, webhooks reales).
+   * Actualizamos el state local y refrescamos la UI del puente.
+   */
   async save() {
     const token = localStorage.getItem('token');
     if (!token) return showNotification("Debes iniciar sesión", "error");
+
+    this.setSyncStatus('syncing');
 
     const flowData = this.editor.export();
     const payload = {
       id: this.automationId,
       name: this.automationName,
       flow_data: JSON.stringify(flowData),
-      is_active: 1
+      is_active: this.isActive ? 1 : 0
     };
 
     try {
       const response = await fetch('../../API/index.php?route=automation/save', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ' + token
         },
@@ -237,13 +258,26 @@ class FlowEditor {
 
       const data = await response.json();
       if (data.success) {
-        this.automationId = data.id;
-        showNotification("Flujo guardado con éxito", "success");
+        this.automationId   = data.id;
+        this.n8nWorkflowId  = data.n8n_workflow_id || null;
+        this.n8nSyncStatus  = data.n8n_sync_status || 'unsynced';
+        this.n8nSyncError   = data.n8n_sync_error  || null;
+        this.webhooks       = Array.isArray(data.webhooks) ? data.webhooks : [];
+        this.updateBridgeUI();
+
+        const msg = this.n8nSyncStatus === 'synced'
+          ? "Flujo guardado y desplegado en n8n"
+          : (this.n8nSyncStatus === 'error'
+              ? "Guardado en BD, pero n8n devolvió un error"
+              : "Flujo guardado");
+        showNotification(msg, this.n8nSyncStatus === 'error' ? 'error' : 'success');
       } else {
+        this.setSyncStatus('error', data.message);
         showNotification(data.message || "Error al guardar", "error");
       }
     } catch (error) {
       console.error("Save error:", error);
+      this.setSyncStatus('error', error.message);
       showNotification("Error de conexión con el servidor", "error");
     }
   }
@@ -257,16 +291,9 @@ class FlowEditor {
         headers: { 'Authorization': 'Bearer ' + token }
       });
       const data = await response.json();
-      
+
       if (data.success && data.automations.length > 0) {
-        const last = data.automations[0];
-        this.automationId = last.id;
-        this.automationName = last.name;
-        this.editor.import(JSON.parse(last.flow_data));
-        this.updateCounters();
-        
-        const nameInput = document.querySelector('.h-16 input[type="text"]');
-        if (nameInput) nameInput.value = this.automationName;
+        await this.load(data.automations[0].id);
       }
     } catch (error) {
       console.warn("Load error:", error);
@@ -285,15 +312,23 @@ class FlowEditor {
 
       if (data.success && data.automation) {
         const a = data.automation;
-        this.automationId = a.id;
-        this.automationName = a.name;
+        this.automationId    = Number(a.id);
+        this.automationName  = a.name;
+        this.n8nWorkflowId   = a.n8n_workflow_id || null;
+        this.n8nSyncStatus   = a.n8n_sync_status || 'unsynced';
+        this.n8nSyncError    = a.n8n_sync_error  || null;
+        this.isActive        = Number(a.is_active) === 1;
+        this.webhooks        = Array.isArray(a.webhooks) ? a.webhooks : [];
+
         this.editor.import(JSON.parse(a.flow_data));
         this.updateCounters();
+        this.updateBridgeUI();
 
         const nameInput = document.querySelector('.h-16 input[type="text"]');
         if (nameInput) nameInput.value = this.automationName;
       } else {
         console.warn("[NodeWeaver] load() — automation not found, starting blank.");
+        this.resetBridgeState();
       }
     } catch (error) {
       console.warn("[NodeWeaver] load() error:", error);
@@ -305,10 +340,198 @@ class FlowEditor {
       this.editor.clearModuleSelected();
       this.automationId = null;
       this.automationName = "Nuevo Flujo";
+      this.resetBridgeState();
       this.updateCounters();
       const nameInput = document.querySelector('.h-16 input[type="text"]');
       if (nameInput) nameInput.value = this.automationName;
     }
+  }
+
+  // ===========================================================
+  //  n8n bridge — orquestación desde el editor (Fase 7)
+  // ===========================================================
+
+  /** Resetea el estado del puente cuando se inicia un flujo nuevo. */
+  resetBridgeState() {
+    this.n8nWorkflowId = null;
+    this.n8nSyncStatus = 'unsynced';
+    this.n8nSyncError  = null;
+    this.isActive      = true;
+    this.webhooks      = [];
+    this.updateBridgeUI();
+  }
+
+  /** Refresca el badge de sync sin tocar n8n (para estados transitorios). */
+  setSyncStatus(status, error = null) {
+    this.n8nSyncStatus = status;
+    this.n8nSyncError  = error;
+    this.updateBridgeUI();
+  }
+
+  /**
+   * Dispara la ejecución manual del flujo (POST /automation/execute).
+   * Requiere que haya al menos un nodo `webhook` en el grafo.
+   */
+  async execute() {
+    const token = localStorage.getItem('token');
+    if (!token) return showNotification("Debes iniciar sesión", "error");
+    if (!this.automationId)
+      return showNotification("Guarda el flujo antes de ejecutarlo", "error");
+    if (this.n8nSyncStatus !== 'synced')
+      return showNotification("El flujo no está sincronizado con n8n", "error");
+
+    try {
+      const res = await fetch('../../API/index.php?route=automation/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ id: this.automationId, input_payload: {} })
+      });
+      const data = await res.json();
+
+      if (res.status === 202 || data.success) {
+        showNotification(
+          `Ejecución disparada (#${data.execution_id}) · ${data.trigger_duration_ms}ms`,
+          "success"
+        );
+      } else {
+        showNotification(data.message || "Error al ejecutar", "error");
+      }
+    } catch (err) {
+      console.error("execute()", err);
+      showNotification("Error de conexión al ejecutar", "error");
+    }
+  }
+
+  /** Activa o desactiva el workflow en n8n + local. */
+  async setActive(active) {
+    const token = localStorage.getItem('token');
+    if (!token || !this.automationId) return;
+
+    const route = active ? 'automation/activate' : 'automation/deactivate';
+    this.setSyncStatus('syncing');
+    try {
+      const res = await fetch('../../API/index.php?route=' + route, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ id: this.automationId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        this.isActive = active;
+        this.n8nSyncStatus = 'synced';
+        this.updateBridgeUI();
+        showNotification(active ? "Flujo activado" : "Flujo desactivado", "success");
+      } else {
+        this.setSyncStatus('error', data.message);
+        showNotification(data.message || "Error al cambiar el estado", "error");
+      }
+    } catch (err) {
+      this.setSyncStatus('error', err.message);
+      showNotification("Error de conexión", "error");
+    }
+  }
+
+  /** Reintento manual de deploy si n8n falló (POST /automation/resync). */
+  async resync() {
+    const token = localStorage.getItem('token');
+    if (!token || !this.automationId) return;
+
+    this.setSyncStatus('syncing');
+    try {
+      const res = await fetch('../../API/index.php?route=automation/resync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ id: this.automationId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        this.n8nWorkflowId = data.n8n_workflow_id || this.n8nWorkflowId;
+        this.n8nSyncStatus = data.n8n_sync_status || 'synced';
+        this.n8nSyncError  = data.n8n_sync_error  || null;
+        this.webhooks      = Array.isArray(data.webhooks) ? data.webhooks : this.webhooks;
+        this.updateBridgeUI();
+        showNotification(
+          this.n8nSyncStatus === 'synced' ? "Re-sincronizado con n8n" : "n8n sigue dando error",
+          this.n8nSyncStatus === 'synced' ? 'success' : 'error'
+        );
+      } else {
+        this.setSyncStatus('error', data.message);
+        showNotification(data.message || "Error al re-sincronizar", "error");
+      }
+    } catch (err) {
+      this.setSyncStatus('error', err.message);
+      showNotification("Error de conexión", "error");
+    }
+  }
+
+  /**
+   * Devuelve el webhook registrado para un nodo Drawflow dado.
+   * Usado por showNodeConfig() para pintar la URL real en el panel derecho.
+   */
+  getWebhookForNode(drawflowId) {
+    if (!this.webhooks || !this.webhooks.length) return null;
+    // El backend guarda drawflow_id como string.
+    const dfId = String(drawflowId);
+    return this.webhooks.find(w => String(w.drawflow_id) === dfId) || null;
+  }
+
+  /**
+   * Refresca el badge de sync + habilita/deshabilita botones del topbar.
+   * Es tolerante: si los elementos no existen (p.ej. en una vista sin
+   * botones del puente), no pasa nada.
+   */
+  updateBridgeUI() {
+    const badge = document.getElementById('bridge-badge');
+    if (badge) {
+      const variants = {
+        unsynced: { color: 'text-slate-400 bg-slate-700/40 border-white/10', icon: 'fa-circle-dashed', label: 'Sin sync' },
+        syncing:  { color: 'text-amber-300 bg-amber-500/15 border-amber-500/30 animate-pulse', icon: 'fa-spinner fa-spin', label: 'Sincronizando' },
+        synced:   { color: 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30', icon: 'fa-check', label: 'Sincronizado' },
+        error:    { color: 'text-red-300 bg-red-500/15 border-red-500/30', icon: 'fa-triangle-exclamation', label: 'Error n8n' },
+      };
+      const v = variants[this.n8nSyncStatus] || variants.unsynced;
+      badge.className = `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold ${v.color}`;
+      badge.innerHTML = `<i class="fas ${v.icon}"></i> ${v.label}`;
+      badge.title = this.n8nSyncError || v.label;
+    }
+
+    const activeBadge = document.getElementById('active-badge');
+    if (activeBadge) {
+      activeBadge.className = `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold ${
+        this.isActive
+          ? 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30'
+          : 'text-slate-400 bg-slate-700/40 border-white/10'
+      }`;
+      activeBadge.innerHTML = `<i class="fas ${this.isActive ? 'fa-play' : 'fa-pause'}"></i> ${this.isActive ? 'Activo' : 'Inactivo'}`;
+    }
+
+    const btnExecute  = document.getElementById('btn-execute');
+    const btnResync   = document.getElementById('btn-resync');
+    const btnToggle   = document.getElementById('btn-toggle-active');
+    if (btnExecute) btnExecute.disabled = this.n8nSyncStatus !== 'synced' || !this.hasWebhookNode();
+    if (btnResync)  btnResync.disabled  = !this.automationId;
+    if (btnToggle) {
+      btnToggle.disabled = !this.automationId;
+      btnToggle.innerHTML = this.isActive
+        ? '<i class="fas fa-pause"></i> Desactivar'
+        : '<i class="fas fa-play"></i> Activar';
+    }
+  }
+
+  /** Devuelve true si el grafo contiene al menos un nodo 'webhook'. */
+  hasWebhookNode() {
+    const data = this.editor.export();
+    const nodes = Object.values(data.drawflow?.Home?.data ?? {});
+    return nodes.some(n => n.name === 'webhook');
   }
 
   // --- UI & Configuration ---
@@ -366,11 +589,36 @@ class FlowEditor {
         </div>
       `;
     } else if (node.name === 'webhook') {
+      const wh = this.getWebhookForNode(id);
+      const method = (node.data.method || 'POST').toUpperCase();
       html += `
-        <div class="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-[10px] text-blue-300">
-          URL de escucha: <br><span class="font-mono text-white">/api/v1/trigger/${id}</span>
+        <div class="space-y-1">
+          <label class="text-[10px] uppercase font-bold text-slate-500">Método HTTP</label>
+          <select id="cfg-method" class="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-xs text-white">
+            ${['POST','GET','PUT','DELETE'].map(m =>
+              `<option value="${m}" ${method === m ? 'selected' : ''}>${m}</option>`
+            ).join('')}
+          </select>
         </div>
       `;
+      if (wh && wh.url) {
+        html += `
+          <div class="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[10px] text-emerald-300 space-y-1.5">
+            <div class="font-bold flex items-center gap-1.5"><i class="fas fa-link"></i> URL pública (n8n)</div>
+            <div class="font-mono text-white break-all text-[10px] leading-tight">${wh.url}</div>
+            <button onclick="navigator.clipboard.writeText('${wh.url.replace(/'/g,"\\'")}'); showNotification('URL copiada','success');"
+                    class="w-full mt-1 px-2 py-1 rounded-md bg-emerald-500/20 hover:bg-emerald-500/30 text-[10px] font-bold transition">
+              <i class="fas fa-copy"></i> Copiar URL
+            </button>
+          </div>
+        `;
+      } else {
+        html += `
+          <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[10px] text-amber-300">
+            <i class="fas fa-circle-info"></i> Guarda el flujo para generar la URL real en n8n.
+          </div>
+        `;
+      }
     } else if (node.name === 'log') {
       html += `
         <div class="space-y-1">
@@ -433,6 +681,8 @@ class FlowEditor {
     } else if (node.name === 'http_request') {
       newData.url = document.getElementById('cfg-url')?.value || '';
       newData.method = document.getElementById('cfg-method')?.value || 'GET';
+    } else if (node.name === 'webhook') {
+      newData.method = document.getElementById('cfg-method')?.value || 'POST';
     }
 
     this.editor.updateNodeDataFromId(id, newData);

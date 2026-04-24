@@ -136,13 +136,28 @@
           <div class="flex items-center gap-2.5">
             <button onclick="editorInstance.clear()" class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-700/30 hover:bg-slate-700/80 border border-white/5 transition-all flex items-center gap-2 text-slate-300 hover:text-white hover:shadow-lg"><i class="fas fa-file-alt"></i> Nuevo</button>
             <button onclick="editorInstance.save()" class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-700/30 hover:bg-slate-700/80 border border-white/5 transition-all flex items-center gap-2 text-slate-300 hover:text-white hover:shadow-lg"><i class="fas fa-save text-cyan-400"></i> Guardar</button>
+            <button id="btn-resync" onclick="editorInstance.resync()" disabled
+                    class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-700/30 hover:bg-slate-700/80 border border-white/5 transition-all flex items-center gap-2 text-slate-300 hover:text-white hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed">
+              <i class="fas fa-rotate text-purple-400"></i> Re-sync
+            </button>
+            <button id="btn-toggle-active" onclick="editorInstance.setActive(!editorInstance.isActive)" disabled
+                    class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-700/30 hover:bg-slate-700/80 border border-white/5 transition-all flex items-center gap-2 text-slate-300 hover:text-white hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed">
+              <i class="fas fa-play"></i> Activar
+            </button>
           </div>
 
-          <div class="flex-1 flex justify-center items-center">
+          <div class="flex-1 flex justify-center items-center gap-3">
             <div class="flex items-center gap-2 px-4 py-1.5 rounded-full hover:bg-white/5 transition-colors cursor-text group border border-transparent hover:border-white/5">
               <input type="text" value="Mi Automática Vibrante" class="bg-transparent border-none text-[15px] font-bold focus:outline-none text-center w-56 text-slate-100 focus:text-pink-400 transition-colors" />
               <i class="fas fa-pen text-slate-600 group-hover:text-pink-400 text-[10px] transition-colors"></i>
             </div>
+            <!-- Bridge indicators (Fase 7) -->
+            <span id="bridge-badge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-white/10 bg-slate-700/40 text-slate-400 text-[10px] font-bold">
+              <i class="fas fa-circle-dashed"></i> Sin sync
+            </span>
+            <span id="active-badge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/15 text-emerald-300 text-[10px] font-bold">
+              <i class="fas fa-play"></i> Activo
+            </span>
           </div>
 
           <div class="flex items-center gap-4">
@@ -150,15 +165,16 @@
                <span class="px-2.5 py-1 rounded-full bg-slate-900/50 border border-white/5 text-[10px] font-bold text-slate-400 flex items-center shadow-inner"><span class="w-1.5 h-1.5 rounded-full bg-purple-500 mr-1.5 shadow-[0_0_5px_rgba(168,85,247,0.8)]"></span><span id="node-count" class="text-slate-200 mr-0.5">0</span> nd</span>
                <span class="px-2.5 py-1 rounded-full bg-slate-900/50 border border-white/5 text-[10px] font-bold text-slate-400 flex items-center shadow-inner"><span class="w-1.5 h-1.5 rounded-full bg-cyan-500 mr-1.5 shadow-[0_0_5px_rgba(6,182,212,0.8)]"></span><span id="connection-count" class="text-slate-200 mr-0.5">0</span> cx</span>
             </div>
-            
+
             <div class="flex items-center bg-slate-900/50 rounded-full border border-white/5 p-1">
               <button class="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all" onclick="editorInstance.editor.zoom_in()"><i class="fas fa-plus text-[10px]"></i></button>
               <button class="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all" onclick="editorInstance.editor.zoom_reset()"><i class="fas fa-compress text-[10px]"></i></button>
               <button class="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all" onclick="editorInstance.editor.zoom_out()"><i class="fas fa-minus text-[10px]"></i></button>
             </div>
 
-            <button class="px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-amber-500 via-pink-500 to-purple-500 hover:from-amber-400 hover:via-pink-400 hover:to-purple-400 text-white shadow-lg shadow-pink-500/25 hover:shadow-pink-500/40 transition-all flex items-center gap-2 transform hover:-translate-y-0.5">
-              <i class="fas fa-rocket"></i> Desplegar
+            <button id="btn-execute" onclick="editorInstance.execute()" disabled
+                    class="px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-amber-500 via-pink-500 to-purple-500 hover:from-amber-400 hover:via-pink-400 hover:to-purple-400 text-white shadow-lg shadow-pink-500/25 hover:shadow-pink-500/40 transition-all flex items-center gap-2 transform hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:transform-none">
+              <i class="fas fa-rocket"></i> Ejecutar
             </button>
           </div>
         </div>

@@ -64,6 +64,12 @@
       .badge-active .badge-dot  { background: #34d399; box-shadow: 0 0 6px rgba(52,211,153,0.7); }
       .badge-inactive .badge-dot { background: #f87171; box-shadow: 0 0 6px rgba(248,113,113,0.5); }
 
+      /* n8n bridge badges (Fase 7) */
+      .badge-synced   { background: rgba(52,211,153,0.1);  color: #6ee7b7; border: 1px solid rgba(52,211,153,0.25); }
+      .badge-unsynced { background: rgba(148,163,184,0.1); color: #cbd5e1; border: 1px solid rgba(148,163,184,0.2); }
+      .badge-sync-error { background: rgba(239,68,68,0.12); color: #fca5a5; border: 1px solid rgba(239,68,68,0.25); }
+      .badge-syncing  { background: rgba(245,158,11,0.12); color: #fcd34d; border: 1px solid rgba(245,158,11,0.25); }
+
       .btn-edit { background: rgba(6,182,212,0.1); color: #67e8f9; }
       .btn-edit:hover { background: rgba(6,182,212,0.25); border-color: rgba(6,182,212,0.3); }
       .btn-delete { background: rgba(239,68,68,0.08); color: #f87171; }
@@ -153,9 +159,22 @@
           </button>
         </div>
 
-        <!-- Grid Container -->
-        <div class="flex-1 overflow-y-auto custom-scrollbar pr-1 flex flex-col">
-          <div class="cards-grid flex-1" id="automations-grid">
+        <!-- Stats + Grid -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar pr-1 flex flex-col gap-4">
+          <!-- Hero stats (Fase 7) -->
+          <div class="bg-slate-800/40 backdrop-blur-2xl border border-white/10 rounded-3xl p-5 shadow-2xl shadow-black/30">
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                <i class="fas fa-chart-line text-cyan-400"></i> Resumen de ejecuciones
+              </h2>
+              <button id="btn-refresh-stats" class="text-[10px] text-slate-400 hover:text-white px-2 py-1 rounded-lg hover:bg-white/5 transition">
+                <i class="fas fa-rotate"></i> Refrescar
+              </button>
+            </div>
+            <div id="stats-hero"></div>
+          </div>
+
+          <div class="cards-grid" id="automations-grid">
             <div class="skeleton-card"></div>
             <div class="skeleton-card"></div>
             <div class="skeleton-card"></div>
@@ -179,6 +198,7 @@
       </div>
     </div>
 
+    <script src="../js/stats.js"></script>
     <script>
       const token = localStorage.getItem('token');
       if (!token) window.location.href = 'auth/login.html';
@@ -186,6 +206,7 @@
       const API_BASE = '../../API/index.php?route=';
       const grid = document.getElementById('automations-grid');
       let pendingDeleteId = null;
+      const nwStats = new NodeWeaverStats(API_BASE);
 
       async function loadUser() {
           try {
@@ -231,16 +252,47 @@
         const badgeClass = isActive ? 'badge-active' : 'badge-inactive';
         const badgeLabel = isActive ? 'Activo' : 'Inactivo';
 
+        // n8n bridge badge
+        const syncStatus = a.n8n_sync_status || 'unsynced';
+        const syncConfig = {
+          synced:    { cls: 'badge-synced',     icon: 'fa-check',                lbl: 'Sync' },
+          unsynced:  { cls: 'badge-unsynced',   icon: 'fa-circle-dashed',        lbl: 'Sin sync' },
+          syncing:   { cls: 'badge-syncing',    icon: 'fa-spinner fa-spin',      lbl: 'Sincronizando' },
+          error:     { cls: 'badge-sync-error', icon: 'fa-triangle-exclamation', lbl: 'Error n8n' },
+        }[syncStatus] || { cls: 'badge-unsynced', icon: 'fa-circle-dashed', lbl: 'Sin sync' };
+        const syncTooltip = a.n8n_sync_error ? ` title="${a.n8n_sync_error.replace(/"/g, '&quot;')}"` : '';
+        const lastSync = a.n8n_last_sync_at
+          ? new Date(a.n8n_last_sync_at).toLocaleString('es-ES', {hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'})
+          : null;
+
+        // Run stats (Fase 7)
+        const runs   = Number(a.total_runs   || 0);
+        const errors = Number(a.total_errors || 0);
+        const lastRun = a.last_run_at
+          ? new Date(a.last_run_at).toLocaleString('es-ES', {hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'})
+          : null;
+
         return `
           <div class="auto-card" style="animation-delay:${index * 0.05}s" id="card-${a.id}">
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between gap-2">
               <span class="font-bold text-slate-100 truncate pr-2">${a.name}</span>
               <span class="card-badge ${badgeClass}">
                 <span class="badge-dot"></span> ${badgeLabel}
               </span>
             </div>
+            <div class="flex items-center gap-2">
+              <span class="card-badge ${syncConfig.cls}"${syncTooltip}>
+                <i class="fas ${syncConfig.icon}"></i> ${syncConfig.lbl}
+              </span>
+              ${lastSync ? `<span class="text-[9px] text-slate-500">sync: ${lastSync}</span>` : ''}
+            </div>
+            <div class="flex items-center gap-3 text-[10px] text-slate-500 border-t border-white/5 pt-2">
+              <span><i class="fas fa-bolt text-amber-400/80"></i> <span class="text-slate-300 font-bold">${runs}</span> runs</span>
+              <span><i class="fas fa-circle-exclamation text-red-400/80"></i> <span class="text-slate-300 font-bold">${errors}</span> err</span>
+              ${lastRun ? `<span class="ml-auto"><i class="fas fa-clock opacity-60"></i> ${lastRun}</span>` : `<span class="ml-auto opacity-60">sin ejec.</span>`}
+            </div>
             <div class="text-[10px] text-slate-500 flex items-center gap-1.5">
-              <i class="fas fa-clock opacity-60"></i> Creado el ${date}
+              <i class="fas fa-calendar-plus opacity-60"></i> Creado el ${date}
             </div>
             <div class="flex gap-2 mt-2">
               <button class="btn-edit flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[11px] font-bold transition-all border border-transparent" onclick="window.location.href='dashboard.html?id=${a.id}'">
@@ -300,9 +352,15 @@
         window.location.href = 'auth/login.html';
       }
 
+      document.getElementById('btn-refresh-stats')?.addEventListener('click', () => {
+        nwStats.renderInto('#stats-hero');
+        loadAutomations();
+      });
+
       // Init
       loadUser();
       loadAutomations();
+      nwStats.renderInto('#stats-hero');
     </script>
   </body>
 </html>
