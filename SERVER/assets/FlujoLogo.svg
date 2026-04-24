@@ -1,0 +1,64 @@
+<svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      @keyframes pulseGlow {
+        0%, 100% { transform: scale(1); opacity: 0.8; }
+        50% { transform: scale(1.2); opacity: 0.4; }
+      }
+      @keyframes flowData {
+        0% { stroke-dashoffset: 40; }
+        100% { stroke-dashoffset: 0; }
+      }
+      .node-glow { transform-origin: center; animation: pulseGlow 3.5s infinite ease-in-out; }
+      .data-stream { animation: flowData 1.5s linear infinite; }
+      .hover-float { transform-origin: center; animation: float1 4s infinite ease-in-out; }
+    </style>
+    
+    <filter id="glow-emerald" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="glow-teal" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <path d="M 10 70 C 80 90, 160 50, 230 70" stroke="#334155" stroke-width="2" stroke-dasharray="4 6" opacity="0.4" />
+  <path d="M 30 200 C 90 140, 150 180, 210 140" stroke="#334155" stroke-width="2" stroke-dasharray="4 6" opacity="0.4" />
+  <path d="M 70 20 C 50 100, 90 160, 120 230" stroke="#334155" stroke-width="2" stroke-dasharray="4 6" opacity="0.4" />
+
+  <path d="M 70 70 C 100 70, 150 70, 170 70" stroke="#10b981" stroke-width="2" opacity="0.3" />
+  <path d="M 70 70 C 100 70, 150 70, 170 70" stroke="#10b981" stroke-width="3" stroke-dasharray="8 12" class="data-stream" opacity="0.8" />
+  
+  <path d="M 170 70 C 170 110, 140 150, 120 150" stroke="#06b6d4" stroke-width="2" opacity="0.3" />
+  <path d="M 170 70 C 170 110, 140 150, 120 150" stroke="#06b6d4" stroke-width="3" stroke-dasharray="8 12" class="data-stream" opacity="0.8" style="animation-direction: reverse;" />
+
+  <g class="hover-float" transform="translate(70, 70)">
+    <circle cx="0" cy="0" r="20" fill="#10b981" opacity="0.3" filter="url(#glow-emerald)" class="node-glow" />
+    <circle cx="0" cy="0" r="14" fill="#0f172a" stroke="#10b981" stroke-width="2.5" />
+    <circle cx="0" cy="0" r="5" fill="#10b981" />
+  </g>
+
+  <g class="hover-float" transform="translate(170, 70)" style="animation-delay: 1s;">
+    <circle cx="0" cy="0" r="20" fill="#14b8a6" opacity="0.3" filter="url(#glow-teal)" class="node-glow" style="animation-delay: 0.5s;" />
+    <circle cx="0" cy="0" r="14" fill="#0f172a" stroke="#14b8a6" stroke-width="2.5" />
+    <rect x="-4" y="-4" width="8" height="8" fill="#14b8a6" />
+  </g>
+
+  <g class="hover-float" transform="translate(120, 150)" style="animation-delay: 2s;">
+    <circle cx="0" cy="0" r="20" fill="#06b6d4" opacity="0.3" filter="url(#glow-teal)" class="node-glow" style="animation-delay: 1s;" />
+    <circle cx="0" cy="0" r="14" fill="#0f172a" stroke="#06b6d4" stroke-width="2.5" />
+    <polygon points="0,-6 6,0 0,6 -6,0" fill="#06b6d4" />
+  </g>
+
+  <circle cx="120" cy="40" r="2" fill="#10b981" opacity="0.6" />
+  <circle cx="80" cy="130" r="2" fill="#06b6d4" opacity="0.6" />
+  <circle cx="190" cy="120" r="1.5" fill="#14b8a6" opacity="0.5" />
+</svg>

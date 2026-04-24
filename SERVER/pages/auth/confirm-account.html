@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Confirmando Cuenta - NodeWeaver</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="stylesheet" href="../../css/tailwind.css" />
+    <style>
+      @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+      .grid-pattern {
+        background-image:
+          linear-gradient(rgba(139, 92, 246, 0.1) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(139, 92, 246, 0.1) 1px, transparent 1px);
+        background-size: 80px 80px;
+      }
+    </style>
+  </head>
+  <body class="bg-[#0a0a0f] text-white min-h-screen font-sans antialiased flex items-center justify-center p-4 relative overflow-hidden isolate">
+    
+    <!-- Seamless Flowing Background Elements -->
+    <div class="fixed inset-0 bg-[#0a0a0f] z-[-10] pointer-events-none"></div>
+    <div class="fixed inset-0 bg-gradient-to-b from-purple-900/20 via-pink-900/10 to-[#0a0a0f] z-[-9] pointer-events-none"></div>
+    <div class="fixed inset-0 grid-pattern opacity-25 z-[-8] pointer-events-none"></div>
+
+    <!-- Ambient Glows -->
+    <div class="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full bg-amber-500/10 blur-[140px] pointer-events-none z-[-7]"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-pink-600/15 blur-[120px] pointer-events-none z-[-7]"></div>
+    <div class="absolute top-[20%] right-[30%] w-[30%] h-[30%] rounded-full bg-cyan-500/10 blur-[130px] pointer-events-none z-[-7]"></div>
+
+    <div class="w-full max-w-md p-8 md:p-10 my-8 bg-slate-800/40 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl shadow-black/40 z-10 transition-all duration-300 text-center animate-[slideIn_0.5s_ease-out_forwards]">
+        
+      <object type="image/svg+xml" data="../../assets/nodeweaver-logo.svg" class="w-20 h-20 mx-auto mb-6 drop-shadow-[0_0_15px_rgba(236,72,153,0.4)] pointer-events-none"></object>
+
+      <!-- Loading State -->
+      <div id="loadingState">
+        <i class="fas fa-circle-notch fa-spin text-5xl text-pink-500 mb-6 drop-shadow-[0_0_15px_rgba(236,72,153,0.6)]"></i>
+        <h2 class="text-2xl font-bold text-white mb-2">Confirmando tu cuenta</h2>
+        <p class="text-slate-400 text-sm">Por favor espera un momento, estamos validando tu token de seguridad...</p>
+      </div>
+
+      <!-- Success State -->
+      <div id="successState" class="hidden">
+        <i class="fas fa-check-circle text-6xl text-emerald-500 mb-6 drop-shadow-[0_0_20px_rgba(16,185,129,0.5)]"></i>
+        <h2 class="text-2xl font-bold text-white mb-2">¡Cuenta verificada!</h2>
+        <p class="text-slate-400 text-sm mb-8">Tu email ha sido confirmado correctamente. Ya puedes acceder a todas las funciones.</p>
+        
+        <a href="login.html" class="w-full bg-gradient-to-r from-emerald-600 to-green-500 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 inline-flex">
+          <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+        </a>
+      </div>
+
+      <!-- Error State -->
+      <div id="errorState" class="hidden">
+        <i class="fas fa-times-circle text-6xl text-red-500 mb-6 drop-shadow-[0_0_20px_rgba(239,68,68,0.5)]"></i>
+        <h2 class="text-2xl font-bold text-white mb-2">Enlace inválido</h2>
+        <p id="errorMsg" class="text-slate-400 text-sm mb-8">El token ha expirado o la cuenta ya fue verificada.</p>
+        
+        <div class="flex flex-col gap-3">
+          <a href="login.html" class="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium py-3 rounded-xl flex items-center justify-center gap-2 transition-all">
+            <i class="fas fa-arrow-left"></i> Volver al Login
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.onload = async () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+
+        if (!token) {
+          showError("No se proporcionó ningún token en el enlace.");
+          return;
+        }
+
+        try {
+          const response = await fetch("../../../API/index.php?route=auth/confirm-account", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token }),
+          });
+          const data = await response.json();
+
+          if (data.success) {
+            document.getElementById("loadingState").classList.add("hidden");
+            document.getElementById("successState").classList.remove("hidden");
+          } else {
+            showError(data.message);
+          }
+        } catch (error) {
+          showError("No pudimos conectar con el servidor.");
+        }
+      };
+
+      function showError(message) {
+        document.getElementById("loadingState").classList.add("hidden");
+        document.getElementById("errorState").classList.remove("hidden");
+        document.getElementById("errorMsg").innerText = message;
+      }
+    </script>
+  </body>
+</html>
