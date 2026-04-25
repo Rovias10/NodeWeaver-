@@ -1,0 +1,171 @@
+/* 
+ * NodeWeaver - Drawflow Premium Theme
+ * Dedicated CSS for Canvas, Nodes, Connections and Ports
+ * PERFORMANCE-OPTIMIZED: GPU-composited layers, no filter:drop-shadow
+ */
+
+:root {
+    /* Drawflow Base Variables */
+    --dfBackgroundColor: transparent;
+    --dfBackgroundSize: 25px;
+    
+    /* Grid Pattern (Dot-grid) */
+    --dfBackgroundImage: radial-gradient(var(--grid-major) 1.5px, transparent 1.5px);
+
+    /* Node Default Colors */
+    --dfNodeBackgroundColor: rgba(15, 23, 42, 0.85); /* slate-900 with glass opacity */
+    --dfNodeTextColor: var(--text-primary);
+    --dfNodeBorderSize: 1px;
+    --dfNodeBorderColor: var(--border-color);
+    --dfNodeBorderRadius: 16px;
+    
+    /* Connections */
+    --dfLineColor: var(--accent-color);
+    --dfLineWidth: 3.5px;
+    --dfLineHoverColor: #ec4899; /* Pink accent on hover */
+    --dfLineSelectedColor: var(--accent-color);
+
+    /* Selection & Config */
+    --dfNodeSelectedBackgroundColor: rgba(30, 41, 59, 0.9);
+    --dfNodeSelectedBorderColor: var(--accent-color);
+}
+
+/* --- Canvas Styling --- */
+#drawflow {
+    width: 100%;
+    height: 100%;
+    background-color: var(--dfBackgroundColor);
+    background-image: var(--dfBackgroundImage);
+    background-size: var(--dfBackgroundSize) var(--dfBackgroundSize);
+}
+
+/* --- Node Styling (Glassmorphism) --- */
+.drawflow .drawflow-node {
+    background: var(--dfNodeBackgroundColor);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: var(--dfNodeBorderSize) solid var(--dfNodeBorderColor);
+    border-radius: var(--dfNodeBorderRadius);
+    color: var(--dfNodeTextColor);
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+    padding: 0; /* Internal padding handled by custom-node div */
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 180px;
+    will-change: transform, left, top;
+    contain: layout style;
+}
+
+.drawflow .drawflow-node:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px -10px rgba(0,0,0,0.6);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.drawflow .drawflow-node.selected {
+    border-color: var(--dfNodeSelectedBorderColor);
+    box-shadow: 0 0 0 4px var(--accent-glow);
+}
+
+/* --- PERF: Disable expensive effects during pan/zoom --- */
+.is-interacting .drawflow .drawflow-node {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    transition: none;
+}
+
+.is-interacting .drawflow .connection .main-path {
+    transition: none;
+}
+
+/* Node Content Structure */
+.custom-node {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.node-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.node-body {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+/* Colored Accents per Node Category */
+/* Triggers (Amber) */
+.drawflow-node.schedule, .drawflow-node.webhook {
+    border-left: 4px solid #f59e0b !important;
+}
+/* Actions (Pink/Purple) */
+.drawflow-node.email, .drawflow-node.backup, .drawflow-node.log {
+    border-left: 4px solid #ec4899 !important;
+}
+/* Logic (Cyan) */
+.drawflow-node.condition, .drawflow-node.delay, .drawflow-node.http_request {
+    border-left: 4px solid #06b6d4 !important;
+}
+
+/* --- Connections (Neon Lines) --- */
+.drawflow .connection .main-path {
+    stroke: var(--dfLineColor);
+    stroke-width: var(--dfLineWidth);
+    /* PERF: box-shadow not applicable to SVG paths. Using a lightweight
+       static glow via stroke opacity instead of filter:drop-shadow */
+    transition: stroke 0.2s ease, stroke-width 0.2s ease;
+    will-change: transform;
+}
+
+.drawflow .connection:hover .main-path {
+    stroke: var(--dfLineHoverColor);
+    stroke-width: calc(var(--dfLineWidth) + 1.5px);
+}
+
+.drawflow .connection.selected .main-path {
+    stroke: var(--dfLineSelectedColor);
+    stroke-width: calc(var(--dfLineWidth) + 1px);
+}
+
+/* --- Ports (Neon Dots) --- */
+.drawflow .drawflow-node .input, 
+.drawflow .drawflow-node .output {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #0f172a;
+    border: 2px solid var(--accent-color);
+    box-shadow: 0 0 8px var(--accent-glow);
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+                box-shadow 0.2s ease;
+    z-index: 5;
+    /* PERF: Removed infinite port-glow animation — constant repaints */
+}
+
+.drawflow .drawflow-node .input:hover, 
+.drawflow .drawflow-node .output:hover {
+    transform: scale(1.4);
+    box-shadow: 0 0 15px var(--accent-glow);
+}
+
+/* Input/Output differentiation */
+.drawflow .drawflow-node .input {
+    left: -8px;
+    border-color: #8b5cf6; /* Purple for input */
+    box-shadow: 0 0 8px rgba(139, 92, 246, 0.5);
+}
+
+.drawflow .drawflow-node .output {
+    right: -8px;
+    border-color: #ec4899; /* Pink for output */
+    box-shadow: 0 0 8px rgba(236, 72, 153, 0.5);
+}

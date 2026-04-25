@@ -65,12 +65,41 @@ class User {
     }
 
     public function createFromGoogle($name, $email, $google_id) {
-        $query = "INSERT INTO " . $this->table_name . " (name, email, google_id, created_at) VALUES (?, ?, ?, NOW())";
+        // Google ya verificó el email -> se crea la cuenta como activa y verificada
+        $query = "INSERT INTO " . $this->table_name . "
+                  (name, email, google_id, status, verified_at, created_at)
+                  VALUES (?, ?, ?, 'active', NOW(), NOW())";
         $stmt = $this->conn->prepare($query);
         if($stmt->execute([$name, $email, $google_id])) {
             return $this->conn->lastInsertId();
         }
         return false;
+    }
+
+    public function recordSuccessfulLogin($id, $ip) {
+        $query = "UPDATE " . $this->table_name . "
+                  SET last_login_at = NOW(),
+                      last_login_ip = ?,
+                      failed_login_attempts = 0,
+                      locked_until = NULL
+                  WHERE id = ?";
+        $stmt = $this->conn->prepare($query);
+        return $stmt->execute([$ip, $id]);
+    }
+
+    public function recordFailedLogin($id, $maxAttempts = 5, $lockMinutes = 15) {
+        // Incrementa el contador y, si se alcanza el umbral, bloquea la cuenta
+        // durante `lockMinutes` minutos. El reset lo hace recordSuccessfulLogin().
+        $query = "UPDATE " . $this->table_name . "
+                  SET failed_login_attempts = failed_login_attempts + 1,
+                      locked_until = CASE
+                          WHEN failed_login_attempts + 1 >= ?
+                          THEN DATE_ADD(NOW(), INTERVAL ? MINUTE)
+                          ELSE locked_until
+                      END
+                  WHERE id = ?";
+        $stmt = $this->conn->prepare($query);
+        return $stmt->execute([$maxAttempts, $lockMinutes, $id]);
     }
 
     public function searchById($id) {

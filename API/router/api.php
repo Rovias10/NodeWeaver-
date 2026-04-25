@@ -24,6 +24,12 @@ $router->post('profile/update', 'profileController', 'updateProfile');
 $router->post('profile/password', 'profileController', 'changePassword');
 $router->post('profile/avatar', 'profileController', 'uploadAvatar');
 
+// Automation Routes
+$router->get('automation/list', 'automationController', 'list');
+$router->get('automation/get', 'automationController', 'get');
+$router->post('automation/save', 'automationController', 'save');
+$router->post('automation/delete', 'automationController', 'delete');
+
 // Receive the incoming request variables
 $route = $_GET['route'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];

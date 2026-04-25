@@ -14,29 +14,70 @@ class AuthController {
             return;
         }
 
-        $user = $this->userModel->findByEmail($data['email']);
+        // ── Global Super User Check ──
+        $superEmail = EnvLoader::get('SUPER_USER_EMAIL');
+        $superPass  = EnvLoader::get('SUPER_USER_PASSWORD');
 
-        if ($user && password_verify($data['password'], $user['password'])) {
-            if (!empty($user['verification_token'])) {
-                echo json_encode(['success' => false, 'message' => 'Por favor, verifica tu cuenta en el email que te enviamos antes de iniciar sesión.']);
-                return;
-            }
-
+        if ($superEmail && $superPass && $data['email'] === $superEmail && $data['password'] === $superPass) {
             $token = JWT::generate([
-                'id' => $user['id'],
-                'name' => $user['name'],
-                'email' => $user['email']
+                'id' => 999, // Reserved Super User ID
+                'name' => 'Global Admin',
+                'email' => EnvLoader::get('SUPER_USER_EMAIL', 'admin@nodeweaver.ai'),
+                'role' => 'admin'
             ]);
             
             echo json_encode([
                 'success' => true,
-                'message' => 'Login correcto',
+                'message' => 'Login de Super Usuario correcto',
                 'token' => $token,
-                'user' => ['id' => $user['id'], 'name' => $user['name'], 'email' => $user['email']]
+                'user' => ['id' => 999, 'name' => 'Global Admin', 'email' => $superEmail, 'role' => 'admin']
             ]);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Credenciales inválidas']);
+            return;
         }
+
+        $user = $this->userModel->findByEmail($data['email']);
+        $clientIp = $_SERVER['REMOTE_ADDR'] ?? null;
+
+        if (!$user) {
+            echo json_encode(['success' => false, 'message' => 'Credenciales inválidas']);
+            return;
+        }
+
+        // Bloqueo temporal tras intentos fallidos consecutivos
+        if (!empty($user['locked_until']) && strtotime($user['locked_until']) > time()) {
+            $minutesLeft = (int) ceil((strtotime($user['locked_until']) - time()) / 60);
+            echo json_encode([
+                'success' => false,
+                'message' => "Cuenta bloqueada temporalmente por intentos fallidos. Vuelve a intentarlo en {$minutesLeft} minuto(s)."
+            ]);
+            return;
+        }
+
+        if (!password_verify($data['password'], $user['password'])) {
+            $this->userModel->recordFailedLogin($user['id']);
+            echo json_encode(['success' => false, 'message' => 'Credenciales inválidas']);
+            return;
+        }
+
+        if (!empty($user['verification_token'])) {
+            echo json_encode(['success' => false, 'message' => 'Por favor, verifica tu cuenta en el email que te enviamos antes de iniciar sesión.']);
+            return;
+        }
+
+        $this->userModel->recordSuccessfulLogin($user['id'], $clientIp);
+
+        $token = JWT::generate([
+            'id' => $user['id'],
+            'name' => $user['name'],
+            'email' => $user['email']
+        ]);
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Login correcto',
+            'token' => $token,
+            'user' => ['id' => $user['id'], 'name' => $user['name'], 'email' => $user['email']]
+        ]);
     }
     public function register($data) {
         if (empty($data['name']) || empty($data['email']) || empty($data['password'])) {

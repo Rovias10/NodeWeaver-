@@ -42,6 +42,24 @@ class ProfileController {
      */
     public function getProfile() {
         $user_id = $this->getAuthenticatedUser();
+
+        // ── Virtual Super User Response ──
+        if ($user_id == 999) {
+            echo json_encode([
+                'success' => true, 
+                'user' => [
+                    'id' => 999,
+                    'name' => 'Global Admin',
+                    'email' => EnvLoader::get('SUPER_USER_EMAIL', 'admin@nodeweaver.ai'),
+                    'role' => 'admin',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'company_name' => 'NodeWeaver System',
+                    'phone' => 'N/A'
+                ]
+            ]);
+            return;
+        }
+
         $user = $this->userModel->searchById($user_id);
 
         if ($user) {

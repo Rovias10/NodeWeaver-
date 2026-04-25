@@ -1,7 +1,7 @@
 <?php
 class Database {
     private $host = 'localhost';
-    private $db_name = 'autoflow';
+    private $db_name = 'nodeweaver';
     private $username = 'root';
     private $password = '';
     private $conn;

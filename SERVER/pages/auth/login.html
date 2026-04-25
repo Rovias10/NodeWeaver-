@@ -127,7 +127,7 @@
               localStorage.setItem("token", data.token);
               localStorage.setItem("user", JSON.stringify(data.user));
               showNotification("¡Login correcto! Redirigiendo...", "success");
-              setTimeout(() => window.location.href = "../dashboard.html", 1500);
+              setTimeout(() => window.location.href = "../automations.html", 1500);
             } else {
               showNotification(data.message, "error");
             }
