@@ -11,6 +11,7 @@ import { AppLayout } from '@/features/shell/AppLayout.jsx';
 import { PlaceholderPage } from '@/features/shell/PlaceholderPage.jsx';
 import { DashboardPage } from '@/features/dashboard/DashboardPage.jsx';
 import { ProfilePage } from '@/features/profile/ProfilePage.jsx';
+import { MapsListPage } from '@/features/maps/pages/MapsListPage.jsx';
 
 /**
  * Definición central de rutas en modo "Library / Data Mode" (React Router v7).
@@ -48,17 +49,7 @@ export const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { path: '/dashboard', element: <DashboardPage /> },
-      {
-        path: '/mapas',
-        element: (
-          <PlaceholderPage
-            title="Mis mapas"
-            icon="fa-diagram-project"
-            description="Aquí podrás crear, abrir y compartir mapas conceptuales generados con IA a partir de tus apuntes y PDFs."
-            phase="Fase Maps"
-          />
-        ),
-      },
+      { path: '/mapas', element: <MapsListPage /> },
       {
         path: '/flashcards',
         element: (
