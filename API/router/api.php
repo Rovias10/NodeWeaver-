@@ -24,11 +24,11 @@ $router->post('profile/update', 'profileController', 'updateProfile');
 $router->post('profile/password', 'profileController', 'changePassword');
 $router->post('profile/avatar', 'profileController', 'uploadAvatar');
 
-// Map Routes — pendientes de implementar en la subfase M1 del plan Maps
-// (ver docs/maps-plan.md §3). Cuando MapController y MODEL/Map estén
-// listos, se registran aquí las 4 rutas: maps/list, maps/get, maps/save,
-// maps/delete. De momento se deja sólo el comentario para que quede
-// reservado el sitio y el router quede limpio sin restos de automation/*.
+// Map Routes — CRUD de mapas conceptuales StudyWeaver (Fase Maps · M1).
+$router->get('maps/list',    'mapController', 'list');
+$router->get('maps/get',     'mapController', 'get');
+$router->post('maps/save',   'mapController', 'save');
+$router->post('maps/delete', 'mapController', 'delete');
 
 // Receive the incoming request variables
 $route = $_GET['route'] ?? '';
