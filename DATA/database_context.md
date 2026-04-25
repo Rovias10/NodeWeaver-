@@ -1,392 +1,218 @@
 # StudyWeaver — Database Context Map
 
-> Mapa de la base de datos `autoflow` para que cualquier agente de IA (Cursor, Gemini, Antigravity, Copilot...) entienda el modelo de datos **sin necesidad de consultar el servidor MySQL**.
+> Mapa de la base de datos `autoflow` para que cualquier agente IA (Claude, Cursor, Gemini, Antigravity, Copilot...) y para el propio alumno entiendan el modelo de datos **sin necesidad de abrir MySQL**.
 >
-> Migraciones aplicadas a mano: [`DATA/migrations/`](./migrations/) (sistema sin runner automático; el alumno ejecuta cada `.sql` en phpMyAdmin).
-> Conexión: [`DATA/database.php`](./database.php) (PDO, MariaDB 10.4+, charset `utf8mb4_unicode_ci`).
+> Migraciones aplicadas a mano: [`DATA/migrations/`](./migrations/).
+> Conexión: [`DATA/database.php`](./database.php) (PDO, MariaDB 10.4+, charset `utf8mb4`).
 
 ---
 
-## 1. Visión general
+## 1. Estado actual
 
-StudyWeaver (repositorio histórico `NodeWeaver-`, ver ADR-01) es una plataforma de **estudio personal con mapas conceptuales e IA**. Tras la pivotación, el modelo de datos vive en dos capas:
+StudyWeaver vive físicamente en la base **`autoflow`** (nombre histórico heredado del repositorio `NodeWeaver-`, ver ADR-01). El nombre se mantiene para no tener que tocar `.env` ni `DATA/database.php`.
 
-- **Capa StudyWeaver activa** (la que usa el código nuevo):
-  - `users` — cuentas, perfil, seguridad. Sin cambios respecto a la fase NodeWeaver.
-  - `maps` — mapas conceptuales del usuario, con `drawflow_json` como fuente de verdad. Tabla añadida por la migración `001_create_maps.sql` (ver §2.9).
-- **Capa NodeWeaver heredada** (DEPRECATED, sin uso desde el código actual): `automations`, `sessions`, `credentials_vault`, `webhooks`, `execution_logs`, `execution_node_logs`, `automation_stats`. Se mantienen físicamente para no perder historial git pero **ningún controller del backend StudyWeaver las consulta**. Se eliminarían al provisionar el esquema en producción cloud (ver ADR-04).
-
-Stack:
-
-- **Backend**: PHP clásico MVC (`MODEL/`, `API/controllers/`, `API/router/`).
-- **Frontend**: React 18 + Drawflow envuelto en un componente React. Cada mapa serializa su grafo con `editor.export()` y lo guarda como JSON en `maps.drawflow_json`.
-- **Auth**: JWT (emisión en `DATA/jwt.php`, validación con `AuthMiddleware::verifyToken()`). Flujos activos: registro, login clásico, Google OAuth2 y recuperación por email.
-
-### ERD lógico (capa StudyWeaver activa)
+Tras las migraciones `001` (drop legacy) y `002` (crear maps), la base contiene **2 tablas**:
 
 ```
 users (1) ── (N) maps
 ```
 
-Todas las tablas hijas propagan `ON DELETE CASCADE` desde `users`: borrar una cuenta limpia TODO el rastro del usuario (obligación RGPD).
+`ON DELETE CASCADE` propaga el borrado de la cuenta hacia el resto del rastro del usuario (RGPD).
 
-### ERD lógico (capa NodeWeaver heredada — DEPRECATED, no la consulta el backend StudyWeaver)
-
-```
-users (1) ──┬── (N) automations ──┬── (N) execution_logs ── (N) execution_node_logs
-            │                     ├── (N) webhooks
-            │                     └── (N) automation_stats
-            ├── (N) sessions
-            └── (N) credentials_vault
-```
+El plan futuro (Fases Flashcards y Comunidad) añade 3 tablas más: `flashcards`, `likes`, `comments`. Su DDL ya está escrito en migraciones `.planned` (ver §3). Cuando llegue cada fase, se renombran quitando `.planned` y se ejecutan.
 
 ---
 
-## 2. Tablas
+## 2. Tablas activas (StudyWeaver)
 
 ### 2.1 `users`
 
-Cuenta, perfil y seguridad.
+Tabla **heredada de NodeWeaver** que se mantiene tal cual. El backend StudyWeaver consume sólo las columnas marcadas como ✅. Las marcadas ⚠️ son inertes (no leídas ni escritas) y se eliminarán en una migración futura cuando StudyWeaver implemente 2FA o se simplifique para producción.
 
-| Campo                      | Tipo          | Obligatorio | Notas                                                 |
-| -------------------------- | ------------- | ----------- | ----------------------------------------------------- |
-| `id`                       | INT PK        | sí          | Autoincremental                                       |
-| `name`                     | VARCHAR(100)  | sí          |                                                       |
-| `email`                    | VARCHAR(255)  | sí (UNIQUE) | Login primario                                        |
-| `password`                 | VARCHAR(255)  | no          | bcrypt. NULL solo si el usuario entró por Google      |
-| `google_id`                | VARCHAR(255)  | no (UNIQUE) | `sub` del ID Token de Google                          |
-| `phone`                    | VARCHAR(20)   | no          |                                                       |
-| `company_name`             | VARCHAR(100)  | no          |                                                       |
-| `avatar_url`               | VARCHAR(500)  | no          | URL absoluta hacia `backend/uploads/avatars/` (configurable con `BACKEND_PUBLIC_URL` en .env) |
-| `locale`                   | VARCHAR(10)   | sí          | Default `es`                                          |
-| `timezone`                 | VARCHAR(50)   | sí          | Default `UTC`                                         |
-| `role`                     | ENUM          | sí          | `free` \| `pro` \| `enterprise` \| `admin`            |
-| `status`                   | ENUM          | sí          | `pending` \| `active` \| `suspended` \| `deleted`     |
-| `two_factor_enabled`       | TINYINT(1)    | sí          | 0/1                                                   |
-| `two_factor_secret`        | VARCHAR(255)  | no          | TOTP (base32) cifrado                                 |
-| `two_factor_backup_codes`  | JSON          | no          | Array de códigos de un solo uso (hash)                |
-| `two_factor_verified_at`   | TIMESTAMP     | no          | Fecha de activación confirmada del 2FA                |
-| `verification_token`       | VARCHAR(100)  | no          | Token de confirmación de email                        |
-| `verified_at`              | TIMESTAMP     | no          | Fecha en que se verificó el email                     |
-| `reset_token`              | VARCHAR(100)  | no          | Token de recuperación de contraseña                   |
-| `reset_expires`            | TIMESTAMP     | no          | Caducidad de `reset_token` (1h)                       |
-| `last_login_at`            | TIMESTAMP     | no          |                                                       |
-| `last_login_ip`            | VARCHAR(45)   | no          | IPv4/IPv6                                             |
-| `failed_login_attempts`    | INT UNSIGNED  | sí          | Default 0                                             |
-| `locked_until`             | TIMESTAMP     | no          | Bloqueo temporal tras N fallos                        |
-| `preferences`              | JSON          | no          | UI, notificaciones, etc.                              |
-| `created_at` / `updated_at`| TIMESTAMP     | sí          |                                                       |
+| Campo                  | Tipo                                  | Uso StudyWeaver | Notas                                                          |
+| ---------------------- | ------------------------------------- | --------------- | -------------------------------------------------------------- |
+| `id`                   | INT PK AUTO_INCREMENT                 | ✅              | Foreign key target para `maps.user_id` y futuras.              |
+| `name`                 | VARCHAR(100) NOT NULL                 | ✅              | Nombre mostrado en perfil y navbar.                            |
+| `email`                | VARCHAR(255) NOT NULL UNIQUE          | ✅              | Login primario.                                                |
+| `password`             | VARCHAR(255) NULL                     | ✅              | bcrypt vía `password_hash()`. NULL si la cuenta entró por Google.|
+| `google_id`            | VARCHAR(255) NULL                     | ✅              | `sub` del ID Token de Google (login social).                   |
+| `phone`                | VARCHAR(20) NULL                      | ✅              | Editable desde perfil.                                         |
+| `company_name`         | VARCHAR(100) NULL                     | ✅              | UI lo muestra como **"Institución educativa"** (decisión Fase 4); BD mantiene el nombre legacy `company_name` para no tocar `profileController`. |
+| `locale`               | VARCHAR(10) DEFAULT 'es'              | ✅              | Idioma de la UI.                                               |
+| `timezone`             | VARCHAR(50) DEFAULT 'UTC'             | ✅              | Para cálculos futuros de "racha de estudio diaria".            |
+| `avatar_url`           | VARCHAR(500) NULL                     | ✅              | URL absoluta hacia `backend/uploads/avatars/` (configurable con `BACKEND_PUBLIC_URL` en `.env`). |
+| `role`                 | ENUM('free','pro','admin')            | ✅              | StudyWeaver sólo crea `free` por defecto. `pro` queda inerte (sin pricing). `admin` reservado para uso futuro. |
+| `status`               | ENUM('active','suspended','pending')  | ✅              | `pending` recién registrado, `active` tras confirmar email, `suspended` por moderación. |
+| `verification_token`   | VARCHAR(100) NULL                     | ✅              | Token enviado por SendGrid en el registro. Se limpia al confirmar. |
+| `verified_at`          | TIMESTAMP NULL                        | ⚠️ (no escrito) | El backend actual no lo rellena al confirmar (usa `status='active'` + `verification_token=NULL`). Queda como deuda. |
+| `reset_token`          | VARCHAR(100) NULL                     | ✅              | Token de recuperación de contraseña.                           |
+| `reset_expires`        | TIMESTAMP NULL                        | ✅              | Caducidad de `reset_token` (1 h).                              |
+| `two_factor_enabled`   | TINYINT(1) DEFAULT 0                  | ⚠️ inerte       | StudyWeaver MVP no implementa 2FA.                             |
+| `two_factor_secret`    | VARCHAR(255) NULL                     | ⚠️ inerte       | Idem.                                                          |
+| `created_at`           | TIMESTAMP DEFAULT CURRENT_TIMESTAMP   | ✅              |                                                                |
+| `updated_at`           | TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | ✅              |                                                                |
 
 **Reglas de negocio:**
 
-- Un usuario se crea con `status = 'pending'` y `verification_token` no nulo (ver `AuthController::register`).
-- `AuthController::confirmAccount` pone `status = 'active'` y deja `verification_token = NULL`.
-- El login falla si `verification_token` no es NULL (cuenta sin verificar).
-- `AuthController::forgotPassword` guarda `reset_token` + `reset_expires = NOW + 1h`.
-- `AuthController::resetPassword` exige `reset_expires > NOW()` y limpia ambos campos al tener éxito.
-- El Super User (`id = 999`) es virtual: **NO existe en DB**, vive solo en `.env` (`SUPER_USER_EMAIL` / `SUPER_USER_PASSWORD`) y el controlador lo inyecta en el JWT.
+- Registro: `status='pending'` + `verification_token` no nulo. Login bloqueado mientras `verification_token` no sea NULL (cuenta sin verificar).
+- Confirmación (`AuthController::confirmAccount`): pone `status='active'` y `verification_token=NULL`.
+- Recuperación de contraseña: `forgotPassword` guarda `reset_token` + `reset_expires = NOW() + 1h`. `resetPassword` exige `reset_expires > NOW()` y limpia ambos campos.
+- Super User: `id = 999` es **virtual**, no existe en la base. Vive sólo en `.env` (`SUPER_USER_EMAIL` / `SUPER_USER_PASSWORD`) y el controlador lo inyecta en el JWT.
 
-**Enums válidos:**
+**Índices:**
 
-- `role`: `free` (default) | `pro` | `enterprise` | `admin`.
-- `status`: `pending` (recién registrado) | `active` (email verificado) | `suspended` (bloqueado por admin) | `deleted` (soft-delete).
+- `PRIMARY KEY (id)`
+- `UNIQUE KEY email (email)` — login O(1).
 
 ---
 
-### 2.2 `automations` ⚠️ DEPRECATED (NodeWeaver pre-pivote)
+### 2.2 `maps`
 
-> **Estado:** tabla heredada de la fase NodeWeaver. **Ningún controller del backend StudyWeaver la consulta** desde el commit `chore(backend): eliminar legado automation y crear esquema maps`. Se mantiene físicamente en MySQL local para no romper backups ni historial; se omite al provisionar cloud. Para mapas conceptuales usa la nueva tabla [`maps`](#29-maps) (§2.9). Justificación de no reciclarla en ADR-04.
+Mapas conceptuales del usuario. **Tabla canónica de StudyWeaver**, creada por la migración [`002_create_maps.sql`](./migrations/002_create_maps.sql).
 
-Flujos de Drawflow del usuario.
-
-| Campo                | Tipo         | Notas                                                                    |
-| -------------------- | ------------ | ------------------------------------------------------------------------ |
-| `id`                 | INT PK       |                                                                          |
-| `user_id`            | INT FK       | → `users.id` ON DELETE CASCADE                                           |
-| `name`               | VARCHAR(255) | Default `'Sin nombre'`                                                   |
-| `description`        | TEXT         |                                                                          |
-| `trigger_type`       | ENUM         | `manual` \| `webhook` \| `schedule` \| `event` \| `email`                |
-| `schedule_expression`| VARCHAR(100) | Cron (p. ej. `*/5 * * * *`) cuando `trigger_type='schedule'`             |
-| `flow_data`          | JSON         | **Resultado de `drawflow.export()`**. Estructura: `{drawflow: {Home: {data: {nodeId: {...}}}}}` |
-| `tags`               | JSON         | Array de strings para filtrar en la UI                                   |
-| `version`            | INT UNSIGNED | Versionado incremental en cada `update`                                  |
-| `is_active`          | TINYINT(1)   | 0 = en borrador, 1 = escucha triggers                                    |
-| `last_run_at`        | TIMESTAMP    | Se actualiza al terminar cada ejecución                                  |
-| `last_run_status`    | ENUM         | `success` \| `error` \| `running` \| `timeout`                           |
-| `total_runs`         | INT UNSIGNED | Contador acumulado                                                       |
-| `total_errors`       | INT UNSIGNED | Contador acumulado                                                       |
-
-**Reglas de negocio:**
-
-- `AutomationController::save` hace upsert: sin `id` → `create`, con `id` → `update` (el modelo lo restringe por `user_id` para evitar IDOR).
-- `flow_data` se guarda **tal cual** llega del frontend (ya es JSON válido).
-- `last_run_*` y los contadores se actualizan desde el worker de ejecución (ver `execution_logs`).
-
----
-
-### 2.3 `sessions`
-
-Sesiones JWT activas. Sirve para logout global y auditoría de inicios de sesión.
-
-| Campo        | Tipo          | Notas                                                       |
-| ------------ | ------------- | ----------------------------------------------------------- |
-| `id`         | BIGINT PK     |                                                             |
-| `user_id`    | INT FK        |                                                             |
-| `token_hash` | VARCHAR(128)  | **SHA-256 hex del JWT**, nunca el token en claro            |
-| `ip_address` | VARCHAR(45)   |                                                             |
-| `user_agent` | TEXT          |                                                             |
-| `revoked_at` | TIMESTAMP     | NULL mientras esté activa                                   |
-| `expires_at` | TIMESTAMP     | Coincide con `exp` del JWT                                  |
-| `created_at` | TIMESTAMP     |                                                             |
-
-**Reglas:** middleware de autenticación rechaza tokens cuyo hash aparece con `revoked_at` no nulo o `expires_at < NOW()`.
-
----
-
-### 2.4 `credentials_vault`
-
-Bóveda cifrada del usuario.
-
-| Campo             | Tipo         | Notas                                                                           |
-| ----------------- | ------------ | ------------------------------------------------------------------------------- |
-| `id`              | INT PK       |                                                                                 |
-| `user_id`         | INT FK       |                                                                                 |
-| `name`            | VARCHAR(100) | Alias que verá el usuario                                                       |
-| `description`     | VARCHAR(255) |                                                                                 |
-| `service`         | VARCHAR(50)  | `github`, `openai`, `aws`, `slack`, `mysql`...                                  |
-| `credential_type` | ENUM         | `api_key` \| `oauth2` \| `basic_auth` \| `ssh_key` \| `bearer_token` \| `custom`|
-| `encrypted_data`  | TEXT         | Payload en base64 cifrado con **AES-256-GCM**                                   |
-| `encryption_iv`   | VARCHAR(64)  | IV/Nonce en base64                                                              |
-| `encryption_tag`  | VARCHAR(64)  | Auth tag GCM en base64                                                          |
-| `fingerprint`     | VARCHAR(64)  | SHA-256 no reversible, sirve para detectar duplicados y para mostrar `••••xxxx` |
-| `is_valid`        | TINYINT(1)   | Marcado a 0 si una validación externa falla                                     |
-| `last_used_at`    | TIMESTAMP    |                                                                                 |
-| `expires_at`      | TIMESTAMP    | Para tokens OAuth2 o certificados con caducidad                                 |
-
-**Reglas de cifrado (obligatorias):**
-
-1. La clave maestra vive en `.env` como `APP_VAULT_KEY` (32 bytes base64). **Nunca en DB**.
-2. Algoritmo: `openssl_encrypt($plaintext, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $iv, $tag)`.
-3. Estructura del payload en claro antes de cifrar: JSON `{ "value": "...", "meta": {...} }`.
-4. El `fingerprint` = `hash('sha256', $service . ':' . $plaintextValue)`, útil para evitar re-guardar la misma clave.
-
----
-
-### 2.5 `webhooks`
-
-Endpoints HTTP públicos que disparan automatizaciones.
-
-| Campo               | Tipo          | Notas                                                         |
-| ------------------- | ------------- | ------------------------------------------------------------- |
-| `id`                | INT PK        |                                                               |
-| `automation_id`     | INT FK        | → `automations.id`                                            |
-| `user_id`           | INT FK        | Denormalizado para filtrar por dueño sin JOIN                 |
-| `slug`              | VARCHAR(64)   | UNIQUE. URL pública: `/api/webhooks/{slug}`                   |
-| `http_method`       | ENUM          | `GET` \| `POST` \| `PUT` \| `PATCH` \| `DELETE`               |
-| `secret`            | VARCHAR(128)  | HMAC secret → valida cabecera `X-NodeWeaver-Signature`        |
-| `is_active`         | TINYINT(1)    | 0 = pausado                                                   |
-| `rate_limit`        | INT UNSIGNED  | Peticiones/minuto (NULL = sin límite)                         |
-| `allowed_ips`       | JSON          | Array de IPs o CIDR; si es NULL se aceptan todas              |
-| `last_triggered_at` | TIMESTAMP     |                                                               |
-| `trigger_count`     | INT UNSIGNED  | Contador acumulado                                            |
-
-**Reglas:**
-
-- Al crear un webhook, el backend genera `slug` como nanoid de 21 chars y `secret` como `bin2hex(random_bytes(32))`.
-- Al recibir un request: validar `is_active`, `http_method`, opcional firma HMAC y whitelist de IPs; luego encolar una `execution_logs` con `trigger_source='webhook'` y `trigger_reference = webhooks.id`.
-
----
-
-### 2.6 `execution_logs`
-
-Log maestro de cada ejecución (una fila por run).
-
-| Campo               | Tipo            | Notas                                                              |
-| ------------------- | --------------- | ------------------------------------------------------------------ |
-| `id`                | BIGINT PK       |                                                                    |
-| `automation_id`     | INT FK          |                                                                    |
-| `user_id`           | INT FK          | Denormalizado (mismo owner que la automation)                      |
-| `trigger_source`    | ENUM            | `manual` \| `webhook` \| `schedule` \| `api` \| `retry`            |
-| `trigger_reference` | VARCHAR(128)    | ID del webhook, cron job o la ejecución padre (si es retry)        |
-| `status`            | ENUM            | `queued` \| `running` \| `success` \| `error` \| `timeout` \| `cancelled` |
-| `input_payload`     | JSON            | Lo que entra al primer nodo                                        |
-| `output_payload`    | JSON            | Lo que devuelve el último nodo                                     |
-| `error_message`     | TEXT            | Stacktrace abreviado                                               |
-| `error_node_id`     | VARCHAR(64)     | `node_id` de Drawflow donde falló                                  |
-| `duration_ms`       | INT UNSIGNED    | `completed_at - started_at` en milisegundos                        |
-| `nodes_total`       | INT UNSIGNED    | Nº total de nodos en el flujo                                      |
-| `nodes_executed`    | INT UNSIGNED    | Nodos realmente atravesados                                        |
-| `started_at`        | TIMESTAMP(3)    | Precisión de milisegundos                                          |
-| `completed_at`      | TIMESTAMP(3)    | NULL mientras status ∈ {queued, running}                           |
-
-**Ciclo de vida del status:**
-
-```
-queued ──> running ──> success
-                  └──> error      (guarda error_message/error_node_id)
-                  └──> timeout    (ejecución > límite configurado)
-                  └──> cancelled  (usuario pausa/desactiva la automation)
-```
-
----
-
-### 2.7 `execution_node_logs`
-
-Traza granular nodo a nodo. Se crea una fila por cada nodo procesado dentro de un run.
-
-| Campo          | Tipo          | Notas                                               |
-| -------------- | ------------- | --------------------------------------------------- |
-| `id`           | BIGINT PK     |                                                     |
-| `execution_id` | BIGINT FK     | → `execution_logs.id`                               |
-| `node_id`      | VARCHAR(64)   | Mismo id que en `automations.flow_data`             |
-| `node_type`    | VARCHAR(64)   | `http_request`, `email`, `if`, `transform`, ...    |
-| `sequence`     | INT UNSIGNED  | Orden topológico (1, 2, 3, ...)                     |
-| `status`       | ENUM          | `success` \| `error` \| `skipped`                   |
-| `input_data`   | JSON          |                                                     |
-| `output_data`  | JSON          |                                                     |
-| `error_message`| TEXT          |                                                     |
-| `duration_ms`  | INT UNSIGNED  |                                                     |
-| `started_at`   | TIMESTAMP(3)  |                                                     |
-
-Ideal para la vista "debugger" del dashboard: reproducir paso a paso lo que vio cada nodo.
-
----
-
-### 2.8 `automation_stats`
-
-Rollup diario precalculado para los KPIs del dashboard.
-
-| Campo               | Tipo            | Notas                                      |
-| ------------------- | --------------- | ------------------------------------------ |
-| `id`                | BIGINT PK       |                                            |
-| `automation_id`     | INT FK          | UNIQUE junto a `stats_date`                |
-| `user_id`           | INT FK          | Denormalizado                              |
-| `stats_date`        | DATE            | Día natural (UTC) del agregado             |
-| `runs_success`      | INT UNSIGNED    |                                            |
-| `runs_error`        | INT UNSIGNED    |                                            |
-| `runs_timeout`      | INT UNSIGNED    |                                            |
-| `runs_total`        | INT UNSIGNED    | = success + error + timeout (+ cancelled)  |
-| `avg_duration_ms`   | INT UNSIGNED    |                                            |
-| `max_duration_ms`   | INT UNSIGNED    |                                            |
-| `total_duration_ms` | BIGINT UNSIGNED |                                            |
-
-Actualización: cron nocturno que hace `INSERT ... ON DUPLICATE KEY UPDATE` desde `execution_logs` del día anterior, o trigger en tiempo real al cerrar cada ejecución.
-
----
-
-### 2.9 `maps` ✅ ACTIVA (StudyWeaver)
-
-Mapas conceptuales del usuario. **Tabla canónica de StudyWeaver** desde la migración [`001_create_maps.sql`](./migrations/001_create_maps.sql). Sustituye en propósito a `automations` (que queda DEPRECATED, ver §2.2 y ADR-04).
-
-| Campo           | Tipo          | Obligatorio | Notas                                                                                  |
-| --------------- | ------------- | ----------- | -------------------------------------------------------------------------------------- |
-| `id`            | INT PK        | sí          | Autoincremental.                                                                       |
-| `user_id`       | INT FK        | sí          | → `users.id` ON DELETE CASCADE. Borra el mapa si la cuenta se elimina (RGPD).          |
-| `title`         | VARCHAR(200)  | sí          | Default `'Mapa sin título'`. Editable inline en el editor.                             |
-| `description`   | TEXT          | no          | Subtítulo o resumen del mapa. NULL en mapas recién creados.                            |
-| `is_public`     | TINYINT(1)    | sí          | Default `0`. `1` = visible en el feed público (Fase Social futura).                    |
-| `drawflow_json` | LONGTEXT      | no          | **Fuente de verdad del mapa.** Resultado tal cual de `editor.export()` de Drawflow. NULL en mapas recién creados sin contenido. |
-| `created_at`    | DATETIME      | sí          | Default `CURRENT_TIMESTAMP`.                                                           |
-| `updated_at`    | DATETIME      | sí          | Default `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`. Refleja el último auto-save.  |
+| Campo           | Tipo                                  | Notas                                                                         |
+| --------------- | ------------------------------------- | ----------------------------------------------------------------------------- |
+| `id`            | INT PK AUTO_INCREMENT                 |                                                                               |
+| `user_id`       | INT NOT NULL                          | → `users.id` ON DELETE CASCADE.                                               |
+| `title`         | VARCHAR(200) NOT NULL                 | Default `'Mapa sin título'`. Editable inline en el editor.                    |
+| `description`   | TEXT NULL                             | Subtítulo o resumen. NULL en mapas recién creados.                            |
+| `is_public`     | TINYINT(1) NOT NULL DEFAULT 0         | `1` = visible en el feed público (Fase Comunidad futura).                     |
+| `drawflow_json` | LONGTEXT NULL                         | **Fuente de verdad del mapa.** Resultado tal cual de `editor.export()` de Drawflow. NULL en mapas recién creados sin contenido. |
+| `created_at`    | DATETIME DEFAULT CURRENT_TIMESTAMP    |                                                                               |
+| `updated_at`    | DATETIME ON UPDATE CURRENT_TIMESTAMP  | Refleja el último auto-save.                                                  |
 
 **Reglas de negocio:**
 
 - Cada mapa pertenece exclusivamente a un usuario. **Ownership por `user_id` en cada query** (anti-IDOR). El controller siempre añade `WHERE user_id = :uid` en `SELECT`/`UPDATE`/`DELETE`.
-- `drawflow_json` se guarda **sin parsear ni transformar**: el frontend serializa con `editor.export()`, el backend valida que sea JSON parseable y persiste el string. Defendible: una sola fuente de verdad, sin desincronización.
-- No se denormalizan nodos/edges en tablas separadas en el MVP. Justificación en ADR-04: mientras no haya queries que filtren por concepto individual, denormalizar añade complejidad sin beneficio.
-- Auto-save desde el frontend: tras 1.5 s de inactividad en el editor se llama a `POST maps/save` con el `drawflow_json` actualizado.
-- Mapas "vacíos" (recién creados, sin nodos): `drawflow_json IS NULL`. El frontend los abre en un canvas vacío sin invocar `editor.import()`.
+- `drawflow_json` se guarda **sin parsear**: el frontend serializa con `editor.export()`, el backend valida que sea JSON parseable y persiste el string. Una sola fuente de verdad, sin riesgo de desincronización.
+- No se denormalizan nodos/edges en tablas separadas en el MVP (justificado en ADR-05). Si en el futuro hace falta filtrar por concepto individual (búsqueda full-text, stats por nodo), se añade en una migración posterior.
+- Auto-save: tras 1.5 s de inactividad en el editor, el frontend llama a `POST maps/save` con el `drawflow_json` actualizado.
+- Mapas vacíos (recién creados): `drawflow_json IS NULL`. El frontend abre canvas vacío sin invocar `editor.import()`.
 
 **Índices:**
 
-- `PRIMARY KEY (id)`.
+- `PRIMARY KEY (id)`
 - `INDEX idx_user_updated (user_id, updated_at)` — listado del dashboard ordenado por última edición.
 - `FOREIGN KEY fk_maps_user (user_id)` → `users.id` ON DELETE CASCADE ON UPDATE CASCADE.
 
 ---
 
-## 3. Diccionario de ENUMs (resumen rápido)
+## 3. Tablas planificadas (DDL listo, ejecución diferida)
 
-| Tabla.Columna                        | Valores                                                           |
-| ------------------------------------ | ----------------------------------------------------------------- |
-| `users.role`                         | `free`, `pro`, `enterprise`, `admin`                              |
-| `users.status`                       | `pending`, `active`, `suspended`, `deleted`                       |
-| `automations.trigger_type`           | `manual`, `webhook`, `schedule`, `event`, `email`                 |
-| `automations.last_run_status`        | `success`, `error`, `running`, `timeout`                          |
-| `credentials_vault.credential_type`  | `api_key`, `oauth2`, `basic_auth`, `ssh_key`, `bearer_token`, `custom` |
-| `webhooks.http_method`               | `GET`, `POST`, `PUT`, `PATCH`, `DELETE`                           |
-| `execution_logs.trigger_source`      | `manual`, `webhook`, `schedule`, `api`, `retry`                   |
-| `execution_logs.status`              | `queued`, `running`, `success`, `error`, `timeout`, `cancelled`   |
-| `execution_node_logs.status`         | `success`, `error`, `skipped`                                     |
+> Cada una vive en su archivo `.planned` dentro de [`DATA/migrations/`](./migrations/). Cuando llegue su Fase del roadmap, se renombra quitando `.planned` y se ejecuta en phpMyAdmin. Tener el DDL escrito desde ya cumple el RA "diseño completo de BD" del módulo 0613 sin obligar a implementar todo en MVP.
 
----
+### 3.1 `flashcards` (Fase Flashcards) — [`003_create_flashcards.sql.planned`](./migrations/003_create_flashcards.sql.planned)
 
-## 4. Relaciones (Foreign Keys)
+Repetición espaciada con algoritmo **SM-2 simplificado**. Cada flashcard puede o no estar vinculada a un mapa concreto (campo `map_id` nullable).
 
-Todas con `ON DELETE CASCADE ON UPDATE CASCADE`.
+| Campo              | Tipo                                  | Notas                                                          |
+| ------------------ | ------------------------------------- | -------------------------------------------------------------- |
+| `id`               | INT PK AUTO_INCREMENT                 |                                                                |
+| `user_id`          | INT NOT NULL                          | → `users.id` ON DELETE CASCADE.                                |
+| `map_id`           | INT NULL                              | → `maps.id` **ON DELETE SET NULL**: la tarjeta sobrevive si se borra el mapa origen (no perder progreso de estudio). |
+| `front`            | TEXT NOT NULL                         | Pregunta o concepto.                                           |
+| `back`             | TEXT NOT NULL                         | Respuesta o explicación.                                       |
+| `ease_factor`      | DECIMAL(3,2) NOT NULL DEFAULT 2.50    | Facilidad subjetiva. Mínimo 1.30, típico 2.50.                 |
+| `interval_days`    | INT NOT NULL DEFAULT 0                | Días hasta el próximo repaso. 0 = hoy.                         |
+| `repetitions`      | INT NOT NULL DEFAULT 0                | Aciertos consecutivos. Resetea a 0 al fallar.                  |
+| `next_review_at`   | DATE NOT NULL                         | Fecha del próximo repaso.                                      |
+| `last_reviewed_at` | DATETIME NULL                         | Última sesión de repaso.                                       |
+| `created_at`       | DATETIME DEFAULT CURRENT_TIMESTAMP    |                                                                |
+| `updated_at`       | DATETIME ON UPDATE CURRENT_TIMESTAMP  |                                                                |
 
-**Activas (StudyWeaver):**
+**Lógica SM-2 simplificada (en backend al recibir feedback del usuario):**
 
-| FK              | Padre      | Hijo            |
-| --------------- | ---------- | --------------- |
-| `fk_maps_user`  | `users.id` | `maps.user_id`  |
+- "Acierto fácil" → `repetitions++`, `interval_days = max(1, round(interval_days * ease_factor * 1.3))`, `ease_factor += 0.10` (cap a 2.50).
+- "Acierto" → `repetitions++`, `interval_days = max(1, round(interval_days * ease_factor))`, `ease_factor` sin cambio.
+- "Fallo" → `repetitions = 0`, `interval_days = 1`, `ease_factor = max(1.30, ease_factor - 0.20)`.
+- `next_review_at = CURDATE() + INTERVAL interval_days DAY`.
 
-**Heredadas (NodeWeaver, DEPRECATED):**
-
-| FK                                | Padre            | Hijo                   |
-| --------------------------------- | ---------------- | ---------------------- |
-| `fk_automations_user`             | `users.id`       | `automations.user_id`  |
-| `fk_sessions_user`                | `users.id`       | `sessions.user_id`     |
-| `fk_credentials_user`             | `users.id`       | `credentials_vault.user_id` |
-| `fk_webhooks_user`                | `users.id`       | `webhooks.user_id`     |
-| `fk_webhooks_automation`          | `automations.id` | `webhooks.automation_id`|
-| `fk_exec_user`                    | `users.id`       | `execution_logs.user_id` |
-| `fk_exec_automation`              | `automations.id` | `execution_logs.automation_id` |
-| `fk_node_execution`               | `execution_logs.id` | `execution_node_logs.execution_id` |
-| `fk_stats_user`                   | `users.id`       | `automation_stats.user_id` |
-| `fk_stats_automation`             | `automations.id` | `automation_stats.automation_id` |
+**Índices:** `idx_user_due (user_id, next_review_at)` para "tarjetas a repasar hoy".
 
 ---
 
-## 5. Índices de performance clave
+### 3.2 `likes` (Fase Comunidad) — [`004_create_likes.sql.planned`](./migrations/004_create_likes.sql.planned)
 
-**Activos (StudyWeaver):**
+Likes a mapas públicos. **PK compuesta `(user_id, map_id)`** para impedir likes duplicados a nivel de BD (anti-spam por integridad, sin checks en el controller).
 
-- `users(email)` UNIQUE — login O(1).
-- `users(verification_token)`, `users(reset_token)` — lookup directo en los flujos de auth.
-- `maps(user_id, updated_at)` compuesto — listado del dashboard ordenado por última edición.
+| Campo        | Tipo                                | Notas                              |
+| ------------ | ----------------------------------- | ---------------------------------- |
+| `user_id`    | INT NOT NULL                        | Parte de la PK compuesta.          |
+| `map_id`     | INT NOT NULL                        | Parte de la PK compuesta.          |
+| `created_at` | DATETIME DEFAULT CURRENT_TIMESTAMP  |                                    |
 
-**Heredados (NodeWeaver, DEPRECATED — sin uso desde el backend StudyWeaver):**
+**Patrón de inserción:** `INSERT IGNORE INTO likes ...` — los duplicados son no-op silencioso.
 
-- `automations(user_id)` + `automations(is_active)` — listado del dashboard de automatizaciones.
-- `sessions(token_hash)` UNIQUE — validación de JWT en cada request.
-- `execution_logs(user_id, started_at)` compuesto — timeline del usuario.
-- `execution_logs(status)` — workers que hacen `WHERE status='queued'`.
-- `automation_stats(automation_id, stats_date)` UNIQUE — upsert del rollup.
-- `webhooks(slug)` UNIQUE — routing O(1) desde URL pública.
+**Índices:** `PRIMARY KEY (user_id, map_id)` + `INDEX idx_map (map_id)` para `COUNT(*)` por mapa.
 
 ---
 
-## 6. Convenciones y decisiones de diseño
+### 3.3 `comments` (Fase Comunidad) — [`005_create_comments.sql.planned`](./migrations/005_create_comments.sql.planned)
 
-1. **Charset**: `utf8mb4_unicode_ci` en todas las tablas (soporta emoji y normalización Unicode correcta).
-2. **Timestamps**: `created_at` / `updated_at` en cada tabla mutable. Los logs usan `TIMESTAMP(3)` para precisión de ms.
-3. **IDs**: `INT` para entidades estables (users, automations, credentials, webhooks); `BIGINT UNSIGNED` para tablas de alto volumen (sessions, execution_logs, execution_node_logs, automation_stats).
-4. **JSON**: se prefiere a tablas pivote para estructuras que solo lee/edita la aplicación (Drawflow, payloads, preferencias, IPs whitelist).
-5. **Soft delete**: no se usa borrado lógico salvo `users.status='deleted'`. Resto confía en `ON DELETE CASCADE`.
-6. **Privacidad**: nunca se guardan tokens JWT en claro (solo su hash SHA-256 en `sessions`) ni secretos en claro (todo en `credentials_vault` pasa por AES-256-GCM).
-7. **Super User**: `id=999` es virtual, sólo vive en `.env`. Ningún SELECT/JOIN lo devuelve jamás. Los controladores deben cortocircuitar ese ID antes de tocar la DB.
+Comentarios planos sobre mapas públicos. **Sin replies/threading** en MVP — defendible: "el árbol de comentarios añade complejidad UI/UX que no aporta valor académico evaluable".
+
+| Campo        | Tipo                                  | Notas                              |
+| ------------ | ------------------------------------- | ---------------------------------- |
+| `id`         | INT PK AUTO_INCREMENT                 |                                    |
+| `map_id`     | INT NOT NULL                          | → `maps.id` ON DELETE CASCADE.     |
+| `user_id`    | INT NOT NULL                          | → `users.id` ON DELETE CASCADE.    |
+| `body`       | TEXT NOT NULL                         | Texto plano. Sanitizado en backend. |
+| `created_at` | DATETIME DEFAULT CURRENT_TIMESTAMP    |                                    |
+| `updated_at` | DATETIME ON UPDATE CURRENT_TIMESTAMP  |                                    |
+
+**Índices:** `idx_map_created (map_id, created_at)` para listado paginado por mapa.
 
 ---
 
-## 7. Cómo usar este mapa (para agentes de IA)
+### 3.4 `quizzes` y `quiz_attempts` — sin DDL todavía
+
+La Fase Quizzes (si se implementa) genera el quiz vía IA bajo demanda y no necesita cachearlo en BD para la primera versión. Si llega el momento de cachear, se añadirán dos tablas:
+
+- `quizzes(id, map_id, user_id, questions_json, created_at)` — caché del quiz generado.
+- `quiz_attempts(id, quiz_id, user_id, score, answers_json, completed_at)` — resultados.
+
+DDL no escrito todavía: el alumno lo redactará si llega esa fase.
+
+---
+
+## 4. Capa heredada de NodeWeaver: ELIMINADA
+
+> Histórico para que el tribunal y futuros agentes IA entiendan **por qué** el repo se llamaba NodeWeaver y la BD `autoflow`.
+
+La base `autoflow` originalmente contenía 5 tablas del proyecto NodeWeaver (plataforma no-code de automatización con n8n):
+
+| Tabla legacy     | Estado | Por qué se eliminó                                                      |
+| ---------------- | ------ | ----------------------------------------------------------------------- |
+| `users`          | **Conservada** | Compartida con StudyWeaver (ver §2.1). Columnas 2FA inertes documentadas. |
+| `automations`    | **DROP** (migración 001) | Workflows n8n con `n8n_workflow_id`, `trigger_type`. Vocabulario fuera de dominio StudyWeaver. |
+| `credentials`    | **DROP** (migración 001) | Bóveda de API keys de servicios externos para los flujos n8n. StudyWeaver guarda su única API key (`OPENAI_API_KEY`) en `.env` del backend. |
+| `execution_logs` | **DROP** (migración 001) | Trazas de ejecución de cada workflow. Sin sentido sin workflows. |
+| `sessions`       | **DROP** (migración 001) | Token JWT en claro + auditoría de logins. JWT es stateless por diseño (validación por firma + `exp`); esta tabla era redundante incluso en NodeWeaver. |
+
+Decisión y alternativas en ADR-05 (que supera al ADR-04 inicial). El borrado se hace en el local del alumno ejecutando `001_init_studyweaver.sql` en phpMyAdmin.
+
+---
+
+## 5. Convenciones y decisiones de diseño
+
+1. **Charset/collation.** Las tablas StudyWeaver nuevas usan `utf8mb4` con `utf8mb4_unicode_ci` (orden alfabético respeta acentos y `ñ`). La heredada `users` mantiene `utf8mb4_general_ci` para no tocar datos existentes.
+2. **Timestamps.** `created_at` / `updated_at` en cada tabla mutable. No se usa `TIMESTAMP(3)` (precisión ms): MVP no necesita.
+3. **IDs.** `INT AUTO_INCREMENT` para todo. No hay tablas de alto volumen que justifiquen `BIGINT`.
+4. **JSON.** `LONGTEXT` con `editor.export()` directo (`maps.drawflow_json`). No se usa el tipo `JSON` nativo de MariaDB para mantener compatibilidad con MySQL 5.7 (despliegue cloud futuro podría toparse con esa versión).
+5. **Soft delete.** No se usa borrado lógico. Todas las relaciones confían en `ON DELETE CASCADE` (RGPD: borrar la cuenta limpia el rastro).
+6. **Anti-IDOR.** Cada controller que lee/modifica una entidad incluye `WHERE user_id = :uid` antes de servir o tocar la fila. No hay endpoints públicos sin filtro de ownership salvo el feed (`is_public = 1`) de la Fase Comunidad.
+7. **Super User.** `id = 999` es virtual (sólo en `.env`). Ningún `SELECT` lo devuelve jamás. Los controladores deben cortocircuitar ese ID antes de consultar la BD.
+8. **Migraciones.** Sistema artesanal sin runner: archivos `.sql` numerados en [`DATA/migrations/`](./migrations/), ejecutados a mano en phpMyAdmin. Idempotentes (`CREATE TABLE IF NOT EXISTS`, `DROP TABLE IF EXISTS`) cuando aplica. Los `.sql.planned` están escritos pero **no se ejecutan** hasta que llega su Fase.
+
+---
+
+## 6. Cómo usar este mapa (para agentes de IA)
 
 Cuando necesites:
 
-- **Escribir una query** → localiza la tabla en §2, respeta sus enums en §3 y no inventes columnas. **No consultes tablas marcadas DEPRECATED** desde código nuevo.
-- **Añadir una feature** → comprueba si cabe en las tablas activas antes de proponer nuevas. Si necesitas crear tabla, redacta una nueva migración en `DATA/migrations/NNN_descripcion.sql`.
-- **Crear migraciones** → añade un nuevo `.sql` en [`DATA/migrations/`](./migrations/) (numerado, idempotente con `IF NOT EXISTS` cuando aplique) y documenta el cambio aquí en §2 y §3 en el mismo commit.
-- **Depurar errores FK** → consulta §4 para entender qué cascadas dispara un DELETE.
-- **Optimizar consultas** → revisa §5; si tu query no pega contra un índice, justifica añadir uno nuevo.
+- **Escribir una query** → localiza la tabla en §2 y respeta sus columnas reales. **No inventes columnas** ni consultes tablas DROP del legacy. Si te falta una columna, crea migración nueva en `006_*.sql` y documéntala aquí.
+- **Añadir una feature** → comprueba si cabe en las tablas activas (§2) o en una planificada (§3). Si no cabe, redacta nueva migración numerada y actualiza este documento en el mismo commit.
+- **Crear migración** → `DATA/migrations/NNN_descripcion.sql` (idempotente cuando aplique). Si la feature aún no se implementa pero quieres dejar el diseño listo, añade extensión `.planned`.
+- **Depurar errores FK** → consulta §2/§3 para ver qué `ON DELETE` propaga cada relación.
 
-> **Regla de oro**: si añades una migración o cambias el esquema, **tienes que actualizar este documento en el mismo commit**. Los agentes de IA confían en este archivo como fuente de verdad sin abrir la DB.
+> **Regla de oro**: si modificas el esquema o añades migración, **actualiza este documento en el mismo commit**. Los agentes IA confían en este archivo como fuente de verdad sin abrir MySQL.

@@ -116,7 +116,7 @@ Aplicar **Headless MVC**: el backend PHP queda como API REST que devuelve **siem
 ## ADR-04 — Esquema de mapas: tabla `maps` nueva, `automations` queda DEPRECATED
 
 - **Fecha:** 2026-04-25
-- **Estado:** aceptado
+- **Estado:** **superado por ADR-05** (al revisar el dump real `autoflow.sql` se vio que el esquema legacy era minimalista y borrable; la decisión "dejar como zombie" se reemplazó por "DROP físico en migración 001"). El ADR queda como traza histórica del razonamiento previo a ver el dump.
 
 ### Contexto
 
@@ -165,6 +165,61 @@ La tabla `automations` (y todo su árbol heredado: `sessions`, `credentials_vaul
 
 ---
 
-## ADR-05 — *(siguiente decisión)*
+## ADR-05 — Rediseño completo del esquema StudyWeaver: drop legacy, MVP mínimo, planificadas con DDL
+
+- **Fecha:** 2026-04-25
+- **Estado:** aceptado (supera al ADR-04)
+
+### Contexto
+
+Tras aceptar el ADR-04, el alumno proporcionó el dump real de `autoflow` (`autoflow.sql`, generado desde phpMyAdmin). Comparando con [`DATA/database_context.md`](../DATA/database_context.md) que había sido escrito inicialmente, se constataron varias divergencias importantes:
+
+1. El doc anterior describía 8 tablas (incluyendo `webhooks`, `execution_node_logs`, `automation_stats`, `credentials_vault`); el dump muestra **5 tablas reales**: `users`, `automations`, `credentials`, `execution_logs`, `sessions`.
+2. El esquema real de `automations` es minimalista (10 columnas con `n8n_workflow_id`, sin `tags`/`version`/`last_run_*`/contadores), no las 17 inventadas por el doc.
+3. El esquema real de `credentials` no tiene cifrado AES-256-GCM ni `fingerprint`; sólo `service`, `encrypted_data`, `is_valid`.
+4. `sessions` guarda `token` en claro (500 chars), no `token_hash` SHA-256, y nunca se consultaba ni siquiera en NodeWeaver (JWT es stateless).
+5. La columna del flow es `automations.flow_config` (con `CHECK (json_valid(...))`), no `automations.flow_data` como decían el doc y el `MODEL/automation.php` ya borrado.
+
+Con esta información real, mantener las 4 tablas legacy "como zombies" (decisión del ADR-04) es injustificable: ningún código activo las usa, son minimalistas y su presencia confunde al tribunal y a futuros agentes IA.
+
+Además, el alumno decidió **diseñar la BD desde la perspectiva StudyWeaver**, no parchear sobre la de NodeWeaver. Esto incluye documentar y dejar el DDL listo de las tablas que aún no se implementan pero están en el roadmap (Fase Flashcards y Fase Comunidad), de manera que el RA "diseño completo de BD" del módulo 0613 se cubra sin obligar a implementar todo en MVP.
+
+### Decisión
+
+1. **Drop físico** del legacy NodeWeaver en una migración inicial: ejecutar `DROP TABLE IF EXISTS execution_logs, automations, credentials, sessions;` (con `FOREIGN_KEY_CHECKS = 0` para libertad de orden). Migración: [`DATA/migrations/001_init_studyweaver.sql`](../DATA/migrations/001_init_studyweaver.sql).
+2. **Mantener `users`** tal cual, con sus columnas 2FA inertes (`two_factor_enabled`, `two_factor_secret`) documentadas como tales. Razón: tres usuarios reales con password hashes y tokens activos; reescribirla pierde la cuenta de prueba (id=2 `active`).
+3. **Mantener el nombre de la base `autoflow`** para no tocar `.env` ni `DATA/database.php`. Defendible: nombre histórico ligado al repositorio `NodeWeaver-`. Renombrar a `studyweaver` se puede plantear en el script de provisión cloud.
+4. **Renombrar la migración de `maps`** de `001_create_maps.sql` a `002_create_maps.sql` para que el orden lógico quede `001 init → 002 maps → 003+ futuras`.
+5. **Diseñar y dejar listo el DDL** de las 3 tablas planificadas, en archivos `.sql.planned` que NO se ejecutan hasta que llegue su Fase:
+    - `flashcards` (Fase Flashcards) con algoritmo SM-2 simplificado: `ease_factor`, `interval_days`, `repetitions`, `next_review_at`. FK al mapa con `ON DELETE SET NULL` para que la tarjeta sobreviva al borrado del mapa origen.
+    - `likes` (Fase Comunidad) con PK compuesta `(user_id, map_id)` para impedir duplicados a nivel de BD.
+    - `comments` (Fase Comunidad) planos, sin replies/threading, índice compuesto `(map_id, created_at)` para listado paginado.
+6. **No diseñar todavía** `quizzes` y `quiz_attempts`: la Fase Quizzes (si llega) generará el quiz vía IA bajo demanda y no necesita cachear. Si en el momento se decide cachear, se redacta el DDL entonces.
+
+Justificación de no denormalizar `nodes`/`edges` en MVP heredada del ADR-04: `maps.drawflow_json` como única fuente de verdad evita el bug clásico de "guardar en JSON, olvidar guardar en `nodes`, lectura desincronizada". La denormalización se añade cuando aparezcan queries que la justifiquen (búsqueda full-text, stats por concepto).
+
+### Alternativas consideradas
+
+1. **Mantener legacy como zombie** (decisión inicial ADR-04) — descartada al ver el dump: las tablas legacy son minimalistas y borrarlas no tiene riesgo. Mantenerlas confunde al tribunal y a futuros agentes.
+2. **Reescribir `users` desde cero** quitando las columnas 2FA — descartada: tres usuarios reales (incluyendo la cuenta de prueba `id=2 active`) se perderían. La columna inerte sólo cuesta 9 bytes y queda documentada.
+3. **Renombrar la base a `studyweaver`** — descartada en este sprint: obliga a tocar `.env` (regla CLAUDE.md prohíbe) y reconfigurar todas las herramientas locales (phpMyAdmin, Workbench). Defendible mantener `autoflow` como nombre histórico, replanificable en provisión cloud.
+4. **No documentar las tablas planificadas** hasta que se implementen — descartada: el RA "diseño completo de BD" valora ver el roadmap reflejado en archivos concretos. Coste de documentación ≈ 30 min, beneficio defensivo claro.
+5. **Implementar ya `flashcards`/`likes`/`comments`** en MVP — descartada por timebox (8 días hasta entrega): sin `maps` funcionando primero, las dependencias rompen el orden lógico.
+
+### Consecuencias
+
+- **Positivas:** base limpia con sólo lo que StudyWeaver necesita (`users` + `maps`); roadmap completo documentado y con DDL listo en `.planned`; convenciones uniformes (`utf8mb4_unicode_ci`, `INT AUTO_INCREMENT`, FKs CASCADE); tribunal puede revisar el diseño completo en `database_context.md` sin abrir MySQL; el alumno defiende cada columna activa sin columnas inertes que justificar (salvo las 2FA en `users`, ya documentadas).
+- **Negativas / trade-offs:** el alumno debe ejecutar `001_init_studyweaver.sql` en phpMyAdmin antes de seguir; convivencia temporal con la columna `verified_at` que el backend no rellena (deuda técnica documentada); `users.password` permite NULL por compatibilidad con login Google, lo cual obliga a comprobar en código que el usuario tenga `password` antes de validar (`AuthController::login` ya lo hace).
+- **Línea futura:** simplificación de `users` (drop `two_factor_*`, drop `verified_at`) cuando se implemente o se descarte definitivamente 2FA. Renombrado de la base a `studyweaver` en script de provisión cloud.
+
+### Referencias
+
+- Dump real: `autoflow.sql` aportado por el alumno (no commiteado por contener datos personales).
+- [`DATA/migrations/`](../DATA/migrations/) — `001_init_studyweaver.sql`, `002_create_maps.sql`, `003_create_flashcards.sql.planned`, `004_create_likes.sql.planned`, `005_create_comments.sql.planned`.
+- [`DATA/database_context.md`](../DATA/database_context.md) reescrito para reflejar la realidad y las planificadas.
+
+---
+
+## ADR-06 — *(siguiente decisión)*
 
 *Cuando tomes la siguiente decisión técnica no trivial, añade aquí. Ejemplos pendientes: integración de Drawflow (paquete npm vs script local) y su wrapper React, proveedor IA (OpenAI vs Gemini) y modelo, librería para parsear PDF, proveedor cloud (AWS vs VPS+Vercel), estrategia de paginación del feed.*
