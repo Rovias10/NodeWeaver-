@@ -113,6 +113,58 @@ Aplicar **Headless MVC**: el backend PHP queda como API REST que devuelve **siem
 
 ---
 
-## ADR-04 — *(siguiente decisión)*
+## ADR-04 — Esquema de mapas: tabla `maps` nueva, `automations` queda DEPRECATED
 
-*Cuando tomes la siguiente decisión técnica no trivial, añade aquí. Ejemplos pendientes: proveedor cloud (AWS vs VPS+Vercel), modelo IA (OpenAI vs Gemini), librería para parsear PDF, esquema concreto de tabla `nodes` (JSON único vs columnas separadas), estrategia de paginación del feed.*
+- **Fecha:** 2026-04-25
+- **Estado:** aceptado
+
+### Contexto
+
+La feature core de StudyWeaver (Fase Maps, ver [`docs/maps-plan.md`](./maps-plan.md)) requiere persistir mapas conceptuales: cada mapa es un grafo de nodos y aristas serializado por Drawflow vía `editor.export()`.
+
+El backend heredado de NodeWeaver ya tiene una tabla `automations` con un campo `flow_data JSON` que también almacena el output de `editor.export()`. La pregunta es si reciclarla o crear una tabla nueva. Los caminos posibles eran:
+
+1. **Reciclar** `automations` renombrando o sólo dejando de poblar las columnas n8n.
+2. **Crear** tabla `maps` nueva con esquema mínimo de StudyWeaver.
+3. **Vista** sobre `automations` que exponga sólo las columnas relevantes.
+
+La tabla `automations` arrastra 11 columnas n8n-específicas que no aplican a un mapa conceptual: `trigger_type`, `schedule_expression`, `tags`, `version`, `is_active`, `last_run_at`, `last_run_status`, `total_runs`, `total_errors`, además de la relación con `webhooks`, `execution_logs`, `execution_node_logs`, `automation_stats`. Documentado en [`DATA/database_context.md` §2.2](../DATA/database_context.md).
+
+### Decisión
+
+Crear **tabla nueva `maps`** con esquema mínimo viable centrado en el dominio de mapas conceptuales (ver migración [`DATA/migrations/001_create_maps.sql`](../DATA/migrations/001_create_maps.sql) y [`DATA/database_context.md` §2.9](../DATA/database_context.md)):
+
+```sql
+maps(id, user_id, title, description, is_public, drawflow_json, created_at, updated_at)
++ FK fk_maps_user(user_id) → users(id) ON DELETE CASCADE
++ INDEX idx_user_updated(user_id, updated_at)
+```
+
+`drawflow_json` (LONGTEXT) es la fuente de verdad. **No se denormalizan** nodos/edges en tablas separadas en el MVP.
+
+La tabla `automations` (y todo su árbol heredado: `sessions`, `credentials_vault`, `webhooks`, `execution_logs`, `execution_node_logs`, `automation_stats`) queda **DEPRECATED**: ningún controller del backend StudyWeaver la consulta. Físicamente se mantiene en MySQL local para preservar el historial de la fase pre-pivote, pero se omitiría al provisionar el esquema en producción cloud.
+
+### Alternativas consideradas
+
+1. **Reciclar `automations` renombrando** — descartada: dejaría 11 columnas n8n inertes que el tribunal preguntaría inevitablemente («¿qué hace `trigger_type='webhook'` en un mapa conceptual?»). Indefendible. El coste de "ahorrar" un `CREATE TABLE` no compensa la deuda de explicación.
+2. **Vista** sobre `automations` que exponga sólo las columnas relevantes — descartada: no resuelve nada, la tabla física sigue ahí con su deuda y añade indirección que complica los `INSERT`/`UPDATE` (vistas en MySQL no son siempre actualizables).
+3. **Denormalizar nodos/edges** ya en M0 (tablas `nodes` y `edges` aparte como plantea [`docs/arquitectura.md` §2](./arquitectura.md)) — descartada para el MVP: introduce el clásico bug de "guardas en JSON, olvidas guardar en `nodes`, lectura desincronizada". Se mantiene una sola fuente de verdad y se planifica como mejora futura cuando aparezcan queries que filtren por concepto individual (búsqueda full-text, stats por nodo, feed social).
+4. **Eliminar físicamente** `automations` y dependientes con `DROP TABLE` en M0 — descartada: rompe backups y no aporta valor en local; la limpieza definitiva se hace en el script de provisión cloud (Fase Despliegue), donde el esquema se genera desde cero a partir de las migraciones activas.
+
+### Consecuencias
+
+- **Positivas:** vocabulario limpio (`title`, `description`, `is_public`, `drawflow_json`); ninguna columna inerte que defender; coste de migración ≈ 5 min (un `CREATE TABLE`); ownership por `user_id` claramente reflejada en el índice y la FK; `ON DELETE CASCADE` cubre RGPD sin código extra.
+- **Negativas / trade-offs:** convivencia temporal en local de las dos capas (StudyWeaver activa vs NodeWeaver heredada); requiere disciplina para no reusar tablas DEPRECATED desde código nuevo (mitigado con la marca explícita en el `database_context.md`).
+- **Línea futura:** denormalización opcional `nodes` + `edges` cuando lleguen queries por concepto. Limpieza física del árbol NodeWeaver en el script de despliegue cloud.
+
+### Referencias
+
+- [`docs/maps-plan.md` §1.1](./maps-plan.md) — análisis comparado de las 3 opciones.
+- [`DATA/migrations/001_create_maps.sql`](../DATA/migrations/001_create_maps.sql) — DDL aplicado.
+- [`DATA/database_context.md` §2.9](../DATA/database_context.md) — esquema y reglas de negocio.
+
+---
+
+## ADR-05 — *(siguiente decisión)*
+
+*Cuando tomes la siguiente decisión técnica no trivial, añade aquí. Ejemplos pendientes: integración de Drawflow (paquete npm vs script local) y su wrapper React, proveedor IA (OpenAI vs Gemini) y modelo, librería para parsear PDF, proveedor cloud (AWS vs VPS+Vercel), estrategia de paginación del feed.*

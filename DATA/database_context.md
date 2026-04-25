@@ -1,22 +1,36 @@
-# NodeWeaver - Database Context Map
+# StudyWeaver — Database Context Map
 
 > Mapa de la base de datos `autoflow` para que cualquier agente de IA (Cursor, Gemini, Antigravity, Copilot...) entienda el modelo de datos **sin necesidad de consultar el servidor MySQL**.
 >
-> Fuente de verdad: [`DATA/schema.sql`](./schema.sql).
+> Migraciones aplicadas a mano: [`DATA/migrations/`](./migrations/) (sistema sin runner automático; el alumno ejecuta cada `.sql` en phpMyAdmin).
 > Conexión: [`DATA/database.php`](./database.php) (PDO, MariaDB 10.4+, charset `utf8mb4_unicode_ci`).
 
 ---
 
 ## 1. Visión general
 
-NodeWeaver es una plataforma de automatización tipo n8n con:
+StudyWeaver (repositorio histórico `NodeWeaver-`, ver ADR-01) es una plataforma de **estudio personal con mapas conceptuales e IA**. Tras la pivotación, el modelo de datos vive en dos capas:
+
+- **Capa StudyWeaver activa** (la que usa el código nuevo):
+  - `users` — cuentas, perfil, seguridad. Sin cambios respecto a la fase NodeWeaver.
+  - `maps` — mapas conceptuales del usuario, con `drawflow_json` como fuente de verdad. Tabla añadida por la migración `001_create_maps.sql` (ver §2.9).
+- **Capa NodeWeaver heredada** (DEPRECATED, sin uso desde el código actual): `automations`, `sessions`, `credentials_vault`, `webhooks`, `execution_logs`, `execution_node_logs`, `automation_stats`. Se mantienen físicamente para no perder historial git pero **ningún controller del backend StudyWeaver las consulta**. Se eliminarían al provisionar el esquema en producción cloud (ver ADR-04).
+
+Stack:
 
 - **Backend**: PHP clásico MVC (`MODEL/`, `API/controllers/`, `API/router/`).
-- **Frontend**: HTML/JS vanilla + [Drawflow](https://github.com/jerosoler/Drawflow) que produce un JSON serializado almacenado en `automations.flow_data`.
-- **Auth**: JWT (emisión en `DATA/jwt.php`, validación por controlador). Flujos activos: registro, login clásico, Google OAuth2 y recuperación por email.
-- **Persistencia**: 8 tablas en MariaDB/MySQL.
+- **Frontend**: React 18 + Drawflow envuelto en un componente React. Cada mapa serializa su grafo con `editor.export()` y lo guarda como JSON en `maps.drawflow_json`.
+- **Auth**: JWT (emisión en `DATA/jwt.php`, validación con `AuthMiddleware::verifyToken()`). Flujos activos: registro, login clásico, Google OAuth2 y recuperación por email.
 
-### ERD lógico (texto)
+### ERD lógico (capa StudyWeaver activa)
+
+```
+users (1) ── (N) maps
+```
+
+Todas las tablas hijas propagan `ON DELETE CASCADE` desde `users`: borrar una cuenta limpia TODO el rastro del usuario (obligación RGPD).
+
+### ERD lógico (capa NodeWeaver heredada — DEPRECATED, no la consulta el backend StudyWeaver)
 
 ```
 users (1) ──┬── (N) automations ──┬── (N) execution_logs ── (N) execution_node_logs
@@ -25,8 +39,6 @@ users (1) ──┬── (N) automations ──┬── (N) execution_logs ─
             ├── (N) sessions
             └── (N) credentials_vault
 ```
-
-Todas las tablas hijas propagan `ON DELETE CASCADE` desde `users` / `automations`: borrar una cuenta limpia TODO el rastro del usuario (obligación RGPD).
 
 ---
 
@@ -81,7 +93,9 @@ Cuenta, perfil y seguridad.
 
 ---
 
-### 2.2 `automations`
+### 2.2 `automations` ⚠️ DEPRECATED (NodeWeaver pre-pivote)
+
+> **Estado:** tabla heredada de la fase NodeWeaver. **Ningún controller del backend StudyWeaver la consulta** desde el commit `chore(backend): eliminar legado automation y crear esquema maps`. Se mantiene físicamente en MySQL local para no romper backups ni historial; se omite al provisionar cloud. Para mapas conceptuales usa la nueva tabla [`maps`](#29-maps) (§2.9). Justificación de no reciclarla en ADR-04.
 
 Flujos de Drawflow del usuario.
 
@@ -260,6 +274,37 @@ Actualización: cron nocturno que hace `INSERT ... ON DUPLICATE KEY UPDATE` desd
 
 ---
 
+### 2.9 `maps` ✅ ACTIVA (StudyWeaver)
+
+Mapas conceptuales del usuario. **Tabla canónica de StudyWeaver** desde la migración [`001_create_maps.sql`](./migrations/001_create_maps.sql). Sustituye en propósito a `automations` (que queda DEPRECATED, ver §2.2 y ADR-04).
+
+| Campo           | Tipo          | Obligatorio | Notas                                                                                  |
+| --------------- | ------------- | ----------- | -------------------------------------------------------------------------------------- |
+| `id`            | INT PK        | sí          | Autoincremental.                                                                       |
+| `user_id`       | INT FK        | sí          | → `users.id` ON DELETE CASCADE. Borra el mapa si la cuenta se elimina (RGPD).          |
+| `title`         | VARCHAR(200)  | sí          | Default `'Mapa sin título'`. Editable inline en el editor.                             |
+| `description`   | TEXT          | no          | Subtítulo o resumen del mapa. NULL en mapas recién creados.                            |
+| `is_public`     | TINYINT(1)    | sí          | Default `0`. `1` = visible en el feed público (Fase Social futura).                    |
+| `drawflow_json` | LONGTEXT      | no          | **Fuente de verdad del mapa.** Resultado tal cual de `editor.export()` de Drawflow. NULL en mapas recién creados sin contenido. |
+| `created_at`    | DATETIME      | sí          | Default `CURRENT_TIMESTAMP`.                                                           |
+| `updated_at`    | DATETIME      | sí          | Default `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`. Refleja el último auto-save.  |
+
+**Reglas de negocio:**
+
+- Cada mapa pertenece exclusivamente a un usuario. **Ownership por `user_id` en cada query** (anti-IDOR). El controller siempre añade `WHERE user_id = :uid` en `SELECT`/`UPDATE`/`DELETE`.
+- `drawflow_json` se guarda **sin parsear ni transformar**: el frontend serializa con `editor.export()`, el backend valida que sea JSON parseable y persiste el string. Defendible: una sola fuente de verdad, sin desincronización.
+- No se denormalizan nodos/edges en tablas separadas en el MVP. Justificación en ADR-04: mientras no haya queries que filtren por concepto individual, denormalizar añade complejidad sin beneficio.
+- Auto-save desde el frontend: tras 1.5 s de inactividad en el editor se llama a `POST maps/save` con el `drawflow_json` actualizado.
+- Mapas "vacíos" (recién creados, sin nodos): `drawflow_json IS NULL`. El frontend los abre en un canvas vacío sin invocar `editor.import()`.
+
+**Índices:**
+
+- `PRIMARY KEY (id)`.
+- `INDEX idx_user_updated (user_id, updated_at)` — listado del dashboard ordenado por última edición.
+- `FOREIGN KEY fk_maps_user (user_id)` → `users.id` ON DELETE CASCADE ON UPDATE CASCADE.
+
+---
+
 ## 3. Diccionario de ENUMs (resumen rápido)
 
 | Tabla.Columna                        | Valores                                                           |
@@ -280,6 +325,14 @@ Actualización: cron nocturno que hace `INSERT ... ON DUPLICATE KEY UPDATE` desd
 
 Todas con `ON DELETE CASCADE ON UPDATE CASCADE`.
 
+**Activas (StudyWeaver):**
+
+| FK              | Padre      | Hijo            |
+| --------------- | ---------- | --------------- |
+| `fk_maps_user`  | `users.id` | `maps.user_id`  |
+
+**Heredadas (NodeWeaver, DEPRECATED):**
+
 | FK                                | Padre            | Hijo                   |
 | --------------------------------- | ---------------- | ---------------------- |
 | `fk_automations_user`             | `users.id`       | `automations.user_id`  |
@@ -297,9 +350,15 @@ Todas con `ON DELETE CASCADE ON UPDATE CASCADE`.
 
 ## 5. Índices de performance clave
 
+**Activos (StudyWeaver):**
+
 - `users(email)` UNIQUE — login O(1).
 - `users(verification_token)`, `users(reset_token)` — lookup directo en los flujos de auth.
-- `automations(user_id)` + `automations(is_active)` — listado del dashboard.
+- `maps(user_id, updated_at)` compuesto — listado del dashboard ordenado por última edición.
+
+**Heredados (NodeWeaver, DEPRECATED — sin uso desde el backend StudyWeaver):**
+
+- `automations(user_id)` + `automations(is_active)` — listado del dashboard de automatizaciones.
 - `sessions(token_hash)` UNIQUE — validación de JWT en cada request.
 - `execution_logs(user_id, started_at)` compuesto — timeline del usuario.
 - `execution_logs(status)` — workers que hacen `WHERE status='queued'`.
@@ -324,10 +383,10 @@ Todas con `ON DELETE CASCADE ON UPDATE CASCADE`.
 
 Cuando necesites:
 
-- **Escribir una query** → localiza la tabla en §2, respeta sus enums en §3 y no inventes columnas.
-- **Añadir una feature** → comprueba si cabe en las tablas existentes antes de proponer nuevas.
-- **Crear migraciones** → añade el DDL al final de `schema.sql` y documenta el cambio aquí en §2 y §3.
+- **Escribir una query** → localiza la tabla en §2, respeta sus enums en §3 y no inventes columnas. **No consultes tablas marcadas DEPRECATED** desde código nuevo.
+- **Añadir una feature** → comprueba si cabe en las tablas activas antes de proponer nuevas. Si necesitas crear tabla, redacta una nueva migración en `DATA/migrations/NNN_descripcion.sql`.
+- **Crear migraciones** → añade un nuevo `.sql` en [`DATA/migrations/`](./migrations/) (numerado, idempotente con `IF NOT EXISTS` cuando aplique) y documenta el cambio aquí en §2 y §3 en el mismo commit.
 - **Depurar errores FK** → consulta §4 para entender qué cascadas dispara un DELETE.
 - **Optimizar consultas** → revisa §5; si tu query no pega contra un índice, justifica añadir uno nuevo.
 
-> **Regla de oro**: si modificas `schema.sql`, **tienes que actualizar este documento en el mismo commit**. Los agentes de IA confían en este archivo como fuente de verdad sin abrir la DB.
+> **Regla de oro**: si añades una migración o cambias el esquema, **tienes que actualizar este documento en el mismo commit**. Los agentes de IA confían en este archivo como fuente de verdad sin abrir la DB.
