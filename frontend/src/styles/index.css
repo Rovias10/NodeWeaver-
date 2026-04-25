@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+/* =============================================================
+   StudyWeaver — Sistema de diseño "Cielo Claro"
+   Tokens definidos en @theme. Tailwind 4 los expone como
+   utilidades automáticas: bg-brand-500, text-ink, etc.
+   Documentado en docs/redesign-plan.md §1.
+   ============================================================= */
+@theme {
+  /* === Superficies === */
+  --color-paper:        #f6fbff;
+  --color-mist:         #eaf4ff;
+  --color-glass:        rgba(255, 255, 255, 0.62);
+
+  /* === Marca (azul cielo) === */
+  --color-brand-50:     #eff8ff;
+  --color-brand-100:    #dbeefe;
+  --color-brand-200:    #b9dffe;
+  --color-brand-300:    #7cc6fd;
+  --color-brand-400:    #3aa8fa;
+  --color-brand-500:    #0ea5e9;
+  --color-brand-600:    #0284c7;
+  --color-brand-700:    #0369a1;
+
+  /* === Sol (acento cálido) === */
+  --color-sun-200:      #fde68a;
+  --color-sun-300:      #fcd34d;
+  --color-sun-400:      #fbbf24;
+
+  /* === Coral (CTA secundario / errores suaves) === */
+  --color-coral-300:    #fda4af;
+  --color-coral-400:    #fb7185;
+  --color-coral-500:    #f43f5e;
+
+  /* === Menta (success) === */
+  --color-mint-400:     #34d399;
+  --color-mint-500:     #10b981;
+
+  /* === Tinta (texto) === */
+  --color-ink:          #0f172a;
+  --color-ink-muted:    #475569;
+  --color-ink-faint:    #94a3b8;
+  --color-line:         rgba(14, 165, 233, 0.18);
+
+  /* === Sombras === */
+  --shadow-glow-brand:  0 10px 40px -10px rgba(14, 165, 233, 0.45);
+  --shadow-glow-sun:    0 10px 40px -10px rgba(251, 191, 36, 0.40);
+  --shadow-card:        0 4px 24px -6px rgba(15, 23, 42, 0.08);
+
+  /* === Easings === */
+  --ease-out-quint:     cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring:        cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* === Animaciones === */
+  --animate-fade-up:    fade-up 0.7s var(--ease-out-quint) forwards;
+  --animate-slide-down: slide-down 0.6s var(--ease-out-quint) forwards;
+  --animate-float:      float 2.4s ease-in-out infinite;
+  --animate-pulse-glow: pulse-glow 3s ease-in-out infinite;
+  --animate-slide-in-right: slide-in-right 0.3s var(--ease-out-quint) forwards;
+  --animate-slide-out-right: slide-out-right 0.3s ease-in forwards;
+}
+
+/* === Keyframes === */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes slide-down {
+  from { transform: translateY(-100%); }
+  to   { transform: none; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(10px); }
+}
+@keyframes pulse-glow {
+  0%, 100% { transform: scale(1);    opacity: 0.6; }
+  50%      { transform: scale(1.15); opacity: 1;   }
+}
+@keyframes slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes slide-out-right {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(100%); opacity: 0; }
+}
+
+/* === Patrón de cuadrícula reutilizable (background ambiental) === */
+.grid-pattern {
+  background-image:
+    linear-gradient(rgba(14, 165, 233, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(14, 165, 233, 0.08) 1px, transparent 1px);
+  background-size: 80px 80px;
+}
+
+/* === Base body === */
+html, body, #root { min-height: 100%; }
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'ss01', 'cv11';
+  letter-spacing: -0.005em;
+}

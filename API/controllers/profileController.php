@@ -160,28 +160,40 @@ class ProfileController {
             return;
         }
 
-        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-        $fileName = 'avatar_' . $user_id . '_' . time() . '.' . $extension;
-        $uploadDir = __DIR__ . '/../../SERVER/assets/avatars/';
+        // Saneamos la extensión: nos fiamos de pathinfo pero sólo aceptamos el subset
+        // que coincide con los allowedTypes anteriores.
+        $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if (!in_array($extension, ['jpg', 'jpeg', 'png', 'webp'])) {
+            $extension = 'jpg';
+        }
+
+        $fileName  = 'avatar_' . $user_id . '_' . time() . '.' . $extension;
+        $uploadDir = __DIR__ . '/../../backend/uploads/avatars/';
 
         if (!file_exists($uploadDir)) {
             mkdir($uploadDir, 0777, true);
         }
 
         $destination = $uploadDir . $fileName;
-        if (move_uploaded_file($file['tmp_name'], $destination)) {
-            $avatar_url = '../assets/avatars/' . $fileName;
-            if ($this->userModel->updateAvatarUrl($user_id, $avatar_url)) {
-                echo json_encode([
-                    'success' => true,
-                    'message' => 'Avatar actualizado correctamente.',
-                    'avatar_url' => $avatar_url
-                ]);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Error al guardar en base de datos.']);
-            }
-        } else {
+        if (!move_uploaded_file($file['tmp_name'], $destination)) {
             echo json_encode(['success' => false, 'message' => 'Error al guardar el archivo.']);
+            return;
+        }
+
+        // Construimos la URL pública absoluta. Permite que el frontend la cargue
+        // tal cual sin saber dónde está el backend. El día que despleguemos
+        // basta con definir BACKEND_PUBLIC_URL en .env.
+        $publicBase = rtrim(EnvLoader::get('BACKEND_PUBLIC_URL', 'http://localhost/NodeWeaver-'), '/');
+        $avatar_url = $publicBase . '/backend/uploads/avatars/' . $fileName;
+
+        if ($this->userModel->updateAvatarUrl($user_id, $avatar_url)) {
+            echo json_encode([
+                'success' => true,
+                'message' => 'Avatar actualizado correctamente.',
+                'avatar_url' => $avatar_url
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Error al guardar en base de datos.']);
         }
     }
 }

@@ -24,11 +24,11 @@ $router->post('profile/update', 'profileController', 'updateProfile');
 $router->post('profile/password', 'profileController', 'changePassword');
 $router->post('profile/avatar', 'profileController', 'uploadAvatar');
 
-// Automation Routes
-$router->get('automation/list', 'automationController', 'list');
-$router->get('automation/get', 'automationController', 'get');
-$router->post('automation/save', 'automationController', 'save');
-$router->post('automation/delete', 'automationController', 'delete');
+// Map Routes — CRUD de mapas conceptuales StudyWeaver (Fase Maps · M1).
+$router->get('maps/list',    'mapController', 'list');
+$router->get('maps/get',     'mapController', 'get');
+$router->post('maps/save',   'mapController', 'save');
+$router->post('maps/delete', 'mapController', 'delete');
 
 // Receive the incoming request variables
 $route = $_GET['route'] ?? '';
