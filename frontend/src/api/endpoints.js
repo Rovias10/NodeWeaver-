@@ -25,4 +25,13 @@ export const ENDPOINTS = {
     password:        'profile/password',
     avatar:          'profile/avatar',
   },
+  maps: {
+    list:            'maps/list',
+    get:             'maps/get',
+    save:            'maps/save',
+    remove:          'maps/delete',
+  },
+  ai: {
+    expand:          'ai/expand',
+  },
 };
