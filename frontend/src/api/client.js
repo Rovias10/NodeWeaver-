@@ -43,6 +43,17 @@ function buildHeaders(withJson = true) {
   return headers;
 }
 
+async function safeFetch(url, options) {
+  try {
+    return await fetch(url, options);
+  } catch (error) {
+    // Error de red/CORS: normalmente indica VITE_API_BASE incorrecta o backend caído.
+    throw new Error(
+      `No se pudo conectar con la API en "${url}". Revisa VITE_API_BASE y que el backend esté levantado.`
+    );
+  }
+}
+
 async function handleResponse(response) {
   let body;
   try {
@@ -62,7 +73,8 @@ async function handleResponse(response) {
 }
 
 export async function apiGet(route, signal) {
-  const response = await fetch(buildUrl(route), {
+  const url = buildUrl(route);
+  const response = await safeFetch(url, {
     method: 'GET',
     headers: buildHeaders(false),
     signal,
@@ -71,7 +83,8 @@ export async function apiGet(route, signal) {
 }
 
 export async function apiPost(route, body = {}, signal) {
-  const response = await fetch(buildUrl(route), {
+  const url = buildUrl(route);
+  const response = await safeFetch(url, {
     method: 'POST',
     headers: buildHeaders(true),
     body: JSON.stringify(body),
@@ -81,7 +94,8 @@ export async function apiPost(route, body = {}, signal) {
 }
 
 export async function apiUpload(route, formData, signal) {
-  const response = await fetch(buildUrl(route), {
+  const url = buildUrl(route);
+  const response = await safeFetch(url, {
     method: 'POST',
     headers: buildHeaders(false),
     body: formData,

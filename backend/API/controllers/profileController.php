@@ -168,7 +168,9 @@ class ProfileController {
         }
 
         $fileName  = 'avatar_' . $user_id . '_' . time() . '.' . $extension;
-        $uploadDir = __DIR__ . '/../../backend/uploads/avatars/';
+        // Sube a backend/uploads/avatars/. Desde backend/API/controllers/
+        // hay que retroceder dos niveles (../../) para llegar a backend/.
+        $uploadDir = __DIR__ . '/../../uploads/avatars/';
 
         if (!file_exists($uploadDir)) {
             mkdir($uploadDir, 0777, true);

@@ -1,9 +1,9 @@
 /**
  * Constantes con las rutas de la API. Centralizar aquí evita tipear
  * strings sueltos por todo el código y facilita refactorizar el día
- * que migremos a backend/API/ con URLs limpias.
+ * que el backend cambie a URLs limpias.
  *
- * El backend actual ([API/router/api.php]) recibe la ruta como query string:
+ * El backend ([backend/API/router/api.php]) recibe la ruta como query string:
  *   GET  index.php?route=profile/me
  *   POST index.php?route=auth/login
  *

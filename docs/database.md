@@ -2,8 +2,8 @@
 
 > Mapa de la base de datos `autoflow` para que cualquier agente IA (Claude, Cursor, Gemini, Antigravity, Copilot...) y para el propio alumno entiendan el modelo de datos **sin necesidad de abrir MySQL**.
 >
-> Migraciones aplicadas a mano: [`DATA/migrations/`](./migrations/).
-> Conexión: [`DATA/database.php`](./database.php) (PDO, MariaDB 10.4+, charset `utf8mb4`).
+> Migraciones aplicadas a mano: [`backend/DATA/migrations/`](../backend/DATA/migrations/).
+> Conexión: [`backend/DATA/database.php`](../backend/DATA/database.php) (PDO, MariaDB 10.4+, charset `utf8mb4`).
 
 ---
 
@@ -68,7 +68,7 @@ Tabla **heredada de NodeWeaver** que se mantiene tal cual. El backend StudyWeave
 
 ### 2.2 `maps`
 
-Mapas conceptuales del usuario. **Tabla canónica de StudyWeaver**, creada por la migración [`002_create_maps.sql`](./migrations/002_create_maps.sql).
+Mapas conceptuales del usuario. **Tabla canónica de StudyWeaver**, creada por la migración [`002_create_maps.sql`](../backend/DATA/migrations/002_create_maps.sql).
 
 | Campo           | Tipo                                  | Notas                                                                         |
 | --------------- | ------------------------------------- | ----------------------------------------------------------------------------- |
@@ -99,9 +99,9 @@ Mapas conceptuales del usuario. **Tabla canónica de StudyWeaver**, creada por l
 
 ## 3. Tablas planificadas (DDL listo, ejecución diferida)
 
-> Cada una vive en su archivo `.planned` dentro de [`DATA/migrations/`](./migrations/). Cuando llegue su Fase del roadmap, se renombra quitando `.planned` y se ejecuta en phpMyAdmin. Tener el DDL escrito desde ya cumple el RA "diseño completo de BD" del módulo 0613 sin obligar a implementar todo en MVP.
+> Cada una vive en su archivo `.planned` dentro de [`backend/DATA/migrations/`](../backend/DATA/migrations/). Cuando llegue su Fase del roadmap, se renombra quitando `.planned` y se ejecuta en phpMyAdmin. Tener el DDL escrito desde ya cumple el RA "diseño completo de BD" del módulo 0613 sin obligar a implementar todo en MVP.
 
-### 3.1 `flashcards` (Fase Flashcards) — [`003_create_flashcards.sql.planned`](./migrations/003_create_flashcards.sql.planned)
+### 3.1 `flashcards` (Fase Flashcards) — [`003_create_flashcards.sql.planned`](../backend/DATA/migrations/003_create_flashcards.sql.planned)
 
 Repetición espaciada con algoritmo **SM-2 simplificado**. Cada flashcard puede o no estar vinculada a un mapa concreto (campo `map_id` nullable).
 
@@ -131,7 +131,7 @@ Repetición espaciada con algoritmo **SM-2 simplificado**. Cada flashcard puede 
 
 ---
 
-### 3.2 `likes` (Fase Comunidad) — [`004_create_likes.sql.planned`](./migrations/004_create_likes.sql.planned)
+### 3.2 `likes` (Fase Comunidad) — [`004_create_likes.sql.planned`](../backend/DATA/migrations/004_create_likes.sql.planned)
 
 Likes a mapas públicos. **PK compuesta `(user_id, map_id)`** para impedir likes duplicados a nivel de BD (anti-spam por integridad, sin checks en el controller).
 
@@ -147,7 +147,7 @@ Likes a mapas públicos. **PK compuesta `(user_id, map_id)`** para impedir likes
 
 ---
 
-### 3.3 `comments` (Fase Comunidad) — [`005_create_comments.sql.planned`](./migrations/005_create_comments.sql.planned)
+### 3.3 `comments` (Fase Comunidad) — [`005_create_comments.sql.planned`](../backend/DATA/migrations/005_create_comments.sql.planned)
 
 Comentarios planos sobre mapas públicos. **Sin replies/threading** en MVP — defendible: "el árbol de comentarios añade complejidad UI/UX que no aporta valor académico evaluable".
 
@@ -202,7 +202,7 @@ Decisión y alternativas en ADR-05 (que supera al ADR-04 inicial). El borrado se
 5. **Soft delete.** No se usa borrado lógico. Todas las relaciones confían en `ON DELETE CASCADE` (RGPD: borrar la cuenta limpia el rastro).
 6. **Anti-IDOR.** Cada controller que lee/modifica una entidad incluye `WHERE user_id = :uid` antes de servir o tocar la fila. No hay endpoints públicos sin filtro de ownership salvo el feed (`is_public = 1`) de la Fase Comunidad.
 7. **Super User.** `id = 999` es virtual (sólo en `.env`). Ningún `SELECT` lo devuelve jamás. Los controladores deben cortocircuitar ese ID antes de consultar la BD.
-8. **Migraciones.** Sistema artesanal sin runner: archivos `.sql` numerados en [`DATA/migrations/`](./migrations/), ejecutados a mano en phpMyAdmin. Idempotentes (`CREATE TABLE IF NOT EXISTS`, `DROP TABLE IF EXISTS`) cuando aplica. Los `.sql.planned` están escritos pero **no se ejecutan** hasta que llega su Fase.
+8. **Migraciones.** Sistema artesanal sin runner: archivos `.sql` numerados en [`backend/DATA/migrations/`](../backend/DATA/migrations/), ejecutados a mano en phpMyAdmin. Idempotentes (`CREATE TABLE IF NOT EXISTS`, `DROP TABLE IF EXISTS`) cuando aplica. Los `.sql.planned` están escritos pero **no se ejecutan** hasta que llega su Fase.
 
 ---
 
@@ -212,7 +212,7 @@ Cuando necesites:
 
 - **Escribir una query** → localiza la tabla en §2 y respeta sus columnas reales. **No inventes columnas** ni consultes tablas DROP del legacy. Si te falta una columna, crea migración nueva en `006_*.sql` y documéntala aquí.
 - **Añadir una feature** → comprueba si cabe en las tablas activas (§2) o en una planificada (§3). Si no cabe, redacta nueva migración numerada y actualiza este documento en el mismo commit.
-- **Crear migración** → `DATA/migrations/NNN_descripcion.sql` (idempotente cuando aplique). Si la feature aún no se implementa pero quieres dejar el diseño listo, añade extensión `.planned`.
+- **Crear migración** → `backend/DATA/migrations/NNN_descripcion.sql` (idempotente cuando aplique). Si la feature aún no se implementa pero quieres dejar el diseño listo, añade extensión `.planned`.
 - **Depurar errores FK** → consulta §2/§3 para ver qué `ON DELETE` propaga cada relación.
 
 > **Regla de oro**: si modificas el esquema o añades migración, **actualiza este documento en el mismo commit**. Los agentes IA confían en este archivo como fuente de verdad sin abrir MySQL.
