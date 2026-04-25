@@ -45,7 +45,7 @@ Cuenta, perfil y seguridad.
 | `google_id`                | VARCHAR(255)  | no (UNIQUE) | `sub` del ID Token de Google                          |
 | `phone`                    | VARCHAR(20)   | no          |                                                       |
 | `company_name`             | VARCHAR(100)  | no          |                                                       |
-| `avatar_url`               | VARCHAR(500)  | no          | Ruta relativa servida desde `SERVER/assets/avatars/`  |
+| `avatar_url`               | VARCHAR(500)  | no          | URL absoluta hacia `backend/uploads/avatars/` (configurable con `BACKEND_PUBLIC_URL` en .env) |
 | `locale`                   | VARCHAR(10)   | sí          | Default `es`                                          |
 | `timezone`                 | VARCHAR(50)   | sí          | Default `UTC`                                         |
 | `role`                     | ENUM          | sí          | `free` \| `pro` \| `enterprise` \| `admin`            |

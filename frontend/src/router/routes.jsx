@@ -11,6 +11,7 @@ import { WaitConfirmationPage } from '@/features/auth/pages/WaitConfirmationPage
 import { AppLayout } from '@/features/app-shell/components/AppLayout.jsx';
 import { PlaceholderPage } from '@/features/app-shell/pages/PlaceholderPage.jsx';
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage.jsx';
+import { ProfilePage } from '@/features/profile/pages/ProfilePage.jsx';
 
 /**
  * Definición central de rutas en modo "Library / Data Mode" (React Router v7).
@@ -82,17 +83,7 @@ export const router = createBrowserRouter([
           />
         ),
       },
-      {
-        path: '/perfil',
-        element: (
-          <PlaceholderPage
-            title="Mi perfil"
-            icon="fa-user-gear"
-            description="Edita tu nombre, institución educativa y contraseña. Sube avatar y revisa tu actividad de estudio."
-            phase="Fase 4"
-          />
-        ),
-      },
+      { path: '/perfil', element: <ProfilePage /> },
     ],
   },
 

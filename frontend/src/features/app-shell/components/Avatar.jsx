@@ -1,14 +1,16 @@
+import { useEffect, useState } from 'react';
+
 /**
- * Avatar circular con fallback a iniciales.
+ * Avatar circular con fallback robusto a iniciales.
  *
- * Si user.avatar_url existe y carga sin error, muestra la imagen.
- * En caso contrario, calcula iniciales del nombre y las pinta sobre
- * un fondo de gradiente brand→sun (paleta veraniega).
+ * - Si user.avatar_url existe y la imagen carga, muestra la imagen.
+ * - Si la imagen falla (404, CORS, ruta legacy rota), automáticamente
+ *   pinta las iniciales sobre un gradient veraniego.
+ * - Si no hay avatar_url, va directo a iniciales.
  *
- * No mantiene estado de "imagen rota": si la URL falla en el navegador,
- * la <img> queda en blanco. Para una versión robusta usaríamos onError
- * + useState; aquí mantenemos simple porque el modelo backend ya
- * devuelve null cuando no hay avatar real.
+ * El estado broken se resetea cuando cambia user.avatar_url, lo que
+ * permite que tras subir un avatar nuevo el componente lo vuelva a
+ * intentar sin necesidad de remontarlo.
  */
 function getInitials(name) {
   if (!name || typeof name !== 'string') return '·';
@@ -20,18 +22,29 @@ const SIZE_CLASSES = {
   sm: 'w-8 h-8 text-sm',
   md: 'w-10 h-10 text-sm',
   lg: 'w-16 h-16 text-lg',
+  xl: 'w-24 h-24 text-2xl',
 };
 
 export function Avatar({ user, size = 'md', className = '' }) {
+  const url = user?.avatar_url ?? null;
+  const [broken, setBroken] = useState(false);
+
+  // Reset al cambiar la URL: tras un upload nuevo no queremos seguir
+  // mostrando las iniciales si la nueva imagen sí carga.
+  useEffect(() => {
+    setBroken(false);
+  }, [url]);
+
   const sizeClass = SIZE_CLASSES[size] ?? SIZE_CLASSES.md;
   const baseClass = `${sizeClass} rounded-full flex items-center justify-center font-bold flex-shrink-0 ${className}`;
 
-  if (user?.avatar_url) {
+  if (url && !broken) {
     return (
       <img
-        src={user.avatar_url}
-        alt={user.name ?? 'Avatar'}
-        className={`${baseClass} object-cover border border-line`}
+        src={url}
+        alt={user?.name ?? 'Avatar'}
+        onError={() => setBroken(true)}
+        className={`${baseClass} object-cover border border-line bg-white`}
       />
     );
   }
