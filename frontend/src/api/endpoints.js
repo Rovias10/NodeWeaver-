@@ -31,4 +31,7 @@ export const ENDPOINTS = {
     save:            'maps/save',
     remove:          'maps/delete',
   },
+  ai: {
+    expand:          'ai/expand',
+  },
 };
