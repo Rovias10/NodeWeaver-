@@ -1,7 +1,7 @@
 import { RouterProvider } from 'react-router';
-import { router } from '@/router/routes.jsx';
+import { router } from '@/router.jsx';
 import { AuthProvider } from '@/auth/AuthContext.jsx';
-import { NotificationProvider } from '@/components/feedback/NotificationProvider.jsx';
+import { NotificationProvider } from '@/ui/NotificationProvider.jsx';
 
 /**
  * Raíz de la aplicación.

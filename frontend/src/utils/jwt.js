@@ -7,13 +7,6 @@
  * limpiar la sesión local.
  */
 
-/**
- * Decodifica el payload base64url del JWT. Devuelve null si el token
- * está mal formado o no se puede parsear.
- *
- * @param {string} token
- * @returns {object|null}
- */
 export function decodeJwtPayload(token) {
   if (typeof token !== 'string' || !token.includes('.')) return null;
 
@@ -29,14 +22,6 @@ export function decodeJwtPayload(token) {
   }
 }
 
-/**
- * Indica si un JWT ha caducado según su claim 'exp' (segundos UNIX).
- * Si no hay 'exp' o el token no se puede decodificar, asumimos caducado
- * por seguridad.
- *
- * @param {string} token
- * @returns {boolean}
- */
 export function isJwtExpired(token) {
   const payload = decodeJwtPayload(token);
   if (!payload || typeof payload.exp !== 'number') return true;
