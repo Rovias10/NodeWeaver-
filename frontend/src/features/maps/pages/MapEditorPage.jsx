@@ -7,6 +7,7 @@ import { useNotification } from '@/ui/useNotification.js';
 import { getMap } from '../services/mapsService.js';
 import { expandNode } from '../services/aiService.js';
 import { useMapAutoSave } from '../hooks/useMapAutoSave.js';
+import { useEditorKeybindings } from '../hooks/useEditorKeybindings.js';
 import { DrawflowEditor } from '../components/DrawflowEditor.jsx';
 import { EditorToolbar } from '../components/EditorToolbar.jsx';
 import { MapTitleEditor } from '../components/MapTitleEditor.jsx';
@@ -121,6 +122,16 @@ export function MapEditorPage() {
   const handleZoomReset  = () => editorApiRef.current?.zoomReset();
   const handleSaveNow    = () => auto.flushSave();
   const handleBack       = () => navigate('/mapas');
+  const handleDeleteSel  = () => editorApiRef.current?.removeSelected();
+
+  // Atajos: Ctrl+S guarda, Delete/Backspace borra seleccionado. Sólo
+  // activos cuando el editor está montado (status === 'ok') y nunca
+  // mientras la IA está expandiendo (overlay bloquea interacción).
+  useEditorKeybindings({
+    enabled:     status === 'ok' && expandingNodeId === null,
+    onSaveNow:   handleSaveNow,
+    onDeleteSel: handleDeleteSel,
+  });
 
   // Handler de "+ IA": llama a /api/ai/expand con el label del nodo
   // y, si hay hijos, los pinta con addChildNodes (que también los
