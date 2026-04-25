@@ -6,7 +6,8 @@
 # Ignorar dependencias
 vendor/
 node_modules/
-
+.claude/
 # Ignorar archivos de sistema
 .DS_Store
 Thumbs.db
+claude.md
