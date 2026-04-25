@@ -101,7 +101,7 @@ export function LoginPage() {
           <div className="text-right mt-2">
             <Link
               to="/recuperar"
-              className="text-sm text-brand-600 hover:text-brand-700 font-medium transition-colors"
+              className="text-sm text-brand-600 hover:text-brand-700 font-medium transition-colors inline-block py-1"
             >
               ¿Olvidaste tu contraseña?
             </Link>
@@ -121,7 +121,7 @@ export function LoginPage() {
         ¿No tienes una cuenta?{' '}
         <Link
           to="/registro"
-          className="bg-gradient-to-r from-brand-600 to-coral-400 bg-clip-text text-transparent font-bold ml-1 hover:brightness-110 transition"
+          className="bg-gradient-to-r from-brand-600 to-coral-400 bg-clip-text text-transparent font-bold ml-1 hover:brightness-110 transition inline-block py-1"
         >
           Regístrate gratis
         </Link>

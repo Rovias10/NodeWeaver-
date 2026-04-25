@@ -16,8 +16,8 @@ export function Card({ as: Tag = 'div', padded = true, elevated = false, classNa
   return (
     <Tag
       className={
-        'bg-glass backdrop-blur-2xl border border-line rounded-3xl ' +
-        (elevated ? 'shadow-[var(--shadow-glow-brand)] ' : 'shadow-card ') +
+        'relative bg-glass backdrop-blur-2xl border border-line rounded-3xl ' +
+        (elevated ? 'shadow-(--shadow-glow-brand) ' : 'shadow-card ') +
         (padded ? 'p-6 md:p-8 ' : '') +
         className
       }

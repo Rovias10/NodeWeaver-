@@ -195,15 +195,15 @@ export function RegisterPage() {
             type="checkbox"
             checked={form.terms}
             onChange={update('terms')}
-            className="mt-1 w-4 h-4 rounded border-line text-brand-500 focus:ring-brand-400 focus:ring-2 focus:ring-offset-0 bg-white"
+            className="mt-1 w-5 h-5 rounded border-line text-brand-500 focus:ring-brand-400 focus:ring-2 focus:ring-offset-0 bg-white"
           />
           <span className="text-sm text-ink-muted">
             Acepto los{' '}
-            <a href="#" className="text-brand-600 hover:text-brand-700 hover:underline">
+            <a href="#" className="text-brand-600 hover:text-brand-700 hover:underline inline-block py-0.5">
               Términos y Condiciones
             </a>{' '}
             y la{' '}
-            <a href="#" className="text-brand-600 hover:text-brand-700 hover:underline">
+            <a href="#" className="text-brand-600 hover:text-brand-700 hover:underline inline-block py-0.5">
               Política de Privacidad
             </a>
           </span>
@@ -223,7 +223,7 @@ export function RegisterPage() {
         ¿Ya tienes una cuenta?{' '}
         <Link
           to="/login"
-          className="bg-gradient-to-r from-brand-600 to-coral-400 bg-clip-text text-transparent font-bold ml-1 hover:brightness-110 transition"
+          className="bg-linear-to-r from-brand-600 to-coral-400 bg-clip-text text-transparent font-bold ml-1 hover:brightness-110 transition inline-block py-1"
         >
           Inicia sesión
         </Link>

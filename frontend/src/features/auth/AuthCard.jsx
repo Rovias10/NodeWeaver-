@@ -24,16 +24,16 @@ export function AuthCard({ title, subtitle, width = 'md', icon, children }) {
   return (
     <>
       <AmbientBackground />
-      <main className="min-h-screen flex items-center justify-center p-4">
+      <main className="min-h-screen flex items-start sm:items-center justify-center p-4 py-8">
         <Card elevated className={`${widthClass} w-full z-10`}>
           <div className="text-center mb-8">
             {icon ? (
-              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-brand-400 to-sun-300 flex items-center justify-center shadow-[var(--shadow-glow-brand)]">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-linear-to-br from-brand-400 to-sun-300 flex items-center justify-center shadow-(--shadow-glow-brand)">
                 <i className={`fas ${icon} text-3xl text-white`} aria-hidden="true" />
               </div>
             ) : (
               <Link to="/" className="inline-block mb-4 group">
-                <span className="block text-3xl font-extrabold tracking-tight bg-gradient-to-r from-brand-600 via-brand-500 to-coral-400 bg-clip-text text-transparent group-hover:brightness-110 transition">
+                <span className="block text-3xl font-extrabold tracking-tight bg-linear-to-r from-brand-600 via-brand-500 to-coral-400 bg-clip-text text-transparent group-hover:brightness-110 transition">
                   StudyWeaver
                 </span>
               </Link>

@@ -16,7 +16,7 @@ export function PasswordInput({ icon = 'fa-lock', ...rest }) {
     <button
       type="button"
       onClick={() => setVisible((v) => !v)}
-      className="text-ink-faint hover:text-ink transition-colors p-1"
+      className="text-ink-faint hover:text-ink transition-colors p-2 flex items-center justify-center min-w-11 min-h-11"
       aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
       tabIndex={-1}
     >
