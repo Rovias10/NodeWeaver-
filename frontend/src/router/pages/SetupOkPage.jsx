@@ -64,7 +64,7 @@ export function SetupOkPage() {
                 <Button size="md" variant="ghost">Ver /__ping</Button>
               </Link>
               <Link to="/dashboard">
-                <Button size="md" variant="ghost">Probar ProtectedRoute</Button>
+                <Button size="md" variant="ghost">Ir al dashboard</Button>
               </Link>
             </div>
           </details>
