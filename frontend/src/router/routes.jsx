@@ -1,7 +1,6 @@
 import { createBrowserRouter } from 'react-router';
-import { SetupOkPage } from './pages/SetupOkPage.jsx';
-import { ApiPingPage } from './pages/ApiPingPage.jsx';
 import { NotFoundPage } from './pages/NotFoundPage.jsx';
+import { LandingPage } from '@/features/landing/pages/LandingPage.jsx';
 import { LoginPage } from '@/features/auth/pages/LoginPage.jsx';
 import { RegisterPage } from '@/features/auth/pages/RegisterPage.jsx';
 import { ForgotPasswordPage } from '@/features/auth/pages/ForgotPasswordPage.jsx';
@@ -17,8 +16,7 @@ import { ProfilePage } from '@/features/profile/pages/ProfilePage.jsx';
  * Definición central de rutas en modo "Library / Data Mode" (React Router v7).
  *
  *   Públicas (sin shell):
- *     /                          → smoke test del sistema de diseño (Fase 0).
- *     /__ping                    → smoke test de apiClient + CORS (Fase 0).
+ *     /                          → landing pública StudyWeaver.
  *     /login, /registro          → entrada a la app.
  *     /recuperar                 → solicitar email de recuperación.
  *     /reset?token=...           → restablecer contraseña.
@@ -26,9 +24,10 @@ import { ProfilePage } from '@/features/profile/pages/ProfilePage.jsx';
  *     /esperando-confirmacion    → pantalla informativa post-registro.
  *
  *   Privadas (envueltas en AppLayout, requieren sesión):
- *     /dashboard                 → resumen del usuario (Fase 3).
+ *     /dashboard                 → resumen del usuario.
+ *     /perfil                    → datos personales y cambio de contraseña.
  *     /mapas, /flashcards,
- *     /comunidad, /perfil        → placeholders hasta su Fase respectiva.
+ *     /comunidad                 → placeholders hasta su Fase respectiva.
  *
  *   *                            → 404 amigable.
  *
@@ -36,8 +35,7 @@ import { ProfilePage } from '@/features/profile/pages/ProfilePage.jsx';
  * con las plantillas SendGrid existentes.
  */
 export const router = createBrowserRouter([
-  { path: '/',                       element: <SetupOkPage /> },
-  { path: '/__ping',                 element: <ApiPingPage /> },
+  { path: '/',                       element: <LandingPage /> },
 
   { path: '/login',                  element: <LoginPage /> },
   { path: '/registro',               element: <RegisterPage /> },
