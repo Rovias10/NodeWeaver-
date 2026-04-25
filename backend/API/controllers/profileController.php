@@ -168,9 +168,12 @@ class ProfileController {
         }
 
         $fileName  = 'avatar_' . $user_id . '_' . time() . '.' . $extension;
-        // Sube a backend/uploads/avatars/. Desde backend/API/controllers/
-        // hay que retroceder dos niveles (../../) para llegar a backend/.
-        $uploadDir = __DIR__ . '/../../uploads/avatars/';
+        // Guardamos en backend/public/uploads/avatars/. Tiene que estar
+        // dentro de `public/` porque ese es el document root tanto del
+        // servidor embebido (`php -S localhost:8000 -t backend/public`)
+        // como de Apache cuando se despliegue: solo así los archivos son
+        // accesibles por HTTP de forma estática.
+        $uploadDir = __DIR__ . '/../../public/uploads/avatars/';
 
         if (!file_exists($uploadDir)) {
             mkdir($uploadDir, 0777, true);
@@ -182,11 +185,12 @@ class ProfileController {
             return;
         }
 
-        // Construimos la URL pública absoluta. Permite que el frontend la cargue
-        // tal cual sin saber dónde está el backend. El día que despleguemos
-        // basta con definir BACKEND_PUBLIC_URL en .env.
-        $publicBase = rtrim(EnvLoader::get('BACKEND_PUBLIC_URL', 'http://localhost/NodeWeaver-'), '/');
-        $avatar_url = $publicBase . '/backend/uploads/avatars/' . $fileName;
+        // Construimos la URL pública absoluta. Permite que el frontend la
+        // cargue tal cual sin saber dónde está el backend. El default
+        // apunta al servidor embebido de PHP en local; en cloud basta con
+        // definir BACKEND_PUBLIC_URL en .env (p. ej. https://api.midominio).
+        $publicBase = rtrim(EnvLoader::get('BACKEND_PUBLIC_URL', 'http://localhost:8000'), '/');
+        $avatar_url = $publicBase . '/uploads/avatars/' . $fileName;
 
         if ($this->userModel->updateAvatarUrl($user_id, $avatar_url)) {
             echo json_encode([

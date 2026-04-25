@@ -22,9 +22,25 @@ if (!API_BASE) {
 
 const TOKEN_KEY = 'sw_token';
 
-function buildUrl(route) {
+/**
+ * Compone la URL final de la petición.
+ *
+ * El backend espera la ruta lógica como query string `?route=<ruta>`.
+ * Cualquier parámetro adicional (id, filtros, paginación...) se adjunta
+ * como query independiente para que `$_GET[...]` lo recoja en PHP. No
+ * los empotres dentro del propio `route` con `&id=...` o `?id=...`: el
+ * wrapper se encarga de encodearlos correctamente.
+ */
+function buildUrl(route, params) {
   const sep = API_BASE.includes('?') ? '&' : '?';
-  return `${API_BASE}${sep}route=${encodeURIComponent(route)}`;
+  let url = `${API_BASE}${sep}route=${encodeURIComponent(route)}`;
+  if (params && typeof params === 'object') {
+    for (const [key, value] of Object.entries(params)) {
+      if (value === undefined || value === null) continue;
+      url += `&${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+    }
+  }
+  return url;
 }
 
 function readToken() {
@@ -72,8 +88,14 @@ async function handleResponse(response) {
   return body;
 }
 
-export async function apiGet(route, signal) {
-  const url = buildUrl(route);
+/**
+ * GET a la API. `params` es un objeto opcional cuyas entradas se
+ * adjuntan a la URL como `&clave=valor` (ya encodeadas). Se usa para
+ * pasar filtros o ids: `apiGet(ENDPOINTS.maps.get, { id: 42 })`.
+ * `signal` es un AbortSignal opcional para cancelar la petición.
+ */
+export async function apiGet(route, params, signal) {
+  const url = buildUrl(route, params);
   const response = await safeFetch(url, {
     method: 'GET',
     headers: buildHeaders(false),
