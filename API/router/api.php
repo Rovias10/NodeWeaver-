@@ -30,6 +30,9 @@ $router->get('maps/get',     'mapController', 'get');
 $router->post('maps/save',   'mapController', 'save');
 $router->post('maps/delete', 'mapController', 'delete');
 
+// AI Routes — integración con Ollama (Fase Maps · M4).
+$router->post('ai/expand',   'aiController',  'expand');
+
 // Receive the incoming request variables
 $route = $_GET['route'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];

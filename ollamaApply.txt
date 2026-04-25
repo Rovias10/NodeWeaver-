@@ -1,0 +1,31 @@
+Cambia M4 totalmente. Ollama es buena opción (gratis, sin tarjeta, sin lock-in). Plan posible:
+
+Adelanto M4 ya con stub demo activado y arquitectura preparada para Ollama. Mañana tú añades dos variables al .env y el cliente las detecta:
+
+
+OLLAMA_BASE_URL=http://192.168.x.x:11434
+OLLAMA_MODEL=llama3.2
+Si están vacías → stub determinístico (3 hijos genéricos). Si están → llamada real a POST /api/chat con format: "json".
+
+Te desbloquea hoy:
+
+Endpoint backend ai/expand listo y testeable.
+Botón "+ IA" del editor cableado end-to-end.
+Frontend tratado IDÉNTICAMENTE en stub o real.
+Mañana sólo:
+
+Levantar Ollama con OLLAMA_HOST=0.0.0.0 (si no, solo escucha localhost).
+Pull del modelo.
+Añadir las 2 vars al .env.
+
+Recomendación top: gpt-oss:20b (OpenAI open weights, ago 2025). MoE: activa solo ~3.6B por token → rápido pese al tamaño. Reasoning con effort configurable (low/medium/high), JSON nativo fiable, ~13 GB VRAM cabe en tu 9070 XT. Más capaz que cualquier 7B-14B para este caso.
+
+Plan B si ROCm da guerra con la 9070 XT: qwen3:8b con thinking desactivado (~5 GB, español top, super rápido).
+
+Cambiar modelo es solo OLLAMA_MODEL=gpt-oss:20b en .env. Cero código.
+
+Confirma las 3 que faltan:
+
+¿Adelanto M4 hoy con stub + arquitectura Ollama lista? (sí/no)
+Fallback si Ollama no responde: ¿error visible o stub silencioso? (mi voto: error visible)
+Timeout: 30s. (sí/cambiar)
