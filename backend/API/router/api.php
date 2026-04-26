@@ -33,6 +33,13 @@ $router->post('maps/delete', 'mapController', 'delete');
 // AI Routes — integración con Ollama (Fase Maps · M4).
 $router->post('ai/expand',   'aiController',  'expand');
 
+// Notes Routes — Fase Notes / Apuntes · N1 (CRUD sin parser; la
+// integración IA `ai/from-note` se cablea en la rama `ia-integration`).
+$router->get ('notes/list',    'noteController', 'list');
+$router->get ('notes/get',     'noteController', 'get');
+$router->post('notes/upload',  'noteController', 'upload');
+$router->post('notes/delete',  'noteController', 'delete');
+
 // Flashcards Routes — Fase Flashcards · F2.
 $router->get('flashcards/list',                'flashcardController', 'list');
 $router->get('flashcards/due',                 'flashcardController', 'due');
