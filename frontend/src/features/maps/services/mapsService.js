@@ -18,7 +18,7 @@ export function listMaps() {
 
 /** GET maps/get?id=N → { success, data: {...incluye drawflow_json} } */
 export function getMap(id) {
-  return apiGet(`${ENDPOINTS.maps.get}&id=${encodeURIComponent(id)}`);
+  return apiGet(ENDPOINTS.maps.get, { id });
 }
 
 /**
