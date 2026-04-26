@@ -24,9 +24,9 @@ users (1) ── (N) maps ── (N) likes
 > **Nota de estado:** la sección §3.1 (`flashcards`) sigue redactada como "tabla planificada" por inercia del orden histórico de fases. La tabla está activa desde la Fase Flashcards; mover su sección a §2 queda como limpieza pendiente (no bloquea esta documentación).
 
 El plan futuro añade tablas adicionales según fase:
-- **Fase Notes / Apuntes** (zona principal) → `notes` + columna `source_note_id` en `maps` y `flashcards` (DDL pendiente de redactar — esquema documentado en §3.2 y plan completo en [`docs/notes-plan.md`](./notes-plan.md)).
+- **Fase Notes / Apuntes** (zona principal) → `notes` + columna `source_note_id` en `maps` (y, opcionalmente, `note_id` en `flashcards`). DDL ya redactado en [`backend/DATA/migrations/007_create_notes.sql`](../backend/DATA/migrations/007_create_notes.sql) y [`008_alter_maps_source_note.sql`](../backend/DATA/migrations/008_alter_maps_source_note.sql); ejecución manual pendiente. Esquema documentado en §3.2 y plan completo en [`docs/notes-plan.md`](./notes-plan.md).
 
-Cuando llegue cada fase, se renombran los `.sql.planned` quitando la extensión y se ejecutan en phpMyAdmin.
+Cuando llegue cada fase, se renombran los `.sql.planned` quitando la extensión y se ejecutan en phpMyAdmin (las migraciones de la fase Notes ya están como `.sql` directo porque se ejecutan en este sprint).
 
 ---
 
@@ -88,7 +88,7 @@ Mapas conceptuales del usuario. **Tabla canónica de StudyWeaver**, creada por l
 | `created_at`    | DATETIME DEFAULT CURRENT_TIMESTAMP    |                                                                               |
 | `updated_at`    | DATETIME ON UPDATE CURRENT_TIMESTAMP  | Refleja el último auto-save.                                                  |
 
-> **Columna planificada (Fase Notes):** se añadirá `source_note_id INT NULL` con FK a `notes(id)` ON DELETE SET NULL. Permite saber de qué apunte salió cada mapa cuando se generan vía IA. Detalle en [`docs/notes-plan.md`](./notes-plan.md) §1.2.
+> **Columna planificada (Fase Notes):** `source_note_id INT NULL` con FK a `notes(id)` ON DELETE SET NULL. Permite saber de qué apunte salió cada mapa cuando se generan vía IA en la rama `ia-integration`. DDL en [`008_alter_maps_source_note.sql`](../backend/DATA/migrations/008_alter_maps_source_note.sql), pendiente de ejecutar. Detalle en [`docs/notes-plan.md`](./notes-plan.md) §1.2.
 
 **Reglas de negocio:**
 
@@ -196,36 +196,36 @@ Repetición espaciada con algoritmo **SM-2 simplificado**. Cada flashcard puede 
 
 ---
 
-### 3.2 `notes` (Fase Notes / Apuntes) — DDL pendiente de redactar
+### 3.2 `notes` (Fase Notes / Apuntes) — DDL listo, ejecución pendiente
 
-Apuntes del usuario (PDF, texto pegado o markdown). **Será la nueva zona principal de StudyWeaver** según el pivote de narrativa documentado en [`docs/notes-plan.md`](./notes-plan.md) y ADR-06: el apunte es la fuente de verdad de la que la IA deriva mapas conceptuales y flashcards.
+Apuntes del usuario (PDF subido o texto pegado). **Es la nueva zona principal de StudyWeaver** según el pivote de narrativa documentado en [`docs/notes-plan.md`](./notes-plan.md) y ADR-06: el apunte es la fuente de verdad de la que la IA derivará mapas conceptuales y flashcards en la rama futura `ia-integration`.
+
+DDL completo en [`backend/DATA/migrations/007_create_notes.sql`](../backend/DATA/migrations/007_create_notes.sql).
 
 | Campo               | Tipo                                  | Notas                                                                  |
 | ------------------- | ------------------------------------- | ---------------------------------------------------------------------- |
 | `id`                | INT PK AUTO_INCREMENT                 |                                                                        |
 | `user_id`           | INT NOT NULL                          | → `users.id` ON DELETE CASCADE.                                        |
 | `title`             | VARCHAR(200) NOT NULL                 | Default `'Apunte sin título'`. Editable inline.                        |
-| `source_type`       | ENUM('pdf','text','markdown')         | Default `'text'`.                                                      |
-| `original_filename` | VARCHAR(255) NULL                     | Nombre del PDF subido (informativo).                                    |
-| `file_path`         | VARCHAR(500) NULL                     | Ruta relativa en `backend/uploads/notes/<user_id>/<uuid>.pdf`.          |
-| `extracted_text`    | LONGTEXT NULL                         | Texto plano que se manda a la IA. Para PDFs se extrae con Smalot/PDFParser. |
-| `char_count`        | INT NOT NULL DEFAULT 0                | Longitud del texto extraído (informativo + límite UI).                  |
+| `source_type`       | ENUM('pdf','text','markdown')         | Default `'text'`. MVP frontend expone sólo `pdf` y `text`; `markdown` queda en el ENUM como reserva DDL para no requerir alter futuro. |
+| `original_filename` | VARCHAR(255) NULL                     | Nombre del PDF subido (informativo). NULL si es text.                  |
+| `file_path`         | VARCHAR(500) NULL                     | Ruta relativa en `backend/uploads/notes/<user_id>/<uuid>.pdf`. NULL si es text. |
+| `extracted_text`    | LONGTEXT NULL                         | Para `text` guarda el body íntegro del alumno. Para `pdf` queda NULL en MVP — la fase IA decidirá si Gemini cachea el texto extraído o si ingiere el PDF directamente sin tocar este campo. |
+| `char_count`        | INT NOT NULL DEFAULT 0                | Longitud informativa de `extracted_text`. 0 mientras esté NULL.        |
 | `created_at`        | DATETIME DEFAULT CURRENT_TIMESTAMP    |                                                                        |
 | `updated_at`        | DATETIME ON UPDATE CURRENT_TIMESTAMP  |                                                                        |
 
 **Reglas de negocio:**
 
 - Storage físico en `backend/uploads/notes/<user_id>/<uuid>.pdf` (UUID evita colisiones; carpeta por usuario para borrar fácil).
-- Tamaño máximo 5 MB por PDF.
+- Tamaño máximo 5 MB por PDF (validado en backend; `php.ini` ajustado en local).
 - Anti-IDOR: ownership por `user_id` en cada query.
-- Borrado: `ON DELETE CASCADE` desde `users`. Si se borra un apunte que tiene mapas/flashcards derivadas, esas SOBREVIVEN gracias a `ON DELETE SET NULL` en `maps.source_note_id` y `flashcards.note_id` — no se pierde el progreso de estudio.
+- Borrado: `ON DELETE CASCADE` desde `users` (purgar la cuenta limpia los apuntes). Si el alumno borra un apunte concreto que tiene mapas o flashcards derivadas, esos artefactos SOBREVIVEN gracias a `ON DELETE SET NULL` en `maps.source_note_id` (y, en el futuro, `flashcards.note_id`) — no se pierde el progreso de estudio.
 
-**Migraciones planificadas:**
-- `007_create_notes.sql` (DDL completo arriba).
-- `008_alter_maps_source_note.sql` — añade `source_note_id` a `maps`.
-- `009_alter_flashcards_source_note.sql` — añade `note_id` a `flashcards` (sólo si la 003 ya está aplicada; si no, se incluye directamente en el DDL de la 003).
-
-DDL completo en [`docs/notes-plan.md`](./notes-plan.md) §1.
+**Migraciones de la fase:**
+- [`007_create_notes.sql`](../backend/DATA/migrations/007_create_notes.sql) — crea la tabla. **Pendiente de ejecutar.**
+- [`008_alter_maps_source_note.sql`](../backend/DATA/migrations/008_alter_maps_source_note.sql) — añade `source_note_id` a `maps`. **Pendiente de ejecutar** (requiere la 007 aplicada antes).
+- `009_alter_flashcards_source_note.sql` — añadirá `note_id` a `flashcards`. Pendiente de redactar; se decidirá cuándo se cablee la generación de flashcards desde apunte (target='flashcards' del endpoint `ai/from-note` en la rama `ia-integration`).
 
 ---
 

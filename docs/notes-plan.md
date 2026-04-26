@@ -93,10 +93,8 @@ backend/uploads/notes/                            (storage físico, ya existe el
 
 ### 2.3 Detalles de implementación
 
-- **PDF parsing:** `Smalot/PDFParser` vía Composer (recomendado, sin dep externa de sistema). Alternativa: shell-out a `pdftotext` (menos defendible: depende del binario instalado).
-  - ADR explícito comparando opciones (ADR-07 cuando se ejecute la fase).
-  - `composer require smalot/pdfparser` en `backend/composer.json`.
-- **Tamaño máximo:** 5 MB por PDF. `php.ini` (`upload_max_filesize`, `post_max_size`) puede requerir ajuste — documentar en README.
+- **PDF parsing:** **diferido a la rama futura `ia-integration`.** Se ha decidido usar Gemini API (multimodal) como proveedor IA, en lugar de Ollama+Smalot. Gemini ingiere el PDF directamente, así que el MVP de la fase Notes NO necesita parser server-side. El backend sólo persiste el archivo físico; `extracted_text` queda NULL para `source_type='pdf'` hasta que la rama IA decida si Gemini cachea texto o no. ADR-07 documentará la elección Gemini cuando se cablee.
+- **Tamaño máximo:** 5 MB por PDF. `php.ini` (`upload_max_filesize`, `post_max_size`) ya configurado en local — documentar en README al cierre de la fase.
 - **Validaciones controller:** mime `application/pdf` para PDFs; `title` 1-200 chars; `body` no vacío para texto.
 - **Storage:** `backend/uploads/notes/<user_id>/<uuid>.pdf`. UUID para evitar colisiones y filtrado por dueño en el path. URL pública sólo si llega Fase Comunidad.
 - **Ownership y anti-IDOR:** mismo patrón que `maps` — `WHERE user_id = :uid` en cada query.
@@ -183,6 +181,8 @@ ai: {
 ---
 
 ## 4. Endpoint IA `ai/from-note` (clave del producto)
+
+> ⚠️ **Sección obsoleta para el MVP.** Describe el plan original con Ollama+gpt-oss:20b. Con la decisión de pasar a **Gemini API**, esta sección se reescribirá en la rama dedicada `ia-integration` al final del proyecto, junto con ADR-07. Se mantiene aquí como referencia histórica del diseño previo y porque la **forma del contrato HTTP** (request/response) sí seguirá siendo válida; lo que cambia es el cliente IA por debajo.
 
 ### 4.1 Contrato
 
@@ -272,11 +272,11 @@ Si Ollama no responde (timeout o conexión falla): `AIClient` lanza `RuntimeExce
 
 | Sub | Foco | Horas | Bloquea |
 | --- | --- | --- | --- |
-| **N0** | BD: migraciones 007 y 008 + actualizar `database.md` + ADR-07 (Smalot/PDFParser) | 1 h | Todo lo demás |
-| **N1** | Backend `noteController` + `Note` model + `PDFParser` service + Composer dep | 3-4 h | N2, N4 |
-| **N2** | Frontend `NotesListPage` + `UploadNoteDialog` + `notesService` + redirección post-login | 3-4 h | N3 |
-| **N3** | `NotePreviewPage` + `NoteActionsBar` (botones aún disabled si N4 no está) | 1-2 h | — |
-| **N4** | Backend `ai/from-note` (target=map y target=flashcards) + cableado en `NoteActionsBar` | 3-4 h | (depende de Fase Flashcards si target=flashcards) |
+| **N0** | BD: migraciones 007 y 008 + actualizar `database.md` | 1 h | Todo lo demás |
+| **N1** | Backend `noteController` + `Note` model (CRUD + upload PDF/text, **sin parser**) | 2-3 h | N2 |
+| **N2** | Frontend `NotesListPage` + `UploadNoteDialog` + `notesService` + redirección post-login a `/apuntes` | 3-4 h | N3 |
+| **N3** | `NotePreviewPage` (PDF embebido con `<embed>` + texto inline para `source_type='text'`) + `NoteActionsBar` con botones IA disabled hasta N4 | 1-2 h | — |
+| **N4** | **Diferida a rama `ia-integration`.** Backend `ai/from-note` con Gemini API (target=map y target=flashcards) + ADR-07 + cableado de `NoteActionsBar` | 3-4 h | Defensa |
 | **N5** | Pulido: copy castellano, tooltips, atajos, accesibilidad | 1-2 h | Defensa |
 
 **Total realista: 12-17 h.** Encaja en 4-5 días de trabajo intensivo. Combinado con Figma + despliegue + memoria, es muy ajustado pero viable.
@@ -316,11 +316,12 @@ Cuando arranques el chat nuevo, pásale:
 4. Lo que está bloqueado por acción manual tuya:
    - Confirmar que el PC con Ollama y `gpt-oss:20b` sigue accesible vía red local desde XAMPP.
    - `OLLAMA_BASE_URL` y `OLLAMA_MODEL` en `.env` (ya añadidas en M4).
-5. Decisiones aún abiertas:
-   - **Composer vs shell-out** para PDF parsing (mi voto: Composer `Smalot/PDFParser`, ADR-07).
-   - **Tamaño máx PDF** (mi voto: 5 MB).
-   - **Cómo almacenar el PDF físico** (mi voto: `backend/uploads/notes/<user_id>/<uuid>.pdf` + ruta relativa en BD).
-   - **Truncado del texto** antes de mandarlo a Ollama (gpt-oss:20b acepta contexto largo, pero conviene cap a ~6000-8000 chars del prompt para evitar latencia + uso de VRAM).
+5. Decisiones cerradas:
+   - **Proveedor IA:** Gemini API (multimodal). Sustituye al plan original Ollama+Smalot. La integración se ejecutará en una rama dedicada `ia-integration` al final del proyecto. ADR-07 documentará la elección entonces.
+   - **PDF parsing en MVP:** ninguno. Gemini ingiere el PDF directo; en MVP el backend sólo guarda el archivo físico y deja `extracted_text=NULL` para PDFs.
+   - **Tamaño máx PDF:** 5 MB.
+   - **Almacenamiento físico:** `backend/uploads/notes/<user_id>/<uuid>.pdf` + ruta relativa en BD.
+   - **Truncado del texto:** se decidirá al cablear Gemini (límites de tokens y coste por consulta de la API real, no de Ollama local).
 6. Posible orden de ataque sugerido al chat nuevo:
    - N0 BD
    - N1 backend notes
