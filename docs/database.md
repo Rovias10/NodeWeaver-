@@ -11,18 +11,20 @@
 
 StudyWeaver vive físicamente en la base **`autoflow`** (nombre histórico heredado del repositorio `NodeWeaver-`, ver ADR-01). El nombre se mantiene para no tener que tocar `.env` ni `DATA/database.php`.
 
-Tras las migraciones `001` (drop legacy) y `002` (crear maps), la base contiene **2 tablas**:
+Tras las migraciones `001` (drop legacy), `002` (maps), `003` (flashcards), `004` (likes) y `005` (comments), la base contiene **5 tablas activas**:
 
 ```
-users (1) ── (N) maps
+users (1) ── (N) maps ── (N) likes
+        │             └── (N) comments
+        └─── (N) flashcards (map_id opcional)
 ```
 
-`ON DELETE CASCADE` propaga el borrado de la cuenta hacia el resto del rastro del usuario (RGPD).
+`ON DELETE CASCADE` propaga el borrado de la cuenta hacia el resto del rastro del usuario (RGPD); el borrado de un mapa arrastra sus likes y comments. Las flashcards usan `ON DELETE SET NULL` sobre `map_id` para sobrevivir al borrado del mapa origen y no perder progreso de estudio.
+
+> **Nota de estado:** la sección §3.1 (`flashcards`) sigue redactada como "tabla planificada" por inercia del orden histórico de fases. La tabla está activa desde la Fase Flashcards; mover su sección a §2 queda como limpieza pendiente (no bloquea esta documentación).
 
 El plan futuro añade tablas adicionales según fase:
-- **Fase Flashcards** → `flashcards` (DDL ya escrito en `.planned`).
-- **Fase Comunidad** → `likes`, `comments` (DDL ya escrito en `.planned`).
-- **Fase Notes / Apuntes** (zona principal) → `notes` + columna `source_note_id` en `maps` y `flashcards` (DDL pendiente de redactar — esquema documentado en §3.4 y plan completo en [`docs/notes-plan.md`](./notes-plan.md)).
+- **Fase Notes / Apuntes** (zona principal) → `notes` + columna `source_note_id` en `maps` y `flashcards` (DDL pendiente de redactar — esquema documentado en §3.2 y plan completo en [`docs/notes-plan.md`](./notes-plan.md)).
 
 Cuando llegue cada fase, se renombran los `.sql.planned` quitando la extensión y se ejecutan en phpMyAdmin.
 
@@ -104,6 +106,62 @@ Mapas conceptuales del usuario. **Tabla canónica de StudyWeaver**, creada por l
 
 ---
 
+### 2.3 `likes`
+
+Likes a mapas públicos. Creada por la migración [`004_create_likes.sql`](../backend/DATA/migrations/004_create_likes.sql) en la Fase Comunidad. **PK compuesta `(user_id, map_id)`** para impedir likes duplicados a nivel de BD (anti-spam por integridad, sin checks adicionales en el controller).
+
+Reusada como tabla de **bookmarks**: dar like equivale a guardar el mapa en "Mis favoritos". Sin tabla extra; la PK compuesta ya garantiza la unicidad y la información que aporta una tabla `bookmarks` separada sería la misma. Justificado en [`docs/community-plan.md`](./community-plan.md) §0.
+
+| Campo        | Tipo                                | Notas                              |
+| ------------ | ----------------------------------- | ---------------------------------- |
+| `user_id`    | INT NOT NULL                        | → `users.id` ON DELETE CASCADE. Parte de la PK compuesta. |
+| `map_id`     | INT NOT NULL                        | → `maps.id`  ON DELETE CASCADE. Parte de la PK compuesta. |
+| `created_at` | DATETIME DEFAULT CURRENT_TIMESTAMP  |                                    |
+
+**Reglas de negocio:**
+
+- Sólo se puede dar like a mapas con `is_public = 1`. Excepción: el dueño del mapa puede likearse a sí mismo (UX coherente con "favoritos": el autor también necesita guardar referencias propias).
+- **Patrón de inserción:** `INSERT IGNORE INTO likes ...` — los duplicados son no-op silencioso, no es necesario chequear existencia previa.
+- **Toggle:** si la fila existe se borra (unlike), si no se inserta (like). Una operación por click.
+
+**Índices:**
+
+- `PRIMARY KEY (user_id, map_id)` — unicidad + lookup rápido para `userHasLiked`.
+- `INDEX idx_map (map_id)` — `SELECT COUNT(*) WHERE map_id = ?` y orden "popular" del feed.
+- `FOREIGN KEY fk_likes_user (user_id)` → `users.id` ON DELETE CASCADE ON UPDATE CASCADE.
+- `FOREIGN KEY fk_likes_map  (map_id)`  → `maps.id`  ON DELETE CASCADE ON UPDATE CASCADE.
+
+---
+
+### 2.4 `comments`
+
+Comentarios planos sobre mapas públicos. Creada por la migración [`005_create_comments.sql`](../backend/DATA/migrations/005_create_comments.sql) en la Fase Comunidad. **Sin replies/threading** en MVP — defendible: "el árbol de comentarios añade complejidad UI/UX que no aporta valor académico evaluable; queda como mejora futura en la memoria".
+
+| Campo        | Tipo                                  | Notas                              |
+| ------------ | ------------------------------------- | ---------------------------------- |
+| `id`         | INT PK AUTO_INCREMENT                 |                                    |
+| `map_id`     | INT NOT NULL                          | → `maps.id`  ON DELETE CASCADE.    |
+| `user_id`    | INT NOT NULL                          | → `users.id` ON DELETE CASCADE.    |
+| `body`       | TEXT NOT NULL                         | Texto plano. Saneado en backend (`trim` + longitud 1–1000). El frontend lo escapa al renderizar (sin `dangerouslySetInnerHTML`). |
+| `created_at` | DATETIME DEFAULT CURRENT_TIMESTAMP    |                                    |
+| `updated_at` | DATETIME ON UPDATE CURRENT_TIMESTAMP  | El MVP no expone endpoint de edición; la columna queda para futuro. |
+
+**Reglas de negocio:**
+
+- Sólo se permiten comentarios sobre mapas con `is_public = 1`. Excepción: el dueño puede comentar en su propio mapa aunque sea privado.
+- **Borrado autorizado:** lo permite el **autor del comentario** o el **autor del mapa**. Doble verificación en `CommentController::delete`.
+- **Sin endpoint de edición** en MVP. Decisión defensiva: editar abre la puerta a "padding ataques" donde alguien edita su comment después de ser likeado/respondido. Si hace falta cambiarlo, el autor borra y vuelve a publicar.
+- El borrado del mapa o del usuario propaga `ON DELETE CASCADE` y limpia los comentarios huérfanos.
+
+**Índices:**
+
+- `PRIMARY KEY (id)`
+- `INDEX idx_map_created (map_id, created_at)` — listado paginado por mapa, ordenado cronológicamente.
+- `FOREIGN KEY fk_comments_map  (map_id)`  → `maps.id`  ON DELETE CASCADE ON UPDATE CASCADE.
+- `FOREIGN KEY fk_comments_user (user_id)` → `users.id` ON DELETE CASCADE ON UPDATE CASCADE.
+
+---
+
 ## 3. Tablas planificadas (DDL listo, ejecución diferida)
 
 > Cada una vive en su archivo `.planned` dentro de [`backend/DATA/migrations/`](../backend/DATA/migrations/). Cuando llegue su Fase del roadmap, se renombra quitando `.planned` y se ejecuta en phpMyAdmin. Tener el DDL escrito desde ya cumple el RA "diseño completo de BD" del módulo 0613 sin obligar a implementar todo en MVP.
@@ -138,40 +196,7 @@ Repetición espaciada con algoritmo **SM-2 simplificado**. Cada flashcard puede 
 
 ---
 
-### 3.2 `likes` (Fase Comunidad) — [`004_create_likes.sql.planned`](../backend/DATA/migrations/004_create_likes.sql.planned)
-
-Likes a mapas públicos. **PK compuesta `(user_id, map_id)`** para impedir likes duplicados a nivel de BD (anti-spam por integridad, sin checks en el controller).
-
-| Campo        | Tipo                                | Notas                              |
-| ------------ | ----------------------------------- | ---------------------------------- |
-| `user_id`    | INT NOT NULL                        | Parte de la PK compuesta.          |
-| `map_id`     | INT NOT NULL                        | Parte de la PK compuesta.          |
-| `created_at` | DATETIME DEFAULT CURRENT_TIMESTAMP  |                                    |
-
-**Patrón de inserción:** `INSERT IGNORE INTO likes ...` — los duplicados son no-op silencioso.
-
-**Índices:** `PRIMARY KEY (user_id, map_id)` + `INDEX idx_map (map_id)` para `COUNT(*)` por mapa.
-
----
-
-### 3.3 `comments` (Fase Comunidad) — [`005_create_comments.sql.planned`](../backend/DATA/migrations/005_create_comments.sql.planned)
-
-Comentarios planos sobre mapas públicos. **Sin replies/threading** en MVP — defendible: "el árbol de comentarios añade complejidad UI/UX que no aporta valor académico evaluable".
-
-| Campo        | Tipo                                  | Notas                              |
-| ------------ | ------------------------------------- | ---------------------------------- |
-| `id`         | INT PK AUTO_INCREMENT                 |                                    |
-| `map_id`     | INT NOT NULL                          | → `maps.id` ON DELETE CASCADE.     |
-| `user_id`    | INT NOT NULL                          | → `users.id` ON DELETE CASCADE.    |
-| `body`       | TEXT NOT NULL                         | Texto plano. Sanitizado en backend. |
-| `created_at` | DATETIME DEFAULT CURRENT_TIMESTAMP    |                                    |
-| `updated_at` | DATETIME ON UPDATE CURRENT_TIMESTAMP  |                                    |
-
-**Índices:** `idx_map_created (map_id, created_at)` para listado paginado por mapa.
-
----
-
-### 3.4 `notes` (Fase Notes / Apuntes) — DDL pendiente de redactar
+### 3.2 `notes` (Fase Notes / Apuntes) — DDL pendiente de redactar
 
 Apuntes del usuario (PDF, texto pegado o markdown). **Será la nueva zona principal de StudyWeaver** según el pivote de narrativa documentado en [`docs/notes-plan.md`](./notes-plan.md) y ADR-06: el apunte es la fuente de verdad de la que la IA deriva mapas conceptuales y flashcards.
 
@@ -204,7 +229,7 @@ DDL completo en [`docs/notes-plan.md`](./notes-plan.md) §1.
 
 ---
 
-### 3.5 `quizzes` y `quiz_attempts` — sin DDL todavía
+### 3.3 `quizzes` y `quiz_attempts` — sin DDL todavía
 
 La Fase Quizzes (si se implementa) genera el quiz vía IA bajo demanda y no necesita cachearlo en BD para la primera versión. Si llega el momento de cachear, se añadirán dos tablas:
 
