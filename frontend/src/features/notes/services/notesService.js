@@ -71,3 +71,29 @@ export function uploadTextNote({ title, body }) {
 export function deleteNote(id) {
   return apiPost(ENDPOINTS.notes.remove, { id });
 }
+
+/**
+ * POST ai/from-note con target='map' — genera un mapa conceptual a
+ * partir del apunte indicado. La llamada puede tardar 10-30 s mientras
+ * Gemini procesa el apunte (PDF multimodal o texto) y construye el
+ * grafo. La página debe mostrar un spinner overlay durante la espera.
+ *
+ * @param {number} noteId
+ * @returns {Promise<{ success: boolean, message?: string,
+ *                     data?: { map_id: number, title: string, node_count: number } }>}
+ */
+export function fromNoteToMap(noteId) {
+  return apiPost(ENDPOINTS.ai.fromNote, { note_id: noteId, target: 'map' });
+}
+
+/**
+ * POST ai/from-note con target='flashcards' — genera entre 8 y 15
+ * flashcards SM-2 a partir del apunte. Mismo timing que `fromNoteToMap`.
+ *
+ * @param {number} noteId
+ * @returns {Promise<{ success: boolean, message?: string,
+ *                     data?: { created: number } }>}
+ */
+export function fromNoteToFlashcards(noteId) {
+  return apiPost(ENDPOINTS.ai.fromNote, { note_id: noteId, target: 'flashcards' });
+}
