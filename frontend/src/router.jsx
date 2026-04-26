@@ -8,13 +8,13 @@ import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage.jsx';
 import { ConfirmAccountPage } from '@/features/auth/ConfirmAccountPage.jsx';
 import { WaitConfirmationPage } from '@/features/auth/WaitConfirmationPage.jsx';
 import { AppLayout } from '@/features/shell/AppLayout.jsx';
-import { PlaceholderPage } from '@/features/shell/PlaceholderPage.jsx';
 import { DashboardPage } from '@/features/dashboard/DashboardPage.jsx';
 import { ProfilePage } from '@/features/profile/ProfilePage.jsx';
 import { MapsListPage } from '@/features/maps/pages/MapsListPage.jsx';
 import { MapEditorPage } from '@/features/maps/pages/MapEditorPage.jsx';
 import { FlashcardsListPage } from '@/features/flashcards/pages/FlashcardsListPage.jsx';
 import { ReviewSessionPage } from '@/features/flashcards/pages/ReviewSessionPage.jsx';
+import { CommunityFeedPage } from '@/features/community/pages/CommunityFeedPage.jsx';
 
 /**
  * Definición central de rutas en modo "Library / Data Mode" (React Router v7).
@@ -30,8 +30,9 @@ import { ReviewSessionPage } from '@/features/flashcards/pages/ReviewSessionPage
  *   Privadas (envueltas en AppLayout, requieren sesión):
  *     /dashboard                 → resumen del usuario.
  *     /perfil                    → datos personales y cambio de contraseña.
- *     /mapas, /flashcards,
- *     /comunidad                 → placeholders hasta su Fase respectiva.
+ *     /mapas, /mapas/:id         → listado y editor Drawflow.
+ *     /flashcards, /flashcards/repaso → CRUD y sesión SM-2.
+ *     /comunidad                 → feed público (Fase Comunidad · C2).
  *
  *   *                            → 404 amigable.
  *
@@ -56,17 +57,7 @@ export const router = createBrowserRouter([
       { path: '/mapas/:id', element: <MapEditorPage /> },
       { path: '/flashcards',        element: <FlashcardsListPage /> },
       { path: '/flashcards/repaso', element: <ReviewSessionPage /> },
-      {
-        path: '/comunidad',
-        element: (
-          <PlaceholderPage
-            title="Comunidad"
-            icon="fa-users"
-            description="Descubre mapas públicos, da likes, comenta y guarda los que te ayuden a estudiar."
-            phase="Fase Social"
-          />
-        ),
-      },
+      { path: '/comunidad', element: <CommunityFeedPage /> },
       { path: '/perfil', element: <ProfilePage /> },
     ],
   },

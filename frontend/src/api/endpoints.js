@@ -42,4 +42,15 @@ export const ENDPOINTS = {
     remove:          'flashcards/delete',
     generateFromMap: 'flashcards/generate-from-map',
   },
+  community: {
+    feed:            'community/feed',
+    map:             'community/map',
+    profile:         'community/profile',
+    profileMaps:     'community/profile-maps',
+    favorites:       'community/favorites',
+    like:            'community/like',
+    comments:        'community/comments',
+    comment:         'community/comment',
+    commentDelete:   'community/comment-delete',
+  },
 };
