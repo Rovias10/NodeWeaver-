@@ -6,12 +6,25 @@ import { Button } from '@/ui/Button.jsx';
 import { useNotification } from '@/ui/useNotification.js';
 import { getMap } from '../services/mapsService.js';
 import { expandNode } from '../services/aiService.js';
+import { generateFromMap as generateFlashcardsFromMap } from '@/features/flashcards/services/flashcardsService.js';
 import { useMapAutoSave } from '../hooks/useMapAutoSave.js';
 import { useEditorKeybindings } from '../hooks/useEditorKeybindings.js';
 import { DrawflowEditor } from '../components/DrawflowEditor.jsx';
 import { EditorToolbar } from '../components/EditorToolbar.jsx';
 import { MapTitleEditor } from '../components/MapTitleEditor.jsx';
 import { SaveIndicator } from '../components/SaveIndicator.jsx';
+
+/**
+ * Cuenta los nodos visibles en un export de Drawflow. Sirve para
+ * cortocircuitar la generación de flashcards en frontend cuando el
+ * mapa está vacío y evitar gastar la llamada a la IA.
+ */
+function countNodesInDrawflow(drawflowJson) {
+  if (!drawflowJson || typeof drawflowJson !== 'object') return 0;
+  const data = drawflowJson?.drawflow?.Home?.data;
+  if (!data || typeof data !== 'object') return 0;
+  return Object.keys(data).length;
+}
 
 /**
  * Página del editor de un mapa concreto. Carga el mapa por :id, lo
@@ -46,6 +59,7 @@ export function MapEditorPage() {
 
   const auto = useMapAutoSave(mapId);
   const [expandingNodeId, setExpandingNodeId] = useState(null);
+  const [isGeneratingFlashcards, setIsGeneratingFlashcards] = useState(false);
 
   // ── Carga inicial ────────────────────────────────────────────────
   useEffect(() => {
@@ -126,12 +140,51 @@ export function MapEditorPage() {
 
   // Atajos: Ctrl+S guarda, Delete/Backspace borra seleccionado. Sólo
   // activos cuando el editor está montado (status === 'ok') y nunca
-  // mientras la IA está expandiendo (overlay bloquea interacción).
+  // mientras la IA está trabajando (overlay bloquea interacción).
   useEditorKeybindings({
-    enabled:     status === 'ok' && expandingNodeId === null,
+    enabled:     status === 'ok' && expandingNodeId === null && !isGeneratingFlashcards,
     onSaveNow:   handleSaveNow,
     onDeleteSel: handleDeleteSel,
   });
+
+  // Handler del botón "Flashcards" del toolbar: genera un lote de
+  // tarjetas a partir de los nodos del mapa actual.
+  // - Validación frontend: si el mapa está vacío, mostramos un toast
+  //   info y NO llamamos a la IA (ahorra una petición y un 400 del
+  //   backend que sería redundante).
+  // - Mientras está generando, el botón muestra spinner, los atajos
+  //   se desactivan y se pinta un overlay (igual que con expand).
+  // - El backend devuelve 503 si Ollama está caído; lo traducimos a
+  //   un toast claro al usuario sin destapar el detalle.
+  const handleGenerateFlashcards = useCallback(async () => {
+    if (isGeneratingFlashcards) return;
+    if (expandingNodeId !== null) return; // no solapamos dos operaciones IA
+
+    const currentJson = lastJsonRef.current ?? initialJson;
+    const nodeCount   = countNodesInDrawflow(currentJson);
+    if (nodeCount === 0) {
+      notify('Añade conceptos al mapa antes de generar flashcards.', 'info');
+      return;
+    }
+
+    setIsGeneratingFlashcards(true);
+    try {
+      const res = await generateFlashcardsFromMap(mapId);
+      if (!res.success) {
+        notify(res.message || 'No se pudieron generar las flashcards.', 'error');
+        return;
+      }
+      const created = Number(res.data?.created ?? 0);
+      notify(
+        `Generadas ${created} flashcard${created === 1 ? '' : 's'}. Las encontrarás en la sección Flashcards del menú.`,
+        'success',
+      );
+    } catch {
+      notify('La IA no está disponible ahora.', 'error');
+    } finally {
+      setIsGeneratingFlashcards(false);
+    }
+  }, [isGeneratingFlashcards, expandingNodeId, initialJson, mapId, notify]);
 
   // Handler de "+ IA": llama a /api/ai/expand con el label del nodo
   // y, si hay hijos, los pinta con addChildNodes (que también los
@@ -216,7 +269,9 @@ export function MapEditorPage() {
         onZoomReset={handleZoomReset}
         onSaveNow={handleSaveNow}
         onBack={handleBack}
+        onGenerateFlashcards={handleGenerateFlashcards}
         isSaving={auto.status === 'saving'}
+        isGeneratingFlashcards={isGeneratingFlashcards}
       />
 
       {/* Canvas Drawflow */}
@@ -233,8 +288,10 @@ export function MapEditorPage() {
         />
 
         {/* Overlay mientras la IA piensa. Bloquea interacciones para
-            evitar que el usuario dispare un segundo expand encima. */}
-        {expandingNodeId !== null && (
+            evitar que el usuario dispare otra operación IA encima.
+            Sirve para "expand" (sub-conceptos) y "generar flashcards"
+            con copy distinto según la operación activa. */}
+        {(expandingNodeId !== null || isGeneratingFlashcards) && (
           <div
             className="absolute inset-0 z-10 flex items-center justify-center bg-paper/60 backdrop-blur-sm"
             aria-live="polite"
@@ -244,7 +301,9 @@ export function MapEditorPage() {
                 aria-hidden="true"
                 className="inline-block w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"
               />
-              <span className="text-sm font-semibold text-ink">Generando sub-conceptos…</span>
+              <span className="text-sm font-semibold text-ink">
+                {isGeneratingFlashcards ? 'Generando flashcards…' : 'Generando sub-conceptos…'}
+              </span>
             </div>
           </div>
         )}

@@ -1,10 +1,10 @@
 # Plan Fase Notes · "Mis apuntes" como zona principal de StudyWeaver
 
-> **Contexto y origen:** Tras cerrar Fase Maps (M0-M5 en [`docs/maps-plan.md`](./maps-plan.md)), se decide pivotar la **narrativa** del producto sin tirar nada de lo construido. El mapa deja de ser el destino y pasa a ser una **vista derivada** sobre un apunte. El producto real es el **repositorio de apuntes del estudiante** del que la IA genera mapas, flashcards y (futuro) quizzes.
+> **Contexto y origen.** Tras cerrar Fase Maps (M0–M5) y con Fase Flashcards planificada (`plans/crea-el-implementation-plan-golden-canyon.md` y referencia rápida en [`docs/maps-plan.md`](./maps-plan.md)), se decide **pivotar la narrativa** del producto sin tirar nada de lo construido. El mapa deja de ser el destino y pasa a ser una **vista derivada** sobre un apunte. El producto real es el **repositorio de apuntes del estudiante** del que la IA genera mapas, flashcards y (futuro) quizzes.
 >
-> Esta decisión nace de una conversación honesta sobre la utilidad del mapa solo: visualmente útil pero no diferencial vs ChatGPT. La utilidad académica medible (Novak 1990; Hay et al. 2008) está en **construir** el mapa, no en consultarlo. Combinarlo con apuntes como origen y flashcards como salida da una narrativa con valor real medible (Anki + SM-2 lleva 20 años demostrándolo).
+> Esta decisión nace de una conversación honesta sobre la utilidad del mapa solo: visualmente útil pero no diferencial vs ChatGPT. La utilidad académica medible (Novak 1990; Hay et al. 2008) está en **construir** el mapa, no en consultarlo. Combinar apuntes como origen, mapa como vista de comprensión y flashcards como vista de retención da una narrativa con valor real medible (Anki + SM-2 lleva 20 años demostrándolo).
 >
-> Plan para retomar en chat nuevo. Asume que [`CLAUDE.md`](../CLAUDE.md), [`Gemini.md`](../Gemini.md), [`docs/maps-plan.md`](./maps-plan.md), [`docs/decisiones.md`](./decisiones.md) y [`DATA/database_context.md`](../DATA/database_context.md) están leídos.
+> Este plan asume leídos: [`CLAUDE.md`](../CLAUDE.md), [`Gemini.md`](../Gemini.md), [`docs/decisiones.md`](./decisiones.md), [`docs/database.md`](./database.md). La estructura del repo ya está migrada a `backend/`.
 
 ---
 
@@ -25,7 +25,9 @@ Usuario ─▶ Apunte (PDF / texto pegado / markdown)
 
 ## 1. Cambios de BD
 
-### 1.1 Migración `006_create_notes.sql` (ejecutable)
+### 1.1 Migración `007_create_notes.sql` (planificada)
+
+> Numeración 007 porque el slot 006 ya lo ocupa `006_add_login_tracking.sql` ya ejecutada.
 
 ```sql
 CREATE TABLE IF NOT EXISTS notes (
@@ -48,7 +50,7 @@ CREATE TABLE IF NOT EXISTS notes (
   COLLATE=utf8mb4_unicode_ci;
 ```
 
-### 1.2 Migración `007_alter_maps_source_note.sql` (ejecutable)
+### 1.2 Migración `008_alter_maps_source_note.sql` (planificada)
 
 ```sql
 ALTER TABLE maps
@@ -59,13 +61,13 @@ ALTER TABLE maps
     ADD INDEX idx_source_note (source_note_id);
 ```
 
-### 1.3 Actualizar `003_create_flashcards.sql.planned`
+### 1.3 Alter de `flashcards` (cuando se ejecute la 003)
 
-Añadir columna `note_id INT NULL` además del `map_id` que ya tiene. Con el mismo patrón `ON DELETE SET NULL`.
+Si la migración `003_create_flashcards.sql.planned` ya se ha ejecutado, añadir un alter `009_alter_flashcards_source_note.sql` con la misma columna `note_id INT NULL` + FK SET NULL. Si la 003 todavía no se ha ejecutado, basta con incluir la columna directamente en el DDL de `003` antes de aplicarlo (lo dejamos a criterio del momento).
 
 ### 1.4 Documentación
 
-Actualizar [`DATA/database_context.md`](../DATA/database_context.md) §2 añadiendo `notes` como tabla activa (§2.3) y reflejando el nuevo `source_note_id` en `maps` (§2.2). Actualizar el ERD de §1.
+Actualizar [`docs/database.md`](./database.md): mover `notes` a tablas planificadas (§3), añadir referencia a `source_note_id` en §2.2 `maps` como columna planificada, y actualizar §1 con el ERD ampliado.
 
 ---
 
@@ -74,10 +76,10 @@ Actualizar [`DATA/database_context.md`](../DATA/database_context.md) §2 añadie
 ### 2.1 Archivos
 
 ```
-API/controllers/noteController.php       (~150 líneas)
-MODEL/Note.php                            (~80 líneas)
-API/services/PDFParser.php                (~60 líneas, wrapper)
-backend/uploads/notes/                    (storage físico, .gitignore)
+backend/API/controllers/noteController.php       (~150 líneas)
+backend/MODEL/Note.php                            (~80 líneas)
+backend/API/services/PDFParser.php                (~60 líneas, wrapper)
+backend/uploads/notes/                            (storage físico, ya existe el patrón con avatars/)
 ```
 
 ### 2.2 Endpoints
@@ -92,19 +94,19 @@ backend/uploads/notes/                    (storage físico, .gitignore)
 ### 2.3 Detalles de implementación
 
 - **PDF parsing:** `Smalot/PDFParser` vía Composer (recomendado, sin dep externa de sistema). Alternativa: shell-out a `pdftotext` (menos defendible: depende del binario instalado).
-  - ADR explícito comparando opciones.
+  - ADR explícito comparando opciones (ADR-07 cuando se ejecute la fase).
   - `composer require smalot/pdfparser` en `backend/composer.json`.
 - **Tamaño máximo:** 5 MB por PDF. `php.ini` (`upload_max_filesize`, `post_max_size`) puede requerir ajuste — documentar en README.
 - **Validaciones controller:** mime `application/pdf` para PDFs; `title` 1-200 chars; `body` no vacío para texto.
 - **Storage:** `backend/uploads/notes/<user_id>/<uuid>.pdf`. UUID para evitar colisiones y filtrado por dueño en el path. URL pública sólo si llega Fase Comunidad.
 - **Ownership y anti-IDOR:** mismo patrón que `maps` — `WHERE user_id = :uid` en cada query.
-- **Auth:** `AuthMiddleware::verifyToken()`.
+- **Auth:** `AuthMiddleware::verifyToken()` (mismo patrón que `mapController`).
 - **Super User id=999:** cortocircuito 403 igual que en `mapController::save`.
 
-### 2.4 Routing — `API/router/api.php`
+### 2.4 Routing — `backend/API/router/api.php`
 
 ```php
-// Notes Routes
+// Notes Routes — Fase Notes
 $router->get('notes/list',     'noteController', 'list');
 $router->get('notes/get',      'noteController', 'get');
 $router->post('notes/upload',  'noteController', 'upload');
@@ -185,7 +187,7 @@ ai: {
 ### 4.1 Contrato
 
 ```
-POST /API/index.php?route=ai/from-note
+POST /backend/API/index.php?route=ai/from-note
 Authorization: Bearer <jwt>
 Content-Type: application/json
 
@@ -219,7 +221,7 @@ Response 4xx/5xx:
 
 ### 4.2 Implementación
 
-- **Cliente IA:** mismo `API/services/AIClient.php` que ya existe en M4 (Ollama gpt-oss-20b en el PC remoto).
+- **Cliente IA:** mismo `backend/API/services/AIClient.php` que ya existe en M4 (Ollama gpt-oss:20b vía `OLLAMA_BASE_URL` + `OLLAMA_MODEL`). Añadir métodos `parseNoteToMap($mapTitle, $extractedText)` y `parseNoteToFlashcards($extractedText)`.
 - **Prompt para `target='map'`:**
   ```
   Lee este texto de apuntes y devuelve un mapa conceptual en JSON.
@@ -262,7 +264,7 @@ Response 4xx/5xx:
 
 ### 4.3 Modo stub sin IA
 
-- Si Ollama no responde (timeout o conexión falla): devolver mapa stub con 3 nodos hardcoded a partir del título del apunte, o 5 flashcards stub. Misma filosofía que `ai/expand` en M4.
+Si Ollama no responde (timeout o conexión falla): `AIClient` lanza `RuntimeException` (mismo patrón que `expand`). El controller traduce a 503 con mensaje canónico *"La IA no está disponible ahora."*. El cliente puede reintentar manualmente. **No** se devuelve mapa/flashcards stub para `from-note` porque el resultado depende del contenido del apunte y un stub no aporta valor — es preferible mostrar el error real.
 
 ---
 
@@ -270,39 +272,37 @@ Response 4xx/5xx:
 
 | Sub | Foco | Horas | Bloquea |
 | --- | --- | --- | --- |
-| **N0** | BD: migraciones 006 y 007 + actualizar `database_context.md` + ADR | 1 h | Todo lo demás |
+| **N0** | BD: migraciones 007 y 008 + actualizar `database.md` + ADR-07 (Smalot/PDFParser) | 1 h | Todo lo demás |
 | **N1** | Backend `noteController` + `Note` model + `PDFParser` service + Composer dep | 3-4 h | N2, N4 |
 | **N2** | Frontend `NotesListPage` + `UploadNoteDialog` + `notesService` + redirección post-login | 3-4 h | N3 |
 | **N3** | `NotePreviewPage` + `NoteActionsBar` (botones aún disabled si N4 no está) | 1-2 h | — |
-| **N4** | Backend `ai/from-note` (target=map y target=flashcards) + cableado en `NoteActionsBar` | 3-4 h | (depende M4 backend Ollama) |
-| **N5** | Tabla `flashcards` ejecutada + `flashcardController` mínimo (`list`, `review`) + página `/flashcards/repaso` con SM-2 | 4-5 h | Cierra el ciclo de estudio |
-| **N6** | Pulido: copy castellano, tooltips, atajos, accesibilidad | 2 h | Defensa |
+| **N4** | Backend `ai/from-note` (target=map y target=flashcards) + cableado en `NoteActionsBar` | 3-4 h | (depende de Fase Flashcards si target=flashcards) |
+| **N5** | Pulido: copy castellano, tooltips, atajos, accesibilidad | 1-2 h | Defensa |
 
-**Total realista: 17-22 h.** Encaja en 4-5 días de trabajo intensivo. Combinado con Figma + despliegue + memoria, es muy ajustado pero viable.
+**Total realista: 12-17 h.** Encaja en 4-5 días de trabajo intensivo. Combinado con Figma + despliegue + memoria, es muy ajustado pero viable.
 
 ---
 
-## 6. Ranking de prioridades para los 8 días restantes
+## 6. Ranking de prioridades para los días restantes
 
-1. 🔴 **M4 backend Ollama** (cierra mapas) — 2 h
-2. 🔴 **N0-N2 Apuntes** (subir + listar + preview) — 5-6 h
-3. 🔴 **N3-N4 Generar mapa/flashcards desde apunte** (la narrativa diferencial) — 4-6 h
-4. 🟠 **N5 Flashcards repaso SM-2** — 4-5 h
+1. 🔴 **Fase Flashcards F0-F6** (cierra el ciclo del mapa) — ~12.5 h
+2. 🔴 **N0-N3 Apuntes** (subir + listar + preview) — 8-11 h
+3. 🔴 **N4 IA from-note** (la narrativa diferencial) — 3-4 h
+4. 🟡 **Fase Comunidad C0-C6** (mapas públicos + likes + comentarios) — ~13.5 h
 5. 🟡 **Figma 3 devices** — 4-5 h
 6. 🟡 **Despliegue cloud HTTPS** — 3-4 h
 7. 🟡 **Memoria + sostenibilidad + cloud** — 6-8 h
-8. ⚪ **Comunidad** — descartar del MVP, dejar como roadmap futuro
-9. ⚪ **Quizzes, undo, PDF→mapa standalone** — descartar
+8. ⚪ **Quizzes, undo, etc.** — descartar del MVP, dejar como roadmap futuro
 
 ---
 
 ## 7. Defensa al tribunal con la nueva narrativa
 
-> "StudyWeaver convierte tus apuntes en herramientas de estudio activas. Subes el PDF de la asignatura, la IA local (Ollama gpt-oss-20b) lo estructura como mapa conceptual editable y, desde ahí o directamente desde el apunte, genera flashcards de repetición espaciada con algoritmo SM-2. El mapa es el esqueleto visual del temario; las flashcards son el músculo del repaso a largo plazo. Todo nace de un único origen: el apunte que ya tenías."
+> "StudyWeaver convierte tus apuntes en herramientas de estudio activas. Subes el PDF de la asignatura, la IA local (Ollama gpt-oss:20b) lo estructura como mapa conceptual editable y, desde ahí o directamente desde el apunte, genera flashcards de repetición espaciada con algoritmo SM-2. El mapa es el esqueleto visual del temario; las flashcards son el músculo del repaso a largo plazo. Todo nace de un único origen: el apunte que ya tenías."
 
 Defensa del por qué es útil: combina **comprensión** (mapa visual) y **retención** (SM-2 espaciado), las dos piezas del estudio efectivo. Bibliografía: Novak (mapas), Ebbinghaus (curva del olvido), SuperMemo / Anki (SM-2).
 
-Defensa del por qué IA local y no cloud: privacidad de los apuntes del estudiante, cero coste por consulta, defendible desde sostenibilidad (1708190 RA4) — no se factura a OpenAI/Google por cada expansión.
+Defensa del por qué IA local y no cloud: privacidad de los apuntes del estudiante, cero coste por consulta, defendible desde sostenibilidad (1708190 RA4) — no se factura a OpenAI/Google por cada expansión. Modelo open-weights (gpt-oss:20b) cumple los criterios de transparencia y reproducibilidad.
 
 ---
 
@@ -312,23 +312,22 @@ Cuando arranques el chat nuevo, pásale:
 
 1. Este archivo (`docs/notes-plan.md`).
 2. Estado actual: `git log --oneline -10` desde `FaseMaps`.
-3. Lo que está hecho: M0 BD + M1 backend maps + M2 listado + M3 editor + M4 frontend cableado (sólo falta backend Ollama).
+3. Lo que está hecho: M0 BD + M1 backend maps + M2 listado + M3 editor + M4 IA Ollama (frontend + backend).
 4. Lo que está bloqueado por acción manual tuya:
-   - Ejecutar `001_init_studyweaver.sql` y `002_create_maps.sql` en phpMyAdmin si aún no.
-   - Confirmar que el PC remoto con Ollama y `gpt-oss-20b` está accesible vía red local desde XAMPP.
-   - Añadir al `.env` la URL del Ollama (probable: `OLLAMA_BASE_URL=http://<ip-pc-remoto>:11434`) y el modelo (`OLLAMA_MODEL=gpt-oss-20b`).
+   - Confirmar que el PC con Ollama y `gpt-oss:20b` sigue accesible vía red local desde XAMPP.
+   - `OLLAMA_BASE_URL` y `OLLAMA_MODEL` en `.env` (ya añadidas en M4).
 5. Decisiones aún abiertas:
-   - **Composer vs shell-out** para PDF parsing (mi voto: Composer `Smalot/PDFParser`, ADR-06).
+   - **Composer vs shell-out** para PDF parsing (mi voto: Composer `Smalot/PDFParser`, ADR-07).
    - **Tamaño máx PDF** (mi voto: 5 MB).
    - **Cómo almacenar el PDF físico** (mi voto: `backend/uploads/notes/<user_id>/<uuid>.pdf` + ruta relativa en BD).
-   - **Truncado del texto** antes de mandarlo a Ollama (gpt-oss-20b acepta contexto largo, pero conviene cap a ~6000-8000 chars del prompt para evitar latencia + coste de VRAM).
+   - **Truncado del texto** antes de mandarlo a Ollama (gpt-oss:20b acepta contexto largo, pero conviene cap a ~6000-8000 chars del prompt para evitar latencia + uso de VRAM).
 6. Posible orden de ataque sugerido al chat nuevo:
-   - M4 backend Ollama (cierra mapas)
    - N0 BD
    - N1 backend notes
    - N2 frontend listado + upload
    - N4 IA from-note (target=map primero, validar pipeline completo)
-   - N5 flashcards (target=flashcards) + página de repaso
+   - N4b target=flashcards (si Fase Flashcards F0–F4 ya está hecha)
+   - N5 pulido
    - Figma
    - Despliegue
    - Memoria

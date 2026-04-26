@@ -33,6 +33,14 @@ $router->post('maps/delete', 'mapController', 'delete');
 // AI Routes — integración con Ollama (Fase Maps · M4).
 $router->post('ai/expand',   'aiController',  'expand');
 
+// Flashcards Routes — Fase Flashcards · F2.
+$router->get('flashcards/list',                'flashcardController', 'list');
+$router->get('flashcards/due',                 'flashcardController', 'due');
+$router->post('flashcards/save',               'flashcardController', 'save');
+$router->post('flashcards/review',             'flashcardController', 'review');
+$router->post('flashcards/delete',             'flashcardController', 'delete');
+$router->post('flashcards/generate-from-map',  'flashcardController', 'generateFromMap');
+
 // Receive the incoming request variables
 $route = $_GET['route'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];

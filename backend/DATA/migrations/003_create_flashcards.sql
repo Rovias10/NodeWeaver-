@@ -1,10 +1,7 @@
 -- =====================================================================
 -- Migración 003 · Crea la tabla `flashcards` para repetición espaciada.
 --
--- ⚠️ ARCHIVO PLANIFICADO (.planned). NO ejecutar todavía.
---    Se aplica cuando llegue la Fase Flashcards del roadmap. En ese
---    momento, renombrar a `003_create_flashcards.sql` (sin extensión
---    `.planned`) y ejecutar en phpMyAdmin.
+-- Estado: APLICADA en la Fase Flashcards · F0.
 --
 -- Contexto: la landing pública StudyWeaver promete "flashcards de
 -- repetición espaciada con algoritmo SM-2 simplificado". Esta tabla
@@ -12,8 +9,9 @@
 -- mapa concreto (campo `map_id` nullable) y guarda los parámetros
 -- mínimos del algoritmo SM-2.
 --
--- SM-2 simplificado:
---   - `ease_factor`   = facilidad subjetiva, oscila entre 1.30 y ~2.50.
+-- SM-2 simplificado (la fórmula vive aislada en el helper estático
+-- Flashcard::computeReview, en backend/MODEL/Flashcard.php):
+--   - `ease_factor`   = facilidad subjetiva, oscila entre 1.30 y 2.50.
 --   - `interval_days` = días hasta el próximo repaso (0 = hoy).
 --   - `repetitions`   = nº de aciertos consecutivos. Resetea a 0 si fallo.
 -- Cuando el usuario marca "Acierto fácil" / "Acierto" / "Fallo", el

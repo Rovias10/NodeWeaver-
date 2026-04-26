@@ -2,16 +2,20 @@ import { Button } from '@/ui/Button.jsx';
 
 /**
  * Barra de acciones del editor: añadir concepto, zoom, guardar manual,
- * volver al listado. El botón "Deshacer" queda deshabilitado en M3
- * con tooltip "Próximamente": Drawflow no trae undo y un undo correcto
- * son ~4h más, fuera del scope de esta entrega (ver maps-plan.md §5.3).
+ * generar flashcards desde el mapa, volver al listado. El botón
+ * "Deshacer" queda deshabilitado en M3 con tooltip "Próximamente":
+ * Drawflow no trae undo y un undo correcto son ~4h más, fuera del
+ * scope de esta entrega (ver maps-plan.md §5.3).
  *
  * Props:
- *   - onAddConcept:  añade un nodo en el centro del viewport.
+ *   - onAddConcept:           añade un nodo en el centro del viewport.
  *   - onZoomIn / onZoomOut / onZoomReset.
- *   - onSaveNow:     fuerza el flush del auto-save pendiente.
- *   - onBack:        navega de vuelta a /mapas.
- *   - isSaving:      muestra el spinner en "Guardar".
+ *   - onSaveNow:              fuerza el flush del auto-save pendiente.
+ *   - onBack:                 navega de vuelta a /mapas.
+ *   - onGenerateFlashcards:   dispara la generación IA de flashcards
+ *                             a partir de los nodos del mapa actual.
+ *   - isSaving:               muestra spinner en "Guardar".
+ *   - isGeneratingFlashcards: muestra spinner en "Flashcards".
  */
 export function EditorToolbar({
   onAddConcept,
@@ -20,7 +24,9 @@ export function EditorToolbar({
   onZoomReset,
   onSaveNow,
   onBack,
+  onGenerateFlashcards,
   isSaving = false,
+  isGeneratingFlashcards = false,
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2 bg-glass backdrop-blur-md border border-line rounded-xl px-3 py-2 shadow-card">
@@ -62,6 +68,18 @@ export function EditorToolbar({
       <Button onClick={onSaveNow} size="md" isLoading={isSaving} title="Guardar ahora">
         <i className="fas fa-cloud-arrow-up" aria-hidden="true" />
         <span className="hidden sm:inline">Guardar</span>
+      </Button>
+
+      <Button
+        variant="ghost"
+        size="md"
+        onClick={onGenerateFlashcards}
+        isLoading={isGeneratingFlashcards}
+        title="Generar flashcards a partir de los conceptos del mapa"
+        aria-label="Generar flashcards desde el mapa"
+      >
+        <i className="fas fa-clone" aria-hidden="true" />
+        <span className="hidden sm:inline">Flashcards</span>
       </Button>
     </div>
   );

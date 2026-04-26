@@ -13,6 +13,8 @@ import { DashboardPage } from '@/features/dashboard/DashboardPage.jsx';
 import { ProfilePage } from '@/features/profile/ProfilePage.jsx';
 import { MapsListPage } from '@/features/maps/pages/MapsListPage.jsx';
 import { MapEditorPage } from '@/features/maps/pages/MapEditorPage.jsx';
+import { FlashcardsListPage } from '@/features/flashcards/pages/FlashcardsListPage.jsx';
+import { ReviewSessionPage } from '@/features/flashcards/pages/ReviewSessionPage.jsx';
 
 /**
  * Definición central de rutas en modo "Library / Data Mode" (React Router v7).
@@ -52,17 +54,8 @@ export const router = createBrowserRouter([
       { path: '/dashboard', element: <DashboardPage /> },
       { path: '/mapas',     element: <MapsListPage /> },
       { path: '/mapas/:id', element: <MapEditorPage /> },
-      {
-        path: '/flashcards',
-        element: (
-          <PlaceholderPage
-            title="Flashcards"
-            icon="fa-clone"
-            description="Repasa con repetición espaciada las tarjetas generadas a partir de tus mapas. Algoritmo SM-2 simplificado."
-            phase="Fase Flashcards"
-          />
-        ),
-      },
+      { path: '/flashcards',        element: <FlashcardsListPage /> },
+      { path: '/flashcards/repaso', element: <ReviewSessionPage /> },
       {
         path: '/comunidad',
         element: (
