@@ -10,6 +10,7 @@ import { DrawflowEditor } from '@/features/maps/components/DrawflowEditor.jsx';
 import { fetchPublicMap } from '../services/communityService.js';
 import { LikeButton } from '../components/LikeButton.jsx';
 import { CommentsSection } from '../components/CommentsSection.jsx';
+import { Avatar } from '../components/Avatar.jsx';
 
 /**
  * Vista pública de un mapa concreto — ruta `/comunidad/mapa/:id`.
@@ -159,7 +160,7 @@ export function PublicMapPage() {
                 className="flex items-center gap-2 hover:opacity-80"
                 title={`Ver perfil de ${author.name ?? 'autor'}`}
               >
-                <Avatar src={author.avatar_url} name={author.name} />
+                <Avatar src={author.avatar_url} name={author.name} size="md" />
                 <span className="text-sm font-medium text-ink">
                   {author.name ?? 'Anónimo'}
                 </span>
@@ -225,23 +226,3 @@ export function PublicMapPage() {
   );
 }
 
-function Avatar({ src, name }) {
-  if (src) {
-    return (
-      <img
-        src={src}
-        alt=""
-        className="w-9 h-9 rounded-full object-cover bg-brand-100 border border-line"
-      />
-    );
-  }
-  const initial = (name ?? '?').trim().charAt(0).toUpperCase() || '?';
-  return (
-    <div
-      className="w-9 h-9 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-sm border border-line"
-      aria-hidden="true"
-    >
-      {initial}
-    </div>
-  );
-}

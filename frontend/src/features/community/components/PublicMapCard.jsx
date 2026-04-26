@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import { Card } from '@/ui/Card.jsx';
 import { relativeTime } from '@/utils/relativeTime.js';
 import { LikeButton } from './LikeButton.jsx';
+import { Avatar } from './Avatar.jsx';
 
 /**
  * Tarjeta de un mapa en el feed comunidad.
@@ -33,7 +34,7 @@ export function PublicMapCard({ map, onLikeChange }) {
           className="flex items-center gap-2 min-w-0 hover:opacity-80"
           title={`Ver perfil de ${authorName}`}
         >
-          <Avatar src={map.author?.avatar_url} name={authorName} />
+          <Avatar src={map.author?.avatar_url} name={authorName} size="sm" />
           <span className="text-sm font-medium text-ink truncate">{authorName}</span>
         </Link>
         <span className="text-xs text-ink-faint shrink-0" title={map.updated_at ?? ''}>
@@ -88,27 +89,3 @@ export function PublicMapCard({ map, onLikeChange }) {
   );
 }
 
-/**
- * Avatar circular pequeño. Si hay `src` lo usa; si no, pinta la
- * inicial del nombre sobre fondo de marca. Sin librerías externas.
- */
-function Avatar({ src, name }) {
-  if (src) {
-    return (
-      <img
-        src={src}
-        alt=""
-        className="w-8 h-8 rounded-full object-cover bg-brand-100 border border-line"
-      />
-    );
-  }
-  const initial = (name ?? '?').trim().charAt(0).toUpperCase() || '?';
-  return (
-    <div
-      className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-sm border border-line"
-      aria-hidden="true"
-    >
-      {initial}
-    </div>
-  );
-}

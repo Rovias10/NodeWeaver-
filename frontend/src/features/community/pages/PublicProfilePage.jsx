@@ -7,6 +7,7 @@ import { useNotification } from '@/ui/useNotification.js';
 import { useAuth } from '@/auth/useAuth.js';
 import { fetchProfile, fetchProfileMaps } from '../services/communityService.js';
 import { PublicMapCard } from '../components/PublicMapCard.jsx';
+import { Avatar } from '../components/Avatar.jsx';
 
 const PAGE_SIZE = 12;
 
@@ -152,7 +153,7 @@ export function PublicProfilePage() {
 
       {/* Cabecera del perfil */}
       <Card padded className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-        <Avatar src={profile.avatar_url} name={profile.name} />
+        <Avatar src={profile.avatar_url} name={profile.name} size="xl" />
         <div className="flex-1 text-center sm:text-left">
           <h1 className="text-2xl md:text-3xl font-bold text-ink">
             {profile.name || 'Anónimo'}
@@ -210,27 +211,3 @@ export function PublicProfilePage() {
   );
 }
 
-/**
- * Avatar grande del perfil. Mismo fallback de inicial sobre fondo de
- * marca que en PublicMapCard, en versión XL.
- */
-function Avatar({ src, name }) {
-  if (src) {
-    return (
-      <img
-        src={src}
-        alt=""
-        className="w-24 h-24 rounded-full object-cover bg-brand-100 border border-line shrink-0"
-      />
-    );
-  }
-  const initial = (name ?? '?').trim().charAt(0).toUpperCase() || '?';
-  return (
-    <div
-      className="w-24 h-24 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-3xl border border-line shrink-0"
-      aria-hidden="true"
-    >
-      {initial}
-    </div>
-  );
-}

@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { relativeTime } from '@/utils/relativeTime.js';
+import { Avatar } from './Avatar.jsx';
 
 /**
  * Una entrada del hilo de comentarios.
@@ -29,7 +30,7 @@ export function CommentItem({ comment, onDelete, isDeleting = false }) {
         title={`Ver perfil de ${author.name ?? 'autor'}`}
         className="shrink-0 hover:opacity-80"
       >
-        <Avatar src={author.avatar_url} name={author.name} />
+        <Avatar src={author.avatar_url} name={author.name} size="md" />
       </Link>
 
       <div className="flex-1 min-w-0">
@@ -75,23 +76,3 @@ export function CommentItem({ comment, onDelete, isDeleting = false }) {
   );
 }
 
-function Avatar({ src, name }) {
-  if (src) {
-    return (
-      <img
-        src={src}
-        alt=""
-        className="w-9 h-9 rounded-full object-cover bg-brand-100 border border-line"
-      />
-    );
-  }
-  const initial = (name ?? '?').trim().charAt(0).toUpperCase() || '?';
-  return (
-    <div
-      className="w-9 h-9 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-sm border border-line"
-      aria-hidden="true"
-    >
-      {initial}
-    </div>
-  );
-}
