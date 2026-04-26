@@ -54,7 +54,7 @@ export function LandingNav() {
           </a>
         </nav>
 
-        <Link to={isAuthenticated ? '/dashboard' : '/login'}>
+        <Link to={isAuthenticated ? '/apuntes' : '/login'}>
           <Button>
             <i className={`fas ${isAuthenticated ? 'fa-arrow-right-to-bracket' : 'fa-right-to-bracket'}`} aria-hidden="true" />
             {isAuthenticated ? 'Ir al panel' : 'Acceder'}
