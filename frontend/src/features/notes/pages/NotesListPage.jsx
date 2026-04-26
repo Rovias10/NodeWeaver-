@@ -66,6 +66,32 @@ export function NotesListPage() {
     refresh();
   }, [refresh]);
 
+  // ── Atajo de teclado: 'n' abre el diálogo de subida ──────────────
+  // Ignoramos cuando el foco está en input/textarea/select o en un
+  // contenteditable, para que escribir 'n' en cualquier campo NO
+  // dispare el atajo. También lo desactivamos si ya hay un diálogo
+  // abierto (subida o borrado).
+  useEffect(() => {
+    const isEditableTarget = (target) => {
+      if (!target) return false;
+      const tag = (target.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+      return Boolean(target.isContentEditable);
+    };
+
+    const handler = (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key !== 'n' && e.key !== 'N') return;
+      if (isEditableTarget(e.target)) return;
+      if (showUpload || pendingDelete) return;
+      e.preventDefault();
+      setShowUpload(true);
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [showUpload, pendingDelete]);
+
   // ── Subida (PDF o texto) ─────────────────────────────────────────
   const handleSubmitPdf = async ({ file, title }) => {
     setIsUploading(true);
@@ -134,7 +160,12 @@ export function NotesListPage() {
             Sube un PDF o pega el texto. La IA generará mapas y flashcards desde aquí.
           </p>
         </div>
-        <Button onClick={() => setShowUpload(true)} size="lg">
+        <Button
+          onClick={() => setShowUpload(true)}
+          size="lg"
+          title="Atajo: pulsa N"
+          aria-keyshortcuts="N"
+        >
           <i className="fas fa-upload" aria-hidden="true" />
           Subir apunte
         </Button>

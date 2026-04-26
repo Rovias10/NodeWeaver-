@@ -150,7 +150,18 @@ export function UploadNoteDialog({
         if (e.target === dialogRef.current && !isUploading) onCancel?.();
       }}
     >
-      <form onSubmit={handleSubmit} className="p-6 md:p-7">
+      <form
+        onSubmit={handleSubmit}
+        className="p-6 md:p-7"
+        onKeyDown={(e) => {
+          // Ctrl/Cmd+Enter envía el formulario, sobre todo útil dentro
+          // del textarea del tab Texto donde Enter hace nueva línea.
+          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            handleSubmit(e);
+          }
+        }}
+      >
         <div className="flex items-start gap-4">
           <span
             className="inline-flex w-12 h-12 rounded-2xl bg-brand-50 text-brand-500 items-center justify-center shrink-0"
@@ -316,7 +327,13 @@ export function UploadNoteDialog({
           <Button type="button" variant="ghost" onClick={onCancel} disabled={isUploading}>
             Cancelar
           </Button>
-          <Button type="submit" variant="primary" isLoading={isUploading}>
+          <Button
+            type="submit"
+            variant="primary"
+            isLoading={isUploading}
+            title="Atajo: Ctrl+Enter"
+            aria-keyshortcuts="Control+Enter"
+          >
             <i className={`fas ${tab === 'pdf' ? 'fa-upload' : 'fa-floppy-disk'}`} aria-hidden="true" />
             {tab === 'pdf' ? 'Subir PDF' : 'Guardar texto'}
           </Button>

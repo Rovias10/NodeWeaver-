@@ -177,6 +177,27 @@ export function NotePreviewPage() {
           <i className="fas fa-clone" aria-hidden="true" />
           Generar flashcards
         </Button>
+
+        {/* Descargar PDF — sólo cuando el blob está listo. Reutilizamos
+            el object URL ya creado para el iframe; el atributo
+            `download` fuerza una guardar-como con el filename original. */}
+        {isPdf && pdfStatus === 'ok' && pdfUrl && (
+          <a
+            href={pdfUrl}
+            download={note.original_filename || 'apunte.pdf'}
+            className="
+              inline-flex items-center justify-center gap-2 rounded-xl font-semibold
+              transition-all duration-200 transform-gpu hover:-translate-y-0.5 active:translate-y-0
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-paper focus-visible:ring-brand-400
+              text-ink bg-glass border border-line backdrop-blur-md hover:bg-white/80
+              px-5 py-2.5 text-sm sm:ml-auto
+            "
+            title="Descargar el PDF original"
+          >
+            <i className="fas fa-download" aria-hidden="true" />
+            Descargar PDF
+          </a>
+        )}
       </div>
 
       {/* Contenido */}
