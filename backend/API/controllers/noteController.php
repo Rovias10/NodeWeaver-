@@ -187,6 +187,95 @@ class NoteController {
     }
 
     /**
+     * GET notes/file?id=N
+     * Sirve el PDF físico de un apunte tras verificar ownership por
+     * JWT. NO devuelve JSON: streaming binario con `Content-Type:
+     * application/pdf` para que el frontend pueda envolverlo en un
+     * Blob (ver `apiDownload` en client.js) y mostrarlo en un
+     * `<iframe>` con `URL.createObjectURL`.
+     *
+     * Errores: 400 id no válido, 404 apunte no encontrado, 409 si el
+     * apunte es de tipo 'text' (no hay PDF que servir), 410 si la fila
+     * sigue en BD pero el archivo físico ha desaparecido (incoherencia
+     * que el alumno debe diagnosticar). En caso de error sí devolvemos
+     * JSON estándar { success:false, message } para que el cliente
+     * pueda mostrar el motivo.
+     */
+    public function file($data = []) {
+        $auth   = AuthMiddleware::verifyToken();
+        $userId = $auth['id'];
+
+        $id = isset($data['id']) ? (int) $data['id'] : 0;
+        if ($id <= 0) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'message' => 'ID de apunte no válido.',
+            ]);
+            return;
+        }
+
+        try {
+            $note = $this->noteModel->findByIdForUser($id, $userId);
+            if (!$note) {
+                http_response_code(404);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Apunte no encontrado.',
+                ]);
+                return;
+            }
+
+            if ($note['source_type'] !== 'pdf' || empty($note['file_path'])) {
+                http_response_code(409);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Este apunte no tiene archivo PDF asociado.',
+                ]);
+                return;
+            }
+
+            $absolute = $this->absolutePathForRelative($note['file_path'], $userId);
+            if ($absolute === null || !is_file($absolute)) {
+                error_log('[NoteController::file] Archivo huérfano para note_id=' . $id);
+                http_response_code(410);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'El archivo del apunte ya no está disponible.',
+                ]);
+                return;
+            }
+
+            // Sustituimos el Content-Type por defecto (`application/json`
+            // de cors.php) por el binario. `header()` reemplaza la
+            // cabecera previa cuando el nombre coincide. Disposition
+            // `inline` permite al navegador embeberlo en el iframe sin
+            // forzar descarga.
+            $safeName = $this->sanitizeFilenameForHeader(
+                $note['original_filename'] ?: 'apunte.pdf'
+            );
+            header('Content-Type: application/pdf');
+            header('Content-Length: ' . filesize($absolute));
+            header('Content-Disposition: inline; filename="' . $safeName . '"');
+            header('Cache-Control: private, max-age=0, no-store');
+            header('X-Content-Type-Options: nosniff');
+
+            // readfile vacía cualquier buffer pendiente y emite el
+            // binario directamente. Para PDFs de hasta 5 MB es
+            // suficiente — un streaming chunked sólo aportaría con
+            // archivos muy grandes que en MVP no soportamos.
+            readfile($absolute);
+        } catch (PDOException $e) {
+            error_log('[NoteController::file] ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error al servir el archivo.',
+            ]);
+        }
+    }
+
+    /**
      * POST notes/delete
      * Body: { id: número }. Borra fila + archivo físico (si lo había).
      * 404 si el apunte no existe o pertenece a otro usuario.
@@ -509,6 +598,23 @@ class NoteController {
      */
     private function uploadsRoot() {
         return __DIR__ . '/../../uploads';
+    }
+
+    /**
+     * Sanea un nombre de archivo para incluirlo en el header
+     * `Content-Disposition`. Evita romperlo con saltos de línea o
+     * comillas dobles, y descarta caracteres no ASCII para no liarse
+     * con la sintaxis RFC 5987 (filename* encoded). El nombre que
+     * verá el usuario al "Guardar como" puede degradar a ASCII sin
+     * que afecte al uso normal — el embed funciona igual.
+     */
+    private function sanitizeFilenameForHeader($name) {
+        $clean = preg_replace('/[\r\n"]/', '_', (string) $name);
+        $ascii = preg_replace('/[^\x20-\x7E]/', '_', $clean);
+        if ($ascii === '' || $ascii === null) {
+            return 'apunte.pdf';
+        }
+        return $ascii;
     }
 
     /**

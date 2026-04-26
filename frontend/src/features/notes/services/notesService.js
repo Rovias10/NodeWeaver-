@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiUpload } from '@/api/client';
+import { apiDownload, apiGet, apiPost, apiUpload } from '@/api/client';
 import { ENDPOINTS } from '@/api/endpoints';
 
 /**
@@ -27,6 +27,17 @@ export function listNotes() {
  */
 export function getNote(id) {
   return apiGet(ENDPOINTS.notes.get, { id });
+}
+
+/**
+ * GET notes/file?id=N — Descarga el binario PDF de un apunte.
+ * Resuelve a `{ success: true, blob: Blob }` o `{ success: false,
+ * message }`. El cliente envuelve el blob con `URL.createObjectURL`
+ * para mostrarlo en un `<iframe>`; debe acordarse de revocar la
+ * URL al desmontar (ver NotePreviewPage).
+ */
+export function getNoteFile(id) {
+  return apiDownload(ENDPOINTS.notes.file, { id });
 }
 
 /**

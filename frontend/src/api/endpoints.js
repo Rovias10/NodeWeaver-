@@ -45,6 +45,7 @@ export const ENDPOINTS = {
   notes: {
     list:            'notes/list',
     get:             'notes/get',
+    file:            'notes/file',
     upload:          'notes/upload',
     remove:          'notes/delete',
   },

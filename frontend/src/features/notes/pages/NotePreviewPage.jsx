@@ -4,16 +4,19 @@ import { Button } from '@/ui/Button.jsx';
 import { Card } from '@/ui/Card.jsx';
 import { Spinner } from '@/ui/Spinner.jsx';
 import { useNotification } from '@/ui/useNotification.js';
-import { getNote } from '../services/notesService.js';
+import { getNote, getNoteFile } from '../services/notesService.js';
 
 /**
- * Vista preview de un apunte concreto — placeholder MVP de N2.
+ * Vista preview de un apunte concreto.
  *
- * Esta versión es funcional para apuntes de tipo `text`: muestra el
- * `extracted_text` íntegro en un bloque legible. Para apuntes de tipo
- * `pdf` muestra metadatos y un aviso explicando que el visor del PDF
- * llegará en N3 junto con un endpoint autenticado para servir el
- * binario (`notes/file?id=N`).
+ * - Apunte de tipo `text`: muestra el `extracted_text` íntegro en un
+ *   bloque legible (`<pre>` con `whitespace-pre-wrap`).
+ * - Apunte de tipo `pdf`: descarga el binario por el endpoint
+ *   autenticado `notes/file?id=N` (JWT en cabecera), envuelve el
+ *   resultado con `URL.createObjectURL` y lo muestra en un `<iframe>`.
+ *   No usamos `<iframe src="?route=notes/file...">` directo porque
+ *   el navegador haría un GET sin Authorization y el backend
+ *   devolvería 401.
  *
  * Los botones de acción IA («Generar mapa», «Generar flashcards») se
  * incluyen ya como `disabled` con un tooltip "Próximamente". El cableado
@@ -25,6 +28,13 @@ export function NotePreviewPage() {
 
   const [status, setStatus] = useState('loading'); // 'loading' | 'error' | 'ok'
   const [note, setNote] = useState(null);
+
+  // Object URL al PDF descargado como Blob. Mientras la descarga
+  // está en curso, se mantiene en null y se muestra un spinner. Al
+  // desmontar (o al cambiar de apunte) se revoca para no leakear
+  // memoria del navegador.
+  const [pdfUrl, setPdfUrl] = useState(null);
+  const [pdfStatus, setPdfStatus] = useState('idle'); // 'idle' | 'loading' | 'error' | 'ok'
 
   useEffect(() => {
     let active = true;
@@ -49,6 +59,42 @@ export function NotePreviewPage() {
       active = false;
     };
   }, [id, notify]);
+
+  // Descarga del PDF como Blob cuando el apunte cargado es de tipo
+  // 'pdf'. El URL se revoca al desmontar el componente o al cambiar
+  // de apunte para no acumular blobs en memoria.
+  useEffect(() => {
+    if (status !== 'ok' || !note) return undefined;
+    if (note.source_type !== 'pdf') return undefined;
+
+    let active = true;
+    let createdUrl = null;
+    setPdfStatus('loading');
+    setPdfUrl(null);
+
+    getNoteFile(note.id)
+      .then((res) => {
+        if (!active) return;
+        if (!res.success || !res.blob) {
+          setPdfStatus('error');
+          notify(res.message || 'No se pudo cargar el PDF.', 'error');
+          return;
+        }
+        createdUrl = URL.createObjectURL(res.blob);
+        setPdfUrl(createdUrl);
+        setPdfStatus('ok');
+      })
+      .catch(() => {
+        if (!active) return;
+        setPdfStatus('error');
+        notify('Error de red al cargar el PDF.', 'error');
+      });
+
+    return () => {
+      active = false;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [status, note, notify]);
 
   if (status === 'loading') {
     return (
@@ -143,15 +189,39 @@ export function NotePreviewPage() {
       )}
 
       {isPdf && (
-        <Card padded className="text-center">
-          <i className="fas fa-file-pdf text-4xl text-coral-500 mb-3" aria-hidden="true" />
-          <h3 className="text-lg font-semibold text-ink">Vista previa del PDF</h3>
-          <p className="text-sm text-ink-muted mt-2 max-w-md mx-auto">
-            El visor embebido del PDF llegará en la siguiente subfase. Por
-            ahora el archivo está guardado de forma segura en el servidor y
-            podrá usarse para generar mapas y flashcards cuando se conecte
-            la IA (Gemini).
-          </p>
+        <Card padded={false} className="overflow-hidden">
+          {pdfStatus === 'loading' && (
+            <div className="flex flex-col items-center justify-center py-20">
+              <Spinner />
+              <p className="text-sm text-ink-muted mt-4">Cargando el PDF…</p>
+            </div>
+          )}
+
+          {pdfStatus === 'error' && (
+            <div className="text-center p-8">
+              <i className="fas fa-cloud-bolt text-3xl text-coral-500" aria-hidden="true" />
+              <p className="mt-3 font-semibold text-ink">No se pudo mostrar el PDF</p>
+              <p className="text-sm text-ink-muted mt-1">
+                Inténtalo de nuevo o vuelve al listado.
+              </p>
+              <div className="mt-5">
+                <Link to="/apuntes">
+                  <Button variant="ghost">
+                    <i className="fas fa-arrow-left" aria-hidden="true" />
+                    Volver a Mis apuntes
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {pdfStatus === 'ok' && pdfUrl && (
+            <iframe
+              src={pdfUrl}
+              title={note.title || 'Vista previa del apunte'}
+              className="block w-full h-[75vh] bg-white"
+            />
+          )}
         </Card>
       )}
     </div>
