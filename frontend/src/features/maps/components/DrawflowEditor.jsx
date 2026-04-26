@@ -31,15 +31,38 @@ import '../styles/drawflow-summer.css';
  *    cambios al perder foco invocando updateNodeDataFromId() y
  *    notificando con onChange.
  *
+ *  · Modo lectura (`readOnly`): la Fase Comunidad necesita pintar
+ *    mapas ajenos sin permitir editarlos. Activar `readOnly`:
+ *      1. Pone `editor.editor_mode = 'fixed'` (Drawflow desactiva
+ *         drag/connect/delete por sí solo).
+ *      2. Tras `import()`, post-procesa el DOM para quitar los
+ *         `.sw-node__actions` (botones "+ IA" / "✕") y desactivar
+ *         los `[contenteditable]` del label/hint que quedan
+ *         serializados en el HTML del nodo. Drawflow no expone API
+ *         para regenerar el HTML de un nodo importado, así que
+ *         tocamos el DOM una sola vez tras la carga.
+ *      3. No bindea los handlers click/blur/paste de edición ni
+ *         los eventos de cambio — el padre no necesita `onChange`.
+ *      4. Expone una API minimal en `editorApiRef` con sólo
+ *         zoom y export (no addNode, no removeSelected).
+ *
  * Props:
  *  - initialJson:     export() previo de Drawflow o null para canvas vacío.
  *  - onChange:        callback(exportedJson) tras cualquier mutación.
+ *                     Sólo se invoca en modo edición.
  *  - onExpandRequest: callback(nodeId, nodeData) al pulsar "+ IA"
- *                     (la lógica IA se cablea en M4; en M3 puede ser noop).
+ *                     (sólo en modo edición).
  *  - editorApiRef:    ref que el padre usa para invocar acciones del
  *                     editor (addNode, zoom, etc.) desde el toolbar.
+ *  - readOnly:        si true, monta el editor en modo visor.
  */
-export function DrawflowEditor({ initialJson, onChange, onExpandRequest, editorApiRef }) {
+export function DrawflowEditor({
+  initialJson,
+  onChange,
+  onExpandRequest,
+  editorApiRef,
+  readOnly = false,
+}) {
   const containerRef = useRef(null);
   const editorRef    = useRef(null);
 
@@ -50,7 +73,7 @@ export function DrawflowEditor({ initialJson, onChange, onExpandRequest, editorA
     const editor = new Drawflow(containerRef.current);
     editor.reroute = true;
     editor.reroute_fix_curvature = true;
-    editor.editor_mode = 'edit';
+    editor.editor_mode = readOnly ? 'fixed' : 'edit';
     editor.start();
 
     // Restauramos el JSON si existe; si está vacío o null, dejamos
@@ -63,124 +86,161 @@ export function DrawflowEditor({ initialJson, onChange, onExpandRequest, editorA
       }
     }
 
-    // ── Notificar cambios al padre ──
-    const events = [
-      'nodeCreated', 'nodeRemoved', 'nodeMoved',
-      'connectionCreated', 'connectionRemoved',
-      'nodeDataChanged',
-    ];
-    const notifyChange = () => onChange?.(editor.export());
-    events.forEach((evt) => editor.on(evt, notifyChange));
-
-    // ── Delegación de eventos para los botones del custom node ──
-    const handleClick = (e) => {
-      const action = e.target.closest('[data-action]')?.dataset.action;
-      if (!action) return;
-      const nodeEl = e.target.closest('.drawflow-node');
-      if (!nodeEl) return;
-      const nodeId = parseInt(nodeEl.id.replace('node-', ''), 10);
-      if (Number.isNaN(nodeId)) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (action === 'delete') {
-        editor.removeNodeId('node-' + nodeId);
-      } else if (action === 'expand') {
-        const data = editor.getNodeFromId(nodeId)?.data ?? {};
-        onExpandRequest?.(nodeId, data);
-      }
-    };
-
-    // ── Edición inline de label/hint (contenteditable) ──
-    const handleBlur = (e) => {
-      const target = e.target;
-      if (!(target.dataset?.field)) return;
-      const nodeEl = target.closest('.drawflow-node');
-      if (!nodeEl) return;
-      const nodeId = parseInt(nodeEl.id.replace('node-', ''), 10);
-      if (Number.isNaN(nodeId)) return;
-
-      const node = editor.getNodeFromId(nodeId);
-      if (!node) return;
-
-      const newValue = target.innerText.trim();
-      if (node.data?.[target.dataset.field] === newValue) return;
-
-      const newData = { ...node.data, [target.dataset.field]: newValue };
-      editor.updateNodeDataFromId(nodeId, newData);
-      notifyChange();
-    };
-
-    // ── Pegar texto plano en contenteditable (sin HTML enriquecido) ──
-    const handlePaste = (e) => {
-      if (!e.target.dataset?.field) return;
-      e.preventDefault();
-      const text = e.clipboardData.getData('text/plain');
-      document.execCommand('insertText', false, text);
-    };
-
     const container = containerRef.current;
-    container.addEventListener('click', handleClick);
-    container.addEventListener('blur', handleBlur, true); // capture: blur no burbujea.
-    container.addEventListener('paste', handlePaste);
+
+    // En modo lectura, neutralizamos los affordances de edición que
+    // Drawflow ha reconstruido a partir del HTML serializado en cada
+    // nodo. Los botones de acción se eliminan; los contenteditable
+    // pasan a "false" para bloquear también la edición por teclado.
+    if (readOnly) {
+      container.classList.add('drawflow-readonly');
+      container.querySelectorAll('.drawflow-node').forEach((el) => {
+        el.querySelectorAll('.sw-node__actions').forEach((a) => a.remove());
+        el.querySelectorAll('[contenteditable]').forEach((c) => {
+          c.setAttribute('contenteditable', 'false');
+        });
+      });
+    }
+
+    // Cleanup específico del modo edición: declarado fuera del bloque
+    // para que el return del effect pueda invocarlo si existe.
+    let cleanupEdit = null;
+
+    if (!readOnly) {
+      // ── Notificar cambios al padre ──
+      const events = [
+        'nodeCreated', 'nodeRemoved', 'nodeMoved',
+        'connectionCreated', 'connectionRemoved',
+        'nodeDataChanged',
+      ];
+      const notifyChange = () => onChange?.(editor.export());
+      events.forEach((evt) => editor.on(evt, notifyChange));
+
+      // ── Delegación de eventos para los botones del custom node ──
+      const handleClick = (e) => {
+        const action = e.target.closest('[data-action]')?.dataset.action;
+        if (!action) return;
+        const nodeEl = e.target.closest('.drawflow-node');
+        if (!nodeEl) return;
+        const nodeId = parseInt(nodeEl.id.replace('node-', ''), 10);
+        if (Number.isNaN(nodeId)) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (action === 'delete') {
+          editor.removeNodeId('node-' + nodeId);
+        } else if (action === 'expand') {
+          const data = editor.getNodeFromId(nodeId)?.data ?? {};
+          onExpandRequest?.(nodeId, data);
+        }
+      };
+
+      // ── Edición inline de label/hint (contenteditable) ──
+      const handleBlur = (e) => {
+        const target = e.target;
+        if (!(target.dataset?.field)) return;
+        const nodeEl = target.closest('.drawflow-node');
+        if (!nodeEl) return;
+        const nodeId = parseInt(nodeEl.id.replace('node-', ''), 10);
+        if (Number.isNaN(nodeId)) return;
+
+        const node = editor.getNodeFromId(nodeId);
+        if (!node) return;
+
+        const newValue = target.innerText.trim();
+        if (node.data?.[target.dataset.field] === newValue) return;
+
+        const newData = { ...node.data, [target.dataset.field]: newValue };
+        editor.updateNodeDataFromId(nodeId, newData);
+        notifyChange();
+      };
+
+      // ── Pegar texto plano en contenteditable (sin HTML enriquecido) ──
+      const handlePaste = (e) => {
+        if (!e.target.dataset?.field) return;
+        e.preventDefault();
+        const text = e.clipboardData.getData('text/plain');
+        document.execCommand('insertText', false, text);
+      };
+
+      container.addEventListener('click', handleClick);
+      container.addEventListener('blur', handleBlur, true); // capture: blur no burbujea.
+      container.addEventListener('paste', handlePaste);
+
+      cleanupEdit = () => {
+        container.removeEventListener('click', handleClick);
+        container.removeEventListener('blur', handleBlur, true);
+        container.removeEventListener('paste', handlePaste);
+      };
+    }
 
     editorRef.current = editor;
 
     // ── API expuesta al padre vía editorApiRef ──
     if (editorApiRef) {
-      editorApiRef.current = {
-        addConceptNode: (label = 'Nuevo concepto', hint = '') => {
-          const { x, y } = getCanvasCenter(editor);
-          const id = editor.addNode(
-            'concept', 1, 1, x, y, 'concept-node',
-            { label, hint },
-            buildNodeHtml(label, hint),
-          );
-          return id;
-        },
-        addChildNodes: (parentId, children = []) => {
-          // Coloca hijos en abanico alrededor del padre y los conecta.
-          const parent = editor.getNodeFromId(parentId);
-          if (!parent) return [];
-          const N = children.length;
-          const radius = 240;
-          const ids = [];
-          children.forEach((child, i) => {
-            const angle = ((i + 1) / (N + 1)) * Math.PI - Math.PI / 2;
-            const cx = parent.pos_x + radius + 200 * Math.cos(angle);
-            const cy = parent.pos_y + 180 * Math.sin(angle);
+      if (readOnly) {
+        // Subset minimal para visor: zoom + export. Sin addNode ni
+        // removeSelected — el visor no debe poder modificar el grafo.
+        editorApiRef.current = {
+          zoomIn:    () => editor.zoom_in(),
+          zoomOut:   () => editor.zoom_out(),
+          zoomReset: () => editor.zoom_reset(),
+          export:    () => editor.export(),
+        };
+      } else {
+        editorApiRef.current = {
+          addConceptNode: (label = 'Nuevo concepto', hint = '') => {
+            const { x, y } = getCanvasCenter(editor);
             const id = editor.addNode(
-              'concept', 1, 1, cx, cy, 'concept-node',
-              { label: child.label ?? '', hint: child.hint ?? '' },
-              buildNodeHtml(child.label ?? '', child.hint ?? ''),
+              'concept', 1, 1, x, y, 'concept-node',
+              { label, hint },
+              buildNodeHtml(label, hint),
             );
-            editor.addConnection(parentId, id, 'output_1', 'input_1');
-            ids.push(id);
-          });
-          return ids;
-        },
-        zoomIn:   () => editor.zoom_in(),
-        zoomOut:  () => editor.zoom_out(),
-        zoomReset:() => editor.zoom_reset(),
-        export:   () => editor.export(),
-        removeSelected: () => {
-          const selected = container.querySelector('.drawflow-node.selected');
-          if (selected) {
-            const id = parseInt(selected.id.replace('node-', ''), 10);
-            if (!Number.isNaN(id)) editor.removeNodeId('node-' + id);
-          }
-        },
-      };
+            return id;
+          },
+          addChildNodes: (parentId, children = []) => {
+            // Coloca hijos en abanico alrededor del padre y los conecta.
+            const parent = editor.getNodeFromId(parentId);
+            if (!parent) return [];
+            const N = children.length;
+            const radius = 240;
+            const ids = [];
+            children.forEach((child, i) => {
+              const angle = ((i + 1) / (N + 1)) * Math.PI - Math.PI / 2;
+              const cx = parent.pos_x + radius + 200 * Math.cos(angle);
+              const cy = parent.pos_y + 180 * Math.sin(angle);
+              const id = editor.addNode(
+                'concept', 1, 1, cx, cy, 'concept-node',
+                { label: child.label ?? '', hint: child.hint ?? '' },
+                buildNodeHtml(child.label ?? '', child.hint ?? ''),
+              );
+              editor.addConnection(parentId, id, 'output_1', 'input_1');
+              ids.push(id);
+            });
+            return ids;
+          },
+          zoomIn:   () => editor.zoom_in(),
+          zoomOut:  () => editor.zoom_out(),
+          zoomReset:() => editor.zoom_reset(),
+          export:   () => editor.export(),
+          removeSelected: () => {
+            const selected = container.querySelector('.drawflow-node.selected');
+            if (selected) {
+              const id = parseInt(selected.id.replace('node-', ''), 10);
+              if (!Number.isNaN(id)) editor.removeNodeId('node-' + id);
+            }
+          },
+        };
+      }
     }
 
     // ── Cleanup robusto para StrictMode ──
     return () => {
-      container.removeEventListener('click', handleClick);
-      container.removeEventListener('blur', handleBlur, true);
-      container.removeEventListener('paste', handlePaste);
+      cleanupEdit?.();
       try { editor.clear(); } catch { /* noop */ }
       container.replaceChildren();
+      container.classList.remove('drawflow-readonly');
       editorRef.current = null;
       if (editorApiRef) editorApiRef.current = null;
     };
