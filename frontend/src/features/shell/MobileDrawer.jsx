@@ -55,7 +55,7 @@ export function MobileDrawer({ open, onClose }) {
         }
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-line">
-          <Link to="/dashboard" onClick={onClose} className="flex items-center gap-2">
+          <Link to="/apuntes" onClick={onClose} className="flex items-center gap-2">
             <span className="block text-xl font-extrabold tracking-tight bg-gradient-to-r from-brand-600 via-brand-500 to-coral-400 bg-clip-text text-transparent">
               StudyWeaver
             </span>

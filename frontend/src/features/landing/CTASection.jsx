@@ -34,7 +34,7 @@ export function CTASection() {
           </p>
 
           <div className="relative mt-8 flex justify-center">
-            <Link to={isAuthenticated ? '/dashboard' : '/registro'}>
+            <Link to={isAuthenticated ? '/apuntes' : '/registro'}>
               <Button size="lg">
                 {isAuthenticated ? (
                   <>

@@ -126,6 +126,53 @@ export async function apiUpload(route, formData, signal) {
   return handleResponse(response);
 }
 
+/**
+ * GET a la API esperando una respuesta BINARIA (no JSON). Adjunta
+ * JWT igual que `apiGet`. Usado para descargar archivos como Blob —
+ * por ejemplo, para envolver un PDF en `URL.createObjectURL` y
+ * mostrarlo en un `<iframe>`.
+ *
+ * Devuelve uno de:
+ *   { success: true,  blob: Blob }
+ *   { success: false, message: string }
+ *
+ * En 401 dispara el evento global `auth:logout` igual que
+ * `handleResponse`, para que AuthContext cierre la sesión.
+ *
+ * Diferente del wrapper estándar: no intenta `.json()` la respuesta
+ * exitosa (sería un PDF, parsearía mal). En cambio, si el HTTP es
+ * de error sí intenta parsear JSON para extraer `message`, porque
+ * el backend lo emite así también para los endpoints binarios.
+ */
+export async function apiDownload(route, params, signal) {
+  const url = buildUrl(route, params);
+  const response = await safeFetch(url, {
+    method: 'GET',
+    headers: buildHeaders(false),
+    signal,
+  });
+
+  if (response.status === 401) {
+    window.dispatchEvent(new CustomEvent('auth:logout', { detail: { reason: '401' } }));
+    return { success: false, message: 'No autorizado.' };
+  }
+
+  if (!response.ok) {
+    let message = `Error al descargar (HTTP ${response.status}).`;
+    try {
+      const body = await response.json();
+      if (body && body.message) message = body.message;
+    } catch {
+      // El backend pudo emitir binario aún en error o no devolver JSON;
+      // nos quedamos con el mensaje genérico.
+    }
+    return { success: false, message };
+  }
+
+  const blob = await response.blob();
+  return { success: true, blob };
+}
+
 export function setToken(token) {
   try {
     if (token) localStorage.setItem(TOKEN_KEY, token);

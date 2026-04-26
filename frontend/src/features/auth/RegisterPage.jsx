@@ -45,7 +45,9 @@ export function RegisterPage() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  // Si ya hay sesión, mandamos al home autenticado: tras el pivote
+  // ADR-06 esa página es /apuntes (zona principal), no /dashboard.
+  if (isAuthenticated) return <Navigate to="/apuntes" replace />;
 
   function update(field) {
     return (event) => {

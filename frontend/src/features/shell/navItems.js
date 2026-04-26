@@ -11,9 +11,9 @@
  */
 export const NAV_ITEMS = [
   {
-    to: '/dashboard',
-    label: 'Inicio',
-    icon: 'fa-house',
+    to: '/apuntes',
+    label: 'Mis apuntes',
+    icon: 'fa-file-lines',
     end: true,
   },
   {
@@ -30,6 +30,11 @@ export const NAV_ITEMS = [
     to: '/comunidad',
     label: 'Comunidad',
     icon: 'fa-users',
+  },
+  {
+    to: '/dashboard',
+    label: 'Inicio',
+    icon: 'fa-house',
   },
   {
     to: '/perfil',

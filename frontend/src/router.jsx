@@ -14,6 +14,8 @@ import { MapsListPage } from '@/features/maps/pages/MapsListPage.jsx';
 import { MapEditorPage } from '@/features/maps/pages/MapEditorPage.jsx';
 import { FlashcardsListPage } from '@/features/flashcards/pages/FlashcardsListPage.jsx';
 import { ReviewSessionPage } from '@/features/flashcards/pages/ReviewSessionPage.jsx';
+import { NotesListPage } from '@/features/notes/pages/NotesListPage.jsx';
+import { NotePreviewPage } from '@/features/notes/pages/NotePreviewPage.jsx';
 import { CommunityFeedPage } from '@/features/community/pages/CommunityFeedPage.jsx';
 import { PublicMapPage } from '@/features/community/pages/PublicMapPage.jsx';
 import { PublicProfilePage } from '@/features/community/pages/PublicProfilePage.jsx';
@@ -56,6 +58,8 @@ export const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { path: '/dashboard', element: <DashboardPage /> },
+      { path: '/apuntes',     element: <NotesListPage /> },
+      { path: '/apuntes/:id', element: <NotePreviewPage /> },
       { path: '/mapas',     element: <MapsListPage /> },
       { path: '/mapas/:id', element: <MapEditorPage /> },
       { path: '/flashcards',        element: <FlashcardsListPage /> },

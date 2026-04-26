@@ -56,7 +56,7 @@ export function HeroSection() {
             style={{ animation: 'var(--animate-fade-up)', animationDelay: '0.5s' }}
           >
             {isAuthenticated ? (
-              <Link to="/dashboard">
+              <Link to="/apuntes">
                 <Button size="lg">
                   <i className="fas fa-arrow-right-to-bracket" aria-hidden="true" /> Ir al panel
                 </Button>

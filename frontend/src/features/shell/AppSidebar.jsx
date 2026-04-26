@@ -14,7 +14,7 @@ export function AppSidebar() {
   return (
     <aside className="hidden lg:flex lg:flex-col w-64 shrink-0 h-[calc(100dvh-72px)] sticky top-[72px] border-r border-line/60 bg-glass backdrop-blur-2xl px-4 py-6">
       <Link
-        to="/dashboard"
+        to="/apuntes"
         className="px-3 mb-8 flex items-center gap-2 group"
       >
         <span className="block text-xl font-extrabold tracking-tight bg-gradient-to-r from-brand-600 via-brand-500 to-coral-400 bg-clip-text text-transparent group-hover:brightness-110 transition">

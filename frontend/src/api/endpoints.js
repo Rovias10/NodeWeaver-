@@ -42,6 +42,13 @@ export const ENDPOINTS = {
     remove:          'flashcards/delete',
     generateFromMap: 'flashcards/generate-from-map',
   },
+  notes: {
+    list:            'notes/list',
+    get:             'notes/get',
+    file:            'notes/file',
+    upload:          'notes/upload',
+    remove:          'notes/delete',
+  },
   community: {
     feed:            'community/feed',
     map:             'community/map',

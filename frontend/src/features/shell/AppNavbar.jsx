@@ -41,7 +41,7 @@ export function AppNavbar({ onOpenDrawer }) {
         <i className="fas fa-bars text-lg" aria-hidden="true" />
       </button>
 
-      <Link to="/dashboard" className="lg:hidden">
+      <Link to="/apuntes" className="lg:hidden">
         <span className="block text-lg font-extrabold tracking-tight bg-gradient-to-r from-brand-600 via-brand-500 to-coral-400 bg-clip-text text-transparent">
           StudyWeaver
         </span>
