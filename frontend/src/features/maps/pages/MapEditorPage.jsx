@@ -4,7 +4,7 @@ import { Spinner } from '@/ui/Spinner.jsx';
 import { Card } from '@/ui/Card.jsx';
 import { Button } from '@/ui/Button.jsx';
 import { useNotification } from '@/ui/useNotification.js';
-import { getMap } from '../services/mapsService.js';
+import { getMap, saveMap } from '../services/mapsService.js';
 import { expandNode } from '../services/aiService.js';
 import { generateFromMap as generateFlashcardsFromMap } from '@/features/flashcards/services/flashcardsService.js';
 import { useMapAutoSave } from '../hooks/useMapAutoSave.js';
@@ -13,6 +13,7 @@ import { DrawflowEditor } from '../components/DrawflowEditor.jsx';
 import { EditorToolbar } from '../components/EditorToolbar.jsx';
 import { MapTitleEditor } from '../components/MapTitleEditor.jsx';
 import { SaveIndicator } from '../components/SaveIndicator.jsx';
+import { ShareToggle } from '@/features/community/components/ShareToggle.jsx';
 
 /**
  * Cuenta los nodos visibles en un export de Drawflow. Sirve para
@@ -60,6 +61,7 @@ export function MapEditorPage() {
   const auto = useMapAutoSave(mapId);
   const [expandingNodeId, setExpandingNodeId] = useState(null);
   const [isGeneratingFlashcards, setIsGeneratingFlashcards] = useState(false);
+  const [isSharingPending, setIsSharingPending] = useState(false);
 
   // ── Carga inicial ────────────────────────────────────────────────
   useEffect(() => {
@@ -186,6 +188,52 @@ export function MapEditorPage() {
     }
   }, [isGeneratingFlashcards, expandingNodeId, initialJson, mapId, notify]);
 
+  // Handler del switch "Público/Privado" del toolbar de cabecera.
+  //
+  // Política:
+  //  - Al pasar de privado → público pedimos confirmación (el cambio
+  //    es visible al instante en el feed comunidad y abre el mapa
+  //    a likes/comments). Al pasar de público → privado guardamos
+  //    sin preguntar — el usuario sabe lo que hace.
+  //  - Cancelamos el auto-save pendiente para evitar carrera con un
+  //    payload viejo que pisaría el cambio recién confirmado.
+  //  - Persistimos con saveMap directo en lugar de pasar por el
+  //    auto-save debounced: queremos respuesta síncrona para el
+  //    spinner del switch y el toast.
+  const handleSharingChange = useCallback(async (next) => {
+    if (next === isPublic) return;
+    if (next === true) {
+      const ok = window.confirm(
+        '¿Hacer público este mapa? Cualquier usuario podrá verlo, darle like y comentar.'
+      );
+      if (!ok) return;
+    }
+    setIsSharingPending(true);
+    auto.cancelSave();
+    try {
+      const res = await saveMap({
+        id: mapId,
+        title,
+        description,
+        is_public: next,
+        drawflow_json: lastJsonRef.current ?? initialJson,
+      });
+      if (!res.success) {
+        notify(res.message || 'No se pudo cambiar la visibilidad.', 'error');
+        return;
+      }
+      setIsPublic(next);
+      notify(
+        next ? 'Mapa publicado en la comunidad.' : 'Mapa marcado como privado.',
+        'success',
+      );
+    } catch {
+      notify('Error de red al cambiar la visibilidad.', 'error');
+    } finally {
+      setIsSharingPending(false);
+    }
+  }, [isPublic, mapId, title, description, initialJson, notify, auto]);
+
   // Handler de "+ IA": llama a /api/ai/expand con el label del nodo
   // y, si hay hijos, los pinta con addChildNodes (que también los
   // conecta al padre). El auto-save se dispara solo gracias a los
@@ -249,10 +297,16 @@ export function MapEditorPage() {
 
   return (
     <div className="flex flex-col gap-4 h-[calc(100dvh-160px)] min-h-[520px]">
-      {/* Cabecera: título + indicador de guardado */}
-      <header className="flex items-start justify-between gap-4">
+      {/* Cabecera: título + visibilidad + indicador de guardado */}
+      <header className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
         <MapTitleEditor value={title} onChange={handleTitleChange} />
-        <div className="pt-2 shrink-0">
+        <div className="flex items-center gap-4 shrink-0 pt-1 sm:pt-2 flex-wrap">
+          <ShareToggle
+            isPublic={isPublic}
+            onChange={handleSharingChange}
+            isPending={isSharingPending}
+            disabled={status !== 'ok'}
+          />
           <SaveIndicator
             status={auto.status}
             lastSavedAt={auto.lastSavedAt}
