@@ -16,6 +16,8 @@ import { FlashcardsListPage } from '@/features/flashcards/pages/FlashcardsListPa
 import { ReviewSessionPage } from '@/features/flashcards/pages/ReviewSessionPage.jsx';
 import { CommunityFeedPage } from '@/features/community/pages/CommunityFeedPage.jsx';
 import { PublicMapPage } from '@/features/community/pages/PublicMapPage.jsx';
+import { PublicProfilePage } from '@/features/community/pages/PublicProfilePage.jsx';
+import { MyFavoritesPage } from '@/features/community/pages/MyFavoritesPage.jsx';
 
 /**
  * Definición central de rutas en modo "Library / Data Mode" (React Router v7).
@@ -60,6 +62,8 @@ export const router = createBrowserRouter([
       { path: '/flashcards/repaso', element: <ReviewSessionPage /> },
       { path: '/comunidad',           element: <CommunityFeedPage /> },
       { path: '/comunidad/mapa/:id',   element: <PublicMapPage /> },
+      { path: '/comunidad/favoritos',  element: <MyFavoritesPage /> },
+      { path: '/u/:userId',            element: <PublicProfilePage /> },
       { path: '/perfil',               element: <ProfilePage /> },
     ],
   },
