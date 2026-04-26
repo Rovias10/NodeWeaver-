@@ -34,4 +34,12 @@ export const ENDPOINTS = {
   ai: {
     expand:          'ai/expand',
   },
+  flashcards: {
+    list:            'flashcards/list',
+    due:             'flashcards/due',
+    save:            'flashcards/save',
+    review:          'flashcards/review',
+    remove:          'flashcards/delete',
+    generateFromMap: 'flashcards/generate-from-map',
+  },
 };
