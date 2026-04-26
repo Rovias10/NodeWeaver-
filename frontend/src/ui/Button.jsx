@@ -6,9 +6,11 @@
  *   - ghost:   superficie cristal con borde sutil, acción secundaria.
  *   - google:  blanco con icono Google, único en pantallas auth.
  *   - danger:  coral, acciones destructivas.
+ *   - success: verde esmeralda, acciones positivas (p.ej. "Fácil"
+ *              en la sesión de repaso de flashcards).
  *
  * Props:
- *   - variant: 'primary' | 'ghost' | 'google' | 'danger'
+ *   - variant: 'primary' | 'ghost' | 'google' | 'danger' | 'success'
  *   - size:    'md' | 'lg'
  *   - isLoading: muestra spinner y deshabilita.
  *   - resto: cualquier prop nativa de <button>.
@@ -30,6 +32,9 @@ const VARIANTS = {
   danger:
     'text-white bg-coral-500 hover:bg-coral-400 ' +
     'focus-visible:ring-coral-400',
+  success:
+    'text-white bg-emerald-500 hover:bg-emerald-400 ' +
+    'focus-visible:ring-emerald-400',
 };
 
 const SIZES = {
