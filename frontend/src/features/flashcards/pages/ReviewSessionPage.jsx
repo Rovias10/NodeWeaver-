@@ -145,7 +145,12 @@ export function ReviewSessionPage() {
             </p>
           )}
         </div>
-        <Button variant="ghost" onClick={goToList} title="Salir de la sesión">
+        <Button
+          variant="ghost"
+          onClick={goToList}
+          title="Salir de la sesión"
+          aria-label="Salir de la sesión de repaso"
+        >
           <i className="fas fa-xmark" aria-hidden="true" />
           <span className="hidden sm:inline">Salir</span>
         </Button>

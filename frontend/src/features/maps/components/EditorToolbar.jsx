@@ -76,6 +76,7 @@ export function EditorToolbar({
         onClick={onGenerateFlashcards}
         isLoading={isGeneratingFlashcards}
         title="Generar flashcards a partir de los conceptos del mapa"
+        aria-label="Generar flashcards desde el mapa"
       >
         <i className="fas fa-clone" aria-hidden="true" />
         <span className="hidden sm:inline">Flashcards</span>
