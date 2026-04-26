@@ -1,30 +1,50 @@
 <?php
 /**
- * Cliente HTTP de la IA — capa fina sobre Ollama (https://ollama.com).
+ * Fachada de alto nivel para la IA del producto StudyWeaver.
  *
- * Configuración por variables de entorno (.env):
- *   OLLAMA_BASE_URL   p. ej. http://192.168.1.50:11434
- *   OLLAMA_MODEL      p. ej. gpt-oss:20b  (o qwen3:8b, llama3.2, etc.)
+ * Conoce los casos de uso (expand, generateFlashcards, y en I3 los
+ * `parseNoteTo*`), construye los prompts en castellano y sanea la
+ * respuesta del modelo. NO conoce el transporte HTTP: lo delega en
+ * `GeminiClient` (cliente de bajo nivel para Google Gemini API).
  *
- * Comportamiento:
- *   - Si AMBAS variables están definidas → llamada real a Ollama.
- *   - Si falta alguna             → modo STUB demo (3 hijos genéricos).
- *     Sirve para que el editor sea defendible aunque Ollama no esté
- *     levantado o no exista API key (caso típico de defensa offline o
- *     pre-instalación del modelo en el servidor remoto).
- *   - Si la llamada real falla por timeout, red, HTTP no-200 o JSON
- *     inválido → lanza RuntimeException. El controller traduce esa
- *     excepción a respuesta 503 con mensaje
- *     "La IA no está disponible ahora." (NO se cae en stub silencioso:
- *     defendible que el usuario vea el problema real).
+ * Cambio respecto a la versión Ollama (rama `IA_Integration`, ADR-07):
+ *   - Antes: curl directo contra `OLLAMA_BASE_URL/api/chat` con
+ *     `format:'json'`, modo stub determinístico cuando faltaba la
+ *     configuración.
+ *   - Ahora: delegación 100% en `GeminiClient::generateJson(...)`.
+ *     Sin SDKs externos. Sin modo stub: si Gemini cae, el controller
+ *     traduce la `RuntimeException` a 503 con el mensaje canónico.
+ *     Coherente con la decisión cerrada en ADR-07 ("para `from-note`
+ *     un stub no aporta valor; aplicamos la misma regla a expand y
+ *     generateFlashcards para que el comportamiento de error sea
+ *     uniforme en los 3 endpoints IA").
  *
- * Sin SDKs Composer; sólo curl nativo de PHP (cumple regla CLAUDE.md
- * "sin SDKs pesados"). Documentado en plan §1.4 y ADR-06 (pendiente).
+ * La firma pública NO cambia: los controllers (`aiController::expand`
+ * y `flashcardController::generateFromMap`) siguen invocando
+ * `AIClient::expand($label, $context)` y
+ * `AIClient::generateFlashcards($mapTitle, $nodes)` sin enterarse de
+ * qué proveedor IA hay por debajo.
+ *
+ * Convenciones (CLAUDE.md §9):
+ *   - Castellano en prompts y comentarios.
+ *   - `RuntimeException` en cualquier fallo (incluido formato
+ *     inesperado del modelo). El controller decide el HTTP.
+ *   - Saneo defensivo de la salida (longitudes, tipos, descartes).
  */
+
+require_once __DIR__ . '/GeminiClient.php';
+
 class AIClient {
 
-    /** Timeout en segundos para la llamada a Ollama. */
-    const REQUEST_TIMEOUT = 30;
+    /**
+     * Instrucción de sistema común a todas las llamadas IA del producto.
+     * Refuerza la persona y la regla "JSON válido y sólo JSON" pese a
+     * que `GeminiClient` ya activa `responseMimeType: 'application/json'`
+     * — sirve de cinturón adicional por si el modelo lo ignora en algún
+     * caso límite.
+     */
+    const SYSTEM_INSTRUCTION_ES =
+        'Eres un asistente de estudio en español. Devuelves siempre JSON válido y nada más.';
 
     /**
      * Expande un concepto en 3-5 sub-conceptos relacionados.
@@ -32,84 +52,32 @@ class AIClient {
      * @param string      $label    Nombre del concepto a expandir.
      * @param string|null $context  Contexto del padre/abuelo (opcional).
      * @return array Lista de hijos: [{ "label": string, "hint": string }, ...]
-     * @throws RuntimeException si la IA está configurada pero falla la llamada.
+     * @throws RuntimeException si la IA falla (red, HTTP, formato).
      */
     public static function expand($label, $context = null) {
-        $baseUrl = trim((string) EnvLoader::get('OLLAMA_BASE_URL', ''));
-        $model   = trim((string) EnvLoader::get('OLLAMA_MODEL',    ''));
+        $prompt = self::buildExpandPrompt($label, $context);
 
-        // Modo demo: sin configuración → stub determinístico.
-        if ($baseUrl === '' || $model === '') {
-            return self::stubChildren($label);
-        }
+        // thinking_budget=0 → mínima latencia. Para expand el output es
+        // muy estructurado (3-5 entradas con label/hint cortos) y no
+        // necesita razonamiento elaborado.
+        $parsed = GeminiClient::generateJson(
+            $prompt,
+            self::SYSTEM_INSTRUCTION_ES,
+            null,
+            [
+                'temperature'     => 0.5,
+                'thinking_budget' => 0,
+            ]
+        );
 
-        $prompt = self::buildPrompt($label, $context);
-
-        $body = json_encode([
-            'model'    => $model,
-            'messages' => [
-                [
-                    'role'    => 'system',
-                    'content' => 'Eres un asistente de estudio en español. Devuelves siempre JSON válido y nada más.',
-                ],
-                [
-                    'role'    => 'user',
-                    'content' => $prompt,
-                ],
-            ],
-            // format: "json" → Ollama fuerza al modelo a producir JSON parseable.
-            'format'  => 'json',
-            'stream'  => false,
-            'options' => [
-                'temperature' => 0.5,
-                'num_predict' => 800,
-            ],
-        ], JSON_UNESCAPED_UNICODE);
-
-        $url = rtrim($baseUrl, '/') . '/api/chat';
-
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST           => true,
-            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
-            CURLOPT_POSTFIELDS     => $body,
-            CURLOPT_TIMEOUT        => self::REQUEST_TIMEOUT,
-            CURLOPT_CONNECTTIMEOUT => 5,
-        ]);
-        $raw   = curl_exec($ch);
-        $errno = curl_errno($ch);
-        $err   = curl_error($ch);
-        $code  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($errno !== 0 || $raw === false) {
-            // Errores de red/timeout: el log queda en error_log para auditoría
-            // del alumno; el cliente recibe sólo el mensaje genérico.
-            error_log("[AIClient] Ollama curl error #$errno: $err");
-            throw new RuntimeException('IA no disponible (red).');
-        }
-        if ($code !== 200) {
-            error_log("[AIClient] Ollama HTTP $code: $raw");
-            throw new RuntimeException("IA no disponible (HTTP $code).");
-        }
-
-        $payload = json_decode($raw, true);
-        if (!is_array($payload) || !isset($payload['message']['content'])) {
-            error_log('[AIClient] Respuesta Ollama sin message.content: ' . substr($raw, 0, 300));
-            throw new RuntimeException('IA no disponible (respuesta vacía).');
-        }
-
-        $content = $payload['message']['content'];
-        $parsed  = json_decode($content, true);
-        if (!is_array($parsed) || !isset($parsed['children']) || !is_array($parsed['children'])) {
-            error_log('[AIClient] Contenido sin "children" array: ' . substr($content, 0, 300));
+        if (!isset($parsed['children']) || !is_array($parsed['children'])) {
+            error_log('[AIClient::expand] Contenido sin "children" array: '
+                . substr(json_encode($parsed), 0, 300));
             throw new RuntimeException('IA no disponible (formato inesperado).');
         }
 
-        // Saneamos cada hijo: nos quedamos con label/hint como strings,
-        // descartamos los inválidos. Limitamos a 5 (por si el modelo se
-        // pasa) y exigimos al menos 1.
+        // Saneo: descartamos hijos sin label, recortamos a longitudes
+        // máximas, capamos a 5 entradas (regla del prompt).
         $clean = [];
         foreach ($parsed['children'] as $child) {
             if (!is_array($child)) continue;
@@ -130,90 +98,41 @@ class AIClient {
 
     /**
      * Genera entre 8 y 15 flashcards de repaso a partir de los nodos
-     * de un mapa. Mismo patrón HTTP que `expand`: format:'json' para
-     * forzar al modelo a devolver un objeto parseable, timeout 30s,
-     * `RuntimeException` en cualquier fallo (controller traduce a 503).
+     * de un mapa. Mismo contrato de salida que la versión Ollama
+     * heredada — los controllers que la consumen no se enteran del
+     * cambio de proveedor.
      *
      * @param string $mapTitle  Título del mapa (contexto para el prompt).
      * @param array  $nodes     Lista de [{ label, hint }, ...] ya extraída
      *                          del drawflow_json por el controller.
      * @return array Lista de tarjetas: [{ "front": string, "back": string }, ...].
-     * @throws RuntimeException si la IA está configurada pero falla.
+     * @throws RuntimeException si la IA falla (red, HTTP, formato).
      */
     public static function generateFlashcards($mapTitle, $nodes) {
-        $baseUrl = trim((string) EnvLoader::get('OLLAMA_BASE_URL', ''));
-        $model   = trim((string) EnvLoader::get('OLLAMA_MODEL',    ''));
-
-        // Modo demo: sin configuración → tarjetas stub a partir de los nodos.
-        if ($baseUrl === '' || $model === '') {
-            return self::stubFlashcards($nodes);
-        }
-
         $prompt = self::buildFlashcardsPrompt($mapTitle, $nodes);
 
-        $body = json_encode([
-            'model'    => $model,
-            'messages' => [
-                [
-                    'role'    => 'system',
-                    'content' => 'Eres un asistente de estudio en español. Devuelves siempre JSON válido y nada más.',
-                ],
-                [
-                    'role'    => 'user',
-                    'content' => $prompt,
-                ],
-            ],
-            'format'  => 'json',
-            'stream'  => false,
-            'options' => [
-                'temperature' => 0.5,
-                // Margen para 15 tarjetas (≈100 tokens cada una con
-                // pregunta+respuesta cortas + estructura JSON).
-                'num_predict' => 1500,
-            ],
-        ], JSON_UNESCAPED_UNICODE);
+        // thinking_budget=-1 (dynamic) → el modelo decide cuánto razonar.
+        // Para 8-15 flashcards bien formuladas merece la pena permitir
+        // un poco de razonamiento; el coste es menor que un mal output
+        // que obligue a regenerar.
+        $parsed = GeminiClient::generateJson(
+            $prompt,
+            self::SYSTEM_INSTRUCTION_ES,
+            null,
+            [
+                'temperature'     => 0.5,
+                'thinking_budget' => -1,
+            ]
+        );
 
-        $url = rtrim($baseUrl, '/') . '/api/chat';
-
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST           => true,
-            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
-            CURLOPT_POSTFIELDS     => $body,
-            CURLOPT_TIMEOUT        => self::REQUEST_TIMEOUT,
-            CURLOPT_CONNECTTIMEOUT => 5,
-        ]);
-        $raw   = curl_exec($ch);
-        $errno = curl_errno($ch);
-        $err   = curl_error($ch);
-        $code  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($errno !== 0 || $raw === false) {
-            error_log("[AIClient::generateFlashcards] Ollama curl error #$errno: $err");
-            throw new RuntimeException('IA no disponible (red).');
-        }
-        if ($code !== 200) {
-            error_log("[AIClient::generateFlashcards] Ollama HTTP $code: $raw");
-            throw new RuntimeException("IA no disponible (HTTP $code).");
-        }
-
-        $payload = json_decode($raw, true);
-        if (!is_array($payload) || !isset($payload['message']['content'])) {
-            error_log('[AIClient::generateFlashcards] Respuesta sin message.content: ' . substr($raw, 0, 300));
-            throw new RuntimeException('IA no disponible (respuesta vacía).');
-        }
-
-        $content = $payload['message']['content'];
-        $parsed  = json_decode($content, true);
-        if (!is_array($parsed) || !isset($parsed['cards']) || !is_array($parsed['cards'])) {
-            error_log('[AIClient::generateFlashcards] Contenido sin "cards" array: ' . substr($content, 0, 300));
+        if (!isset($parsed['cards']) || !is_array($parsed['cards'])) {
+            error_log('[AIClient::generateFlashcards] Contenido sin "cards" array: '
+                . substr(json_encode($parsed), 0, 300));
             throw new RuntimeException('IA no disponible (formato inesperado).');
         }
 
-        // Saneamos cada tarjeta: front/back no vacíos, recortados a
-        // 200 chars (regla del prompt), máximo 15 (regla del prompt).
+        // Saneo: front/back no vacíos, recortados a 200 chars (regla
+        // del prompt), máximo 15 (regla del prompt).
         $clean = [];
         foreach ($parsed['cards'] as $card) {
             if (!is_array($card)) continue;
@@ -232,48 +151,16 @@ class AIClient {
         return $clean;
     }
 
-    /**
-     * Stub determinístico para modo demo (sin OLLAMA_*).
-     * Devuelve 3 sub-conceptos genéricos basados en el label de entrada,
-     * de forma que la UI sea funcional sin depender de la IA real.
-     */
-    private static function stubChildren($label) {
-        $base = trim((string) $label);
-        if ($base === '') $base = 'Concepto';
-        return [
-            ['label' => "Subtema A de $base", 'hint' => 'Ejemplo demo (sin IA conectada).'],
-            ['label' => "Subtema B de $base", 'hint' => 'Ejemplo demo (sin IA conectada).'],
-            ['label' => "Subtema C de $base", 'hint' => 'Ejemplo demo (sin IA conectada).'],
-        ];
-    }
+    // ──────────────────────────────────────────────────────────────────
+    // Prompts privados
+    // ──────────────────────────────────────────────────────────────────
 
     /**
-     * Stub determinístico de flashcards para modo demo. Genera una
-     * tarjeta por nodo (máx. 15) con la fórmula "¿Qué es X? → hint",
-     * para que la UI sea funcional aunque Ollama no esté conectado.
+     * Construye el prompt en castellano para la expansión de un nodo.
+     * Schema explícito en el cuerpo del prompt como refuerzo del
+     * `responseMimeType: 'application/json'` que ya aplica GeminiClient.
      */
-    private static function stubFlashcards($nodes) {
-        $cards = [];
-        foreach ($nodes as $node) {
-            if (!is_array($node)) continue;
-            $label = trim((string) ($node['label'] ?? ''));
-            if ($label === '') continue;
-            $hint = trim((string) ($node['hint'] ?? ''));
-            $cards[] = [
-                'front' => "¿Qué es {$label}?",
-                'back'  => $hint !== '' ? $hint : 'Ejemplo demo (sin IA conectada).',
-            ];
-            if (count($cards) >= 15) break;
-        }
-        return $cards;
-    }
-
-    /**
-     * Construye el prompt en castellano para el modelo. Estricto sobre
-     * el formato JSON esperado para minimizar respuestas malformadas
-     * (incluso con format:"json" activo, conviene reforzar el schema).
-     */
-    private static function buildPrompt($label, $context) {
+    private static function buildExpandPrompt($label, $context) {
         $contextLine = $context
             ? "Contexto del concepto padre: \"{$context}\"."
             : 'Sin contexto adicional.';
@@ -302,11 +189,11 @@ EOT;
     /**
      * Construye el prompt para generar flashcards a partir del título
      * del mapa y su lista de nodos. Schema explícito en el cuerpo del
-     * prompt como refuerzo de format:'json'.
+     * prompt como refuerzo del `responseMimeType` y de la regla de
+     * 8-15 entradas.
      */
     private static function buildFlashcardsPrompt($mapTitle, $nodes) {
         // Serializamos los nodos en una lista plana legible por el modelo.
-        // Limitamos cada line para no inflar innecesariamente el prompt.
         $lines = [];
         foreach ($nodes as $node) {
             if (!is_array($node)) continue;
