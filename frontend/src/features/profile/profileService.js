@@ -26,6 +26,7 @@ export function changePassword(payload) {
   return apiPost(ENDPOINTS.profile.password, payload);
 }
 
+
 export function uploadAvatar(file) {
   const formData = new FormData();
   formData.append('avatar', file);
