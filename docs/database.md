@@ -19,7 +19,12 @@ users (1) ── (N) maps
 
 `ON DELETE CASCADE` propaga el borrado de la cuenta hacia el resto del rastro del usuario (RGPD).
 
-El plan futuro (Fases Flashcards y Comunidad) añade 3 tablas más: `flashcards`, `likes`, `comments`. Su DDL ya está escrito en migraciones `.planned` (ver §3). Cuando llegue cada fase, se renombran quitando `.planned` y se ejecutan.
+El plan futuro añade tablas adicionales según fase:
+- **Fase Flashcards** → `flashcards` (DDL ya escrito en `.planned`).
+- **Fase Comunidad** → `likes`, `comments` (DDL ya escrito en `.planned`).
+- **Fase Notes / Apuntes** (zona principal) → `notes` + columna `source_note_id` en `maps` y `flashcards` (DDL pendiente de redactar — esquema documentado en §3.4 y plan completo en [`docs/notes-plan.md`](./notes-plan.md)).
+
+Cuando llegue cada fase, se renombran los `.sql.planned` quitando la extensión y se ejecutan en phpMyAdmin.
 
 ---
 
@@ -80,6 +85,8 @@ Mapas conceptuales del usuario. **Tabla canónica de StudyWeaver**, creada por l
 | `drawflow_json` | LONGTEXT NULL                         | **Fuente de verdad del mapa.** Resultado tal cual de `editor.export()` de Drawflow. NULL en mapas recién creados sin contenido. |
 | `created_at`    | DATETIME DEFAULT CURRENT_TIMESTAMP    |                                                                               |
 | `updated_at`    | DATETIME ON UPDATE CURRENT_TIMESTAMP  | Refleja el último auto-save.                                                  |
+
+> **Columna planificada (Fase Notes):** se añadirá `source_note_id INT NULL` con FK a `notes(id)` ON DELETE SET NULL. Permite saber de qué apunte salió cada mapa cuando se generan vía IA. Detalle en [`docs/notes-plan.md`](./notes-plan.md) §1.2.
 
 **Reglas de negocio:**
 
@@ -164,7 +171,40 @@ Comentarios planos sobre mapas públicos. **Sin replies/threading** en MVP — d
 
 ---
 
-### 3.4 `quizzes` y `quiz_attempts` — sin DDL todavía
+### 3.4 `notes` (Fase Notes / Apuntes) — DDL pendiente de redactar
+
+Apuntes del usuario (PDF, texto pegado o markdown). **Será la nueva zona principal de StudyWeaver** según el pivote de narrativa documentado en [`docs/notes-plan.md`](./notes-plan.md) y ADR-06: el apunte es la fuente de verdad de la que la IA deriva mapas conceptuales y flashcards.
+
+| Campo               | Tipo                                  | Notas                                                                  |
+| ------------------- | ------------------------------------- | ---------------------------------------------------------------------- |
+| `id`                | INT PK AUTO_INCREMENT                 |                                                                        |
+| `user_id`           | INT NOT NULL                          | → `users.id` ON DELETE CASCADE.                                        |
+| `title`             | VARCHAR(200) NOT NULL                 | Default `'Apunte sin título'`. Editable inline.                        |
+| `source_type`       | ENUM('pdf','text','markdown')         | Default `'text'`.                                                      |
+| `original_filename` | VARCHAR(255) NULL                     | Nombre del PDF subido (informativo).                                    |
+| `file_path`         | VARCHAR(500) NULL                     | Ruta relativa en `backend/uploads/notes/<user_id>/<uuid>.pdf`.          |
+| `extracted_text`    | LONGTEXT NULL                         | Texto plano que se manda a la IA. Para PDFs se extrae con Smalot/PDFParser. |
+| `char_count`        | INT NOT NULL DEFAULT 0                | Longitud del texto extraído (informativo + límite UI).                  |
+| `created_at`        | DATETIME DEFAULT CURRENT_TIMESTAMP    |                                                                        |
+| `updated_at`        | DATETIME ON UPDATE CURRENT_TIMESTAMP  |                                                                        |
+
+**Reglas de negocio:**
+
+- Storage físico en `backend/uploads/notes/<user_id>/<uuid>.pdf` (UUID evita colisiones; carpeta por usuario para borrar fácil).
+- Tamaño máximo 5 MB por PDF.
+- Anti-IDOR: ownership por `user_id` en cada query.
+- Borrado: `ON DELETE CASCADE` desde `users`. Si se borra un apunte que tiene mapas/flashcards derivadas, esas SOBREVIVEN gracias a `ON DELETE SET NULL` en `maps.source_note_id` y `flashcards.note_id` — no se pierde el progreso de estudio.
+
+**Migraciones planificadas:**
+- `007_create_notes.sql` (DDL completo arriba).
+- `008_alter_maps_source_note.sql` — añade `source_note_id` a `maps`.
+- `009_alter_flashcards_source_note.sql` — añade `note_id` a `flashcards` (sólo si la 003 ya está aplicada; si no, se incluye directamente en el DDL de la 003).
+
+DDL completo en [`docs/notes-plan.md`](./notes-plan.md) §1.
+
+---
+
+### 3.5 `quizzes` y `quiz_attempts` — sin DDL todavía
 
 La Fase Quizzes (si se implementa) genera el quiz vía IA bajo demanda y no necesita cachearlo en BD para la primera versión. Si llega el momento de cachear, se añadirán dos tablas:
 

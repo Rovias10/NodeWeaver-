@@ -220,6 +220,67 @@ Justificación de no denormalizar `nodes`/`edges` en MVP heredada del ADR-04: `m
 
 ---
 
-## ADR-06 — *(siguiente decisión)*
+## ADR-06 — Apuntes como zona principal: pivote de narrativa
 
-*Cuando tomes la siguiente decisión técnica no trivial, añade aquí. Ejemplos pendientes: integración de Drawflow (paquete npm vs script local) y su wrapper React, proveedor IA (OpenAI vs Gemini) y modelo, librería para parsear PDF, proveedor cloud (AWS vs VPS+Vercel), estrategia de paginación del feed.*
+- **Fecha:** 2026-04-26
+- **Estado:** aceptado
+
+### Contexto
+
+Tras cerrar Fase Maps M0–M5 (editor Drawflow funcional con auto-save, IA de expansión por nodo, atajos de teclado), surgió la pregunta de si el mapa conceptual **solo** es lo bastante diferencial para defenderlo en el tribunal. La conclusión honesta es que no del todo:
+
+- **Lo que aporta el mapa solo:** organización visual + jerarquía de un tema en una pantalla. La IA reduce el cuello de botella histórico de los mapas (construirlos era lento).
+- **Lo que NO aporta:** una vez construido, **estudiar consultándolo es peor** que un resumen lineal o flashcards. La utilidad académica medida (Novak 1990; Hay et al. 2008) está en *construir* el mapa, no en revisarlo. Y si el alumno tiene ChatGPT a mano, ya consigue esquemas con un prompt rápido.
+
+A la vez, las features que faltaban en el roadmap (Flashcards, Comunidad) tampoco resuelven solas el "¿por qué usaría yo esto?". Hace falta una narrativa que las una.
+
+### Decisión
+
+**Pivotar la narrativa** del producto sin tirar nada de lo construido. La nueva zona principal de StudyWeaver es **Mis apuntes** (`/apuntes`):
+
+```
+Usuario ─▶ Apunte (PDF / texto pegado / markdown)
+              ├─▶ Mapa conceptual    (IA estructura el contenido)
+              ├─▶ Flashcards SM-2     (IA genera tarjetas de repaso)
+              └─▶ Resumen / Quiz      (futuro, opcional)
+```
+
+- El **apunte** es la fuente de verdad. El alumno sube un PDF (o pega texto) y de ahí parten los demás artefactos.
+- El **mapa** sigue siendo editor Drawflow tal cual; ahora puede generarse desde un apunte vía IA y queda vinculado con `maps.source_note_id`.
+- Las **flashcards** se generan desde un mapa (Fase Flashcards F5) o directamente desde un apunte (Fase Notes N4 con `target='flashcards'`).
+- El dashboard `/dashboard` deja de ser la página de aterrizaje post-login; pasa a ser una vista futura de estadísticas. El redirect post-login pasa a `/apuntes`.
+
+Documentación detallada en [`docs/notes-plan.md`](./notes-plan.md). Cambios de BD planificados (no aplicados aún): tabla `notes` (migración 007) + columna `source_note_id` en `maps` (migración 008) + columna `note_id` en `flashcards` (migración 009 o incluida directamente en la 003).
+
+### Alternativas consideradas
+
+1. **Mantener el mapa como producto principal** y vender la app como "mapas conceptuales colaborativos con IA" — descartada: narrativa floja vs ChatGPT, depende solo del "wow" visual.
+2. **Cambiar de dominio entero** (p. ej. asistente conversacional o generador de resúmenes) — descartada: a menos de 8 días de la entrega, tirar 25 archivos commiteados es suicidio académico.
+3. **Reordenar prioridades hacia Comunidad** (mapas públicos + likes) en lugar de hacia Apuntes — descartada: la Comunidad sí es vistosa en demo pero no resuelve la pregunta de "¿por qué construir el mapa?". Apuntes sí.
+4. **Sólo añadir resumen/quiz como vistas adicionales del mapa** sin tabla `notes` — descartada: el apunte original (PDF, texto largo) tiene valor por sí mismo; convertirlo en metadato de un mapa pierde la fuente.
+
+### Consecuencias
+
+- **Positivas:**
+  - Narrativa con valor real medible: combina **comprensión** (mapa) y **retención** (flashcards SM-2). Bibliografía sólida (Novak, Ebbinghaus, SuperMemo/Anki).
+  - El mapa queda justificado como paso intermedio editable, no como producto final indefendible.
+  - La capa social (Fase Comunidad) tiene más sentido: compartes el mapa **derivado de tus apuntes**, no un mapa hecho a mano sin contexto.
+  - IA local (Ollama gpt-oss:20b) refuerza el ángulo de privacidad (apuntes nunca salen del PC del estudiante) y sostenibilidad (RA4 1708190): cero coste por consulta, modelo open-weights.
+- **Negativas / trade-offs:**
+  - Añade ~12-17h de trabajo (Fase Notes N0-N5). En el tiempo restante hay que descartar features menos defendibles (Quizzes, undo, comunidad full).
+  - Requiere instalar `Smalot/PDFParser` vía Composer (primera dep PHP del proyecto). ADR-07 documentará la elección cuando se ejecute la fase.
+  - El dashboard pierde su rol como home y queda como placeholder hasta que se implementen estadísticas.
+- **Línea futura:** quizá merezca la pena permitir adjuntar apuntes a mapas existentes (no solo generar mapa desde apunte), para que el flujo sea bidireccional.
+
+### Referencias
+
+- [`docs/notes-plan.md`](./notes-plan.md) — plan completo con BD, backend, frontend, IA, defensa.
+- [`docs/database.md`](./database.md) §3.4 — esquema `notes`.
+- [`CLAUDE.md`](../CLAUDE.md) §1 — narrativa actualizada.
+- [`Gemini.md`](../Gemini.md) §3 — `notes` añadida a la lista de features.
+
+---
+
+## ADR-07 — *(siguiente decisión)*
+
+*Cuando tomes la siguiente decisión técnica no trivial, añade aquí. Ejemplos pendientes: librería para parsear PDF (Smalot/PDFParser vs shell-out `pdftotext`), proveedor cloud (AWS vs VPS+Vercel), estrategia de paginación del feed Comunidad.*

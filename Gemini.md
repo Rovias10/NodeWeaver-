@@ -85,7 +85,7 @@ React setState → JSX
 | `frontend/src/api/` | Wrapper HTTP, definiciones de endpoints, tipos. | Único lugar donde aparece `fetch`. |
 | `frontend/src/auth/` | `AuthContext`, `ProtectedRoute`, hook `useAuth`. | Token va a `localStorage.token`. |
 | `frontend/src/components/` | UI reutilizable (Button, Card, Modal, etc.). | Sin acceso a fetch ni state global. |
-| `frontend/src/features/` | Una carpeta por feature: `maps`, `flashcards`, `quizzes`, `social`, `ai`. | Cada feature contiene sus componentes, hooks y página. |
+| `frontend/src/features/` | Una carpeta por feature: **`notes` (zona principal)**, `maps`, `flashcards`, `community`, `quizzes`, `dashboard`, `auth`, `landing`, `profile`, `shell`. | Cada feature contiene sus componentes, hooks, services y páginas. |
 | `frontend/src/pages/` | Rutas de React Router. Componen `features/` y `components/`. | Cada page corresponde a una URL. |
 
 ---
@@ -121,10 +121,13 @@ React setState → JSX
 
 ### E. IA
 
-- API keys solo en backend (`backend/DATA/env.php`).
-- Frontend nunca llama directo a OpenAI/Gemini. Llama a `/api/ai/{action}` en tu backend.
-- Cada acción IA es un endpoint distinto: `/api/ai/expand`, `/api/ai/summarize`, `/api/ai/quiz`, `/api/ai/parse-pdf`.
-- El cliente HTTP a OpenAI/Gemini vive en `backend/API/services/OpenAIClient.php` (o equivalente Gemini).
+- StudyWeaver usa **Ollama local** (modelo open-weights, p. ej. `gpt-oss:20b`). El cliente HTTP vive en `backend/API/services/AIClient.php`.
+- Configuración por `.env`: `OLLAMA_BASE_URL` y `OLLAMA_MODEL`. Si faltan, `AIClient` cae en modo stub determinístico (defendible para defensa offline).
+- Frontend nunca habla directo con Ollama. Llama a `/backend/API/index.php?route=ai/{action}` siempre.
+- Cada acción IA es un endpoint distinto:
+  - `/api/ai/expand` (implementado, Fase Maps M4) — expande un nodo en sub-conceptos.
+  - `/api/ai/from-note` (planificado, Fase Notes) — genera mapa o flashcards desde un apunte.
+- Cuando la IA responde mal o cae: el controller traduce `RuntimeException` del service a HTTP 503 con mensaje canónico *"La IA no está disponible ahora."*. Sin filtrar logs internos al cliente.
 
 ### F. Idioma y comentarios
 
@@ -146,12 +149,18 @@ React setState → JSX
 
 ---
 
-## 5. Verrugas heredadas que arreglar antes de extender
+## 5. Verrugas heredadas (estado actual)
 
-- `MODEL/automation.php` (legado n8n) → eliminar al migrar.
-- `backend/api/{ejecutar,estadisticas,guardar,listar,logs}.php` (legado pre-MVC) → eliminar.
-- `SERVER/js/app.js::apiCall()` apunta a URL incorrecta (`/backend/public/index.php`). En el frontend nuevo, el wrapper React apunta a la URL real definida en `.env` (`VITE_API_URL`).
-- `ProfileController` reimplementa extracción de header inline → al refactorizar usar `AuthMiddleware::verifyToken()`.
+✅ **Ya resueltas:**
+- `MODEL/automation.php` y `API/controllers/automationController.php` legacy → eliminados (M0).
+- Carpetas legacy `API/` y `SERVER/` en raíz → migradas a `backend/`.
+- Tablas legacy `automations`, `credentials`, `execution_logs`, `sessions` → DROP en migración 001.
+- Frontend NodeWeaver Vanilla JS → reemplazado por React 18 + Vite (Fases 0-4).
+
+🟡 **Deudas conocidas pero aceptadas para MVP:**
+- `users.verified_at` no se rellena al confirmar (el backend usa `status='active'` + `verification_token=NULL`). Documentado en `docs/database.md` §2.1.
+- `users.two_factor_*` columnas inertes (StudyWeaver MVP no implementa 2FA). Se eliminarán en una migración cuando se descarte 2FA o se implemente.
+- `ProfileController` aún reimplementa el header parsing inline en `getAuthenticatedUser()` en lugar de delegar en `AuthMiddleware::verifyToken()`. Refactor pendiente cuando haya tiempo.
 
 ---
 
@@ -164,9 +173,9 @@ React setState → JSX
 | Concatenar SQL: `"SELECT * WHERE id=$id"` | `prepare("... ?")` + `execute([$id])` |
 | Class components React | Funcionales con hooks |
 | Lógica de negocio en `MODEL/` | Lógica en controller; model es CRUD puro |
-| Llamar a OpenAI desde React | Llamar a `/api/ai/*` propio |
-| API key de OpenAI en `.env` del frontend | Solo en backend `.env` |
-| Crear endpoint en `backend/api/legacy.php` | Crear en `backend/API/controllers/...` |
+| Llamar a Ollama/OpenAI/Gemini desde React | Llamar a `/api/ai/*` propio del backend |
+| Configurar URL de Ollama o API keys en frontend `.env` | Sólo en backend `.env` (`OLLAMA_BASE_URL`, `OLLAMA_MODEL`) |
+| Crear endpoint en `API/` o `SERVER/` raíz | Crear en `backend/API/controllers/...` |
 | `git push --force` | `git push` normal |
 | Editar `.env` directamente | Pedirle al usuario que añada la variable |
 
@@ -176,7 +185,12 @@ React setState → JSX
 
 - `CLAUDE.md` — guía maestra para Claude Code, mando sobre suposiciones.
 - `Gemini.md` — este documento, arquitectura canónica.
-- `docs/ROADMAP.md` — plan diario de los 8 días.
+- `docs/ROADMAP.md` — plan diario.
 - `docs/criterios-daw.md` — RAs del PDF + mapping a archivos.
-- `docs/arquitectura.md` — diagramas + esquema BD detallado.
+- `docs/arquitectura.md` — diagramas.
+- `docs/database.md` — esquema BD activo + planificadas (fuente de verdad sin abrir MySQL).
 - `docs/decisiones.md` — ADRs, decisiones no triviales.
+- `docs/redesign-plan.md` — plan rediseño Fases 0–4 (cerrado).
+- `docs/maps-plan.md` — plan Fase Maps M0–M5 (cerrado).
+- `docs/notes-plan.md` — plan Fase Notes / Apuntes (zona principal pendiente).
+- `plans/crea-el-implementation-plan-golden-canyon.md` — plan Fase Flashcards aprobado, pendiente de ejecutar.
