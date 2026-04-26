@@ -281,6 +281,60 @@ Documentación detallada en [`docs/notes-plan.md`](./notes-plan.md). Cambios de 
 
 ---
 
-## ADR-07 — *(siguiente decisión)*
+## ADR-07 — Cambio de proveedor IA: Gemini API en lugar de Ollama+PDFParser
 
-*Cuando tomes la siguiente decisión técnica no trivial, añade aquí. Ejemplos pendientes: librería para parsear PDF (Smalot/PDFParser vs shell-out `pdftotext`), proveedor cloud (AWS vs VPS+Vercel), estrategia de paginación del feed Comunidad.*
+- **Fecha:** 2026-04-26
+- **Estado:** aceptado (integración diferida a la rama `ia-integration`)
+
+### Contexto
+
+La Fase Notes (ADR-06) se planificó originalmente con **Ollama local** (`gpt-oss:20b`) como proveedor IA y **Smalot/PDFParser** vía Composer para extraer el texto de los PDFs antes de mandárselo al modelo. Ese diseño hereda la decisión de la Fase Maps M4, donde `ai/expand` ya funciona contra Ollama.
+
+A los pocos días de empezar la Fase Notes, el alumno reevalúa la elección por dos razones prácticas:
+
+1. **Latencia y calidad sobre apuntes largos.** `gpt-oss:20b` con un prompt largo (apuntes truncados a ~6 000 chars) genera respuestas en 10-30 s en la GPU local del alumno. Los modelos cloud ofrecen latencias menores y mejor seguimiento del schema JSON (`format:'json'` no garantiza schema, sólo "es JSON").
+2. **PDFs multimodales nativos.** Gemini API acepta PDFs como input directo (multimodal), eliminando la necesidad de un parser server-side. Ahorra una dependencia Composer, una capa de manipulación de texto y un modo de fallo (PDFs escaneados con OCR no resoluble por Smalot).
+
+A la vez, Ollama tenía dos puntos defensivos fuertes que Gemini pierde:
+- **Privacidad** — los apuntes nunca salen de la máquina del alumno.
+- **Coste cero por consulta** — sin facturación por token.
+
+### Decisión
+
+**Migrar la generación IA basada en apuntes (`POST ai/from-note`) a Gemini API**, dejando Ollama operativo para los endpoints existentes (`ai/expand` en Maps M4 y `flashcards/generate-from-map` en Flashcards F5) hasta que se decida si conviene unificar todo en un solo proveedor.
+
+**La integración no se ejecuta en la rama `NotesNewZone`** que cierra el MVP de la fase Notes. Se delega a una rama futura `ia-integration` para que el cierre de Notes (CRUD + UI + visor PDF) no dependa de tener una API key Gemini válida ni de gestionar errores de cuota durante el desarrollo.
+
+Detalle de los pendientes técnicos en [`docs/notes-plan.md`](./notes-plan.md) §10 (lista canónica para la rama futura).
+
+### Alternativas consideradas
+
+1. **Mantener Ollama + Smalot/PDFParser** (plan original) — descartada: pérdida de calidad sobre apuntes largos, dependencia de un parser PHP que falla en PDFs escaneados, y dependencia operativa de tener Ollama corriendo en la máquina local del alumno también en defensa.
+2. **OpenAI GPT-4o** — descartada: coste por token sensiblemente mayor que Gemini Flash a calidad equivalente para la tarea (extracción estructurada de texto académico), y disponibilidad de cuota gratuita más generosa en Gemini para un proyecto académico.
+3. **Anthropic Claude vía API** — descartada: el alumno no dispone de cuenta de pago al cierre de la fase; defendible pero no operativa en el plazo.
+4. **Coexistencia total** (Ollama para todo lo no-multimodal, Gemini sólo para `ai/from-note`) — abierta: es la opción aceptada en MVP. La rama `ia-integration` decidirá si refactoriza Maps/Flashcards también a Gemini o conserva Ollama por argumento de privacidad/sostenibilidad.
+
+### Consecuencias
+
+- **Positivas:**
+  - Multimodal nativo: el backend deja de extraer texto del PDF y se ahorra `Smalot/PDFParser`. La fase Notes cierra sin nuevas dependencias Composer.
+  - Mejor calidad esperada de la respuesta sobre apuntes largos.
+  - Defensa cloud más coherente: el RA1 0614 (despliegue cloud) encaja con un proveedor IA cloud sin exigir Ollama-as-a-service.
+- **Negativas / trade-offs:**
+  - Pérdida del argumento de **privacidad** ("los apuntes no salen de tu PC"). El alumno deberá explicarlo en la memoria como una concesión consciente y, si es relevante, mencionar que la arquitectura permite volver a Ollama en producción cambiando una variable de entorno.
+  - Coste **per-consulta** distinto de cero. Para volumen TFG es despreciable, pero el argumento de "sostenibilidad cero coste" del plan original (RA4 1708190) se debilita; la memoria reorientará la sostenibilidad hacia "modelo elegido por eficiencia energética per-token".
+  - Dependencia de que `GEMINI_API_KEY` esté presente en el `.env` de producción y no expire/se rote sin avisar.
+- **Línea futura:**
+  - Posible refactor uniforme a un único `AIClient` agnóstico de proveedor (con un adaptador Ollama y otro Gemini) si la app crece más allá del TFG.
+
+### Referencias
+
+- [`docs/notes-plan.md`](./notes-plan.md) §2.3 (decisión documentada al cambiar el alcance de N1) y §10 (pendientes para la rama).
+- ADR-06 (origen de la fase Notes; este ADR-07 sustituye su mención de Smalot/PDFParser).
+- Ollama (`gpt-oss:20b`) — sigue cableado en `backend/API/services/AIClient.php` para `ai/expand` y `flashcards/generate-from-map`.
+
+---
+
+## ADR-08 — *(siguiente decisión)*
+
+*Cuando tomes la siguiente decisión técnica no trivial, añade aquí. Ejemplos pendientes: proveedor cloud (AWS vs VPS+Vercel) y forma del despliegue, estrategia de paginación del feed Comunidad si crece, decisión sobre si la rama `ia-integration` unifica todo en Gemini o mantiene Ollama coexistiendo.*

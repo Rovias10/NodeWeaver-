@@ -449,6 +449,29 @@ class NoteController {
             return;
         }
 
+        // Validación de MIME REAL leyendo los magic bytes del archivo en
+        // disco. La comprobación previa (`$file['type']` + extensión)
+        // depende de lo que declare el cliente y es manipulable: un
+        // atacante podría enviar un .exe etiquetado como
+        // "application/pdf". `finfo` mira los primeros bytes ("%PDF-")
+        // para confirmar que es realmente un PDF. Si falla, borramos el
+        // huérfano del filesystem y devolvemos 415.
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $realMime = $finfo ? finfo_file($finfo, $absoluteFile) : false;
+        if ($finfo) {
+            finfo_close($finfo);
+        }
+        if ($realMime !== 'application/pdf') {
+            @unlink($absoluteFile);
+            error_log('[NoteController::uploadPdf] MIME real distinto de application/pdf: ' . var_export($realMime, true));
+            http_response_code(415);
+            echo json_encode([
+                'success' => false,
+                'message' => 'El archivo no es un PDF válido.',
+            ]);
+            return;
+        }
+
         try {
             $newId = $this->noteModel->create(
                 $userId,

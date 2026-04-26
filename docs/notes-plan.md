@@ -348,3 +348,116 @@ Cuando arranques el chat nuevo, pásale:
 - No tocar `.env` (pedir al usuario que añada variables).
 - No commits sin permiso explícito (Claude sólo escribe, el alumno commitea).
 - RTK manual en cada Bash command.
+
+---
+
+## 10. Pendientes para la rama `ia-integration`
+
+> **Punto único de verdad** sobre lo que se diferió de la fase Notes
+> al elegir Gemini API como proveedor IA en lugar del plan original
+> Ollama+Smalot. Lee este §10 al abrir la rama; el resto del plan
+> describe el diseño previo y queda como referencia histórica.
+
+### 10.1 Backend
+
+1. **Endpoint `POST ai/from-note`** en `backend/API/controllers/aiController.php`.
+   Body: `{ note_id: int, target: 'map' | 'flashcards' }`. Verifica
+   ownership del apunte (`Note::findByIdForUser`), llama al servicio,
+   persiste el resultado y devuelve `{ map_id }` o `{ created: N }`.
+   Errores: 400 validación, 404 apunte no encontrado, 503 IA caída.
+2. **`AIClient` adaptado a Gemini**. Decisión abierta:
+   - Opción A: refactor completo Ollama→Gemini (todos los endpoints
+     IA pasan por Gemini).
+   - Opción B: coexistencia (mantener Ollama para `expand` y
+     `generateFlashcards`, añadir Gemini sólo para `from-note`).
+   - Recomendado: Opción A si la app va a producción cloud (un solo
+     proveedor); Opción B si interesa preservar la defensa "IA
+     local funciona offline".
+3. **Nuevos métodos en el cliente IA**:
+   - `parseNoteToMap($title, $note)` — `$note` puede ser string
+     (texto extraído) o el path absoluto del PDF (Gemini multimodal
+     ingiere PDFs directamente).
+   - `parseNoteToFlashcards($note)` — idem.
+   - Mismo patrón de `RuntimeException` en cualquier fallo, traducido
+     a 503 en el controller.
+4. **Migración `009_alter_flashcards_source_note.sql`** — añade
+   `flashcards.note_id INT NULL` con FK a `notes(id)` ON DELETE SET
+   NULL e índice. Necesaria para que las flashcards generadas desde
+   un apunte queden vinculadas y sobrevivan al borrado del apunte.
+5. **`Flashcard::create`/`createBatch`** — aceptar `note_id`
+   opcional como ya aceptan `map_id`.
+6. **(Opcional) Endpoint `notes/update`** — actualiza el `title` de
+   un apunte. Habilita el título inline-editable en `NotePreviewPage`
+   que el plan §3.3 mencionaba y se omitió en N3 por no requerir IA.
+7. **Posicionado de nodos del mapa generado** — Gemini devuelve
+   `{ nodes:[{id,label,hint}], edges:[{source,target}] }` sin
+   coordenadas. El controller debe posicionar en grid o radial
+   antes de serializar a `drawflow_json` y persistir en `maps`.
+
+### 10.2 Frontend
+
+1. **`endpoints.js`** — añadir `ai.fromNote = 'ai/from-note'`.
+2. **`notesService.js`** — `fromNoteToMap(noteId)` y
+   `fromNoteToFlashcards(noteId)` envuelven `apiPost('ai/from-note',
+   {note_id, target})`.
+3. **`NotePreviewPage.jsx`** — quitar `disabled` de los dos botones
+   IA y cablear handlers. Spinner overlay durante la espera (10–30 s
+   con Gemini Flash; con Pro puede ser más). Navegar a `/mapas/:id`
+   tras éxito de target=map; toast con cantidad creada + link a
+   `/flashcards` tras éxito de target=flashcards.
+4. **(Opcional) Extraer `NoteActionsBar.jsx`** como componente
+   propio. En N3 los botones quedaron inline en `NotePreviewPage`;
+   refactorizar a componente facilita testear el spinner overlay.
+
+### 10.3 Configuración
+
+Variables `.env` nuevas (las añade el alumno, NO Claude):
+
+```
+GEMINI_API_KEY=...
+GEMINI_MODEL=gemini-2.0-flash
+GEMINI_BASE_URL=https://generativelanguage.googleapis.com   # opcional
+```
+
+`GEMINI_API_KEY` es secret y NUNCA se commitea ni aparece en
+respuesta JSON al cliente. Vive sólo en backend.
+
+### 10.4 ADRs
+
+- **ADR-07** — Elección de Gemini API como proveedor IA. Trade-offs
+  a documentar: privacidad (Ollama gana), calidad y multimodal nativo
+  (Gemini gana), latencia (Gemini Flash ≈ Ollama gpt-oss:20b en LAN),
+  coste (Ollama 0 €, Gemini per-consulta), sostenibilidad (el modelo
+  gpt-oss:20b se ejecuta en la GPU del alumno; Gemini consume cloud
+  ajeno). Justificar el cambio respecto al plan original que figura
+  en ADR-06.
+- **(Posible) ADR-08** — Estrategia de extracción de texto de PDFs.
+  Gemini multimodal ingiere el binario directamente, así que en MVP
+  `extracted_text` queda NULL para `source_type='pdf'`. Si en el
+  futuro se decide cachear el texto (p. ej. para búsqueda full-text),
+  se redactará entonces.
+
+### 10.5 Decisiones que la rama puede revisar
+
+- **Truncado del prompt** — con Gemini el cap de 6 000 chars del plan
+  original carece de sentido (ventana de contexto enorme). Ajustar al
+  límite real del modelo elegido (gemini-2.0-flash: 1M tokens input).
+- **Modo stub sin IA** — con API key obligatoria no hay "demo
+  offline" gratuito. Decidir: mantener un stub fallback para defensa
+  sin red (defensible) o sólo 503 (más estricto).
+- **Re-generación de mapa/flashcards** — ¿permitir regenerar sobre
+  el mismo apunte (sustituye el mapa anterior)? El plan no lo
+  contemplaba; UX abierta a debate al cablear.
+
+### 10.6 Cosas que se omitieron y NO dependen de la IA
+
+Por si en `ia-integration` o en otra rama posterior interesa
+recogerlas:
+
+- **Título inline-editable** en `NotePreviewPage` (plan §3.3).
+  Pendiente endpoint `notes/update` y editor inline.
+- **Visor PDF avanzado** con PDF.js. El iframe nativo basta para
+  MVP; PDF.js daría anotaciones, búsqueda dentro del PDF y
+  thumbnails de páginas.
+- **Búsqueda/filtro** en `/apuntes`. No bloqueante mientras un
+  alumno tenga < 20 apuntes; útil cuando crezca la colección.
