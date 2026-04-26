@@ -80,7 +80,7 @@ React setState → JSX
 | `backend/API/router/` | Routing. `api.php` registra rutas, `Router.php` despacha. | No tocar firma del dispatcher: instancia `ucfirst(controller)` por convención. |
 | `backend/API/controllers/` | Lógica de aplicación: validar input, llamar al model, formatear respuesta. | **Solo `echo json_encode(...)`.** Nada de `require 'view.php'`. |
 | `backend/API/middleware/` | Capa transversal (auth, etc.). | Ej. `AuthMiddleware::verifyToken()`. |
-| `backend/API/services/` | Clientes a servicios externos (`OpenAIClient`, `PDFParser`). | Aíslan dependencias HTTP/SDK del controller. |
+| `backend/API/services/` | Clientes a servicios externos (`GeminiClient` transporte HTTP, `AIClient` fachada de producto). | Aíslan dependencias HTTP del controller. Sin SDKs Composer — curl nativo. |
 | `backend/public/` | Entry point para Apache (DocumentRoot). | Solo `index.php` que reescribe a `API/index.php`. |
 | `frontend/src/api/` | Wrapper HTTP, definiciones de endpoints, tipos. | Único lugar donde aparece `fetch`. |
 | `frontend/src/auth/` | `AuthContext`, `ProtectedRoute`, hook `useAuth`. | Token va a `localStorage.token`. |
@@ -121,13 +121,15 @@ React setState → JSX
 
 ### E. IA
 
-- StudyWeaver usa **Ollama local** (modelo open-weights, p. ej. `gpt-oss:20b`). El cliente HTTP vive en `backend/API/services/AIClient.php`.
-- Configuración por `.env`: `OLLAMA_BASE_URL` y `OLLAMA_MODEL`. Si faltan, `AIClient` cae en modo stub determinístico (defendible para defensa offline).
-- Frontend nunca habla directo con Ollama. Llama a `/backend/API/index.php?route=ai/{action}` siempre.
+- StudyWeaver usa **Google Gemini API** (modelo `gemini-2.5-flash`, multimodal). Decisión documentada en ADR-07.
+- El transporte HTTP está aislado en `backend/API/services/GeminiClient.php` (cliente de bajo nivel: curl nativo, sin SDKs Composer). La fachada de producto vive en `backend/API/services/AIClient.php` (prompts en castellano, saneo de la respuesta).
+- Configuración por `.env`: `GEMINI_API_KEY` (obligatoria), `GEMINI_MODEL` (obligatoria), `GEMINI_BASE_URL` (opcional). Si falta cualquiera de las dos primeras, el cliente lanza `RuntimeException` y el controller responde 503. **Sin modo stub** — coherente y uniforme en los 3 endpoints IA.
+- Frontend nunca habla directo con Gemini. Llama a `/backend/API/index.php?route=ai/{action}` siempre. La API key no aparece nunca en respuestas JSON ni en el frontend.
 - Cada acción IA es un endpoint distinto:
-  - `/api/ai/expand` (implementado, Fase Maps M4) — expande un nodo en sub-conceptos.
-  - `/api/ai/from-note` (planificado, Fase Notes) — genera mapa o flashcards desde un apunte.
-- Cuando la IA responde mal o cae: el controller traduce `RuntimeException` del service a HTTP 503 con mensaje canónico *"La IA no está disponible ahora."*. Sin filtrar logs internos al cliente.
+  - `POST ai/expand` (Fase Maps M4) — expande un nodo en 3-5 sub-conceptos.
+  - `POST ai/from-note` (rama `IA_Integration`) — genera un mapa o un set de flashcards desde un apunte (PDF multimodal o texto).
+  - `POST flashcards/generate-from-map` (Fase Flashcards F5) — genera flashcards desde un mapa existente.
+- Cuando Gemini responde mal o cae: `GeminiClient` lanza `RuntimeException`, el controller la traduce a HTTP 503 con mensaje canónico *"La IA no está disponible ahora."*. El detalle real queda en `error_log` del backend; el cliente nunca ve mensajes internos.
 
 ### F. Idioma y comentarios
 
@@ -173,8 +175,8 @@ React setState → JSX
 | Concatenar SQL: `"SELECT * WHERE id=$id"` | `prepare("... ?")` + `execute([$id])` |
 | Class components React | Funcionales con hooks |
 | Lógica de negocio en `MODEL/` | Lógica en controller; model es CRUD puro |
-| Llamar a Ollama/OpenAI/Gemini desde React | Llamar a `/api/ai/*` propio del backend |
-| Configurar URL de Ollama o API keys en frontend `.env` | Sólo en backend `.env` (`OLLAMA_BASE_URL`, `OLLAMA_MODEL`) |
+| Llamar a Gemini/OpenAI/Anthropic desde React | Llamar a `/api/ai/*` propio del backend |
+| API keys de IA en frontend `.env` | Sólo en backend `.env` (`GEMINI_API_KEY`, `GEMINI_MODEL`) |
 | Crear endpoint en `API/` o `SERVER/` raíz | Crear en `backend/API/controllers/...` |
 | `git push --force` | `git push` normal |
 | Editar `.env` directamente | Pedirle al usuario que añada la variable |

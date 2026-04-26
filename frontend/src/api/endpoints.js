@@ -33,6 +33,7 @@ export const ENDPOINTS = {
   },
   ai: {
     expand:          'ai/expand',
+    fromNote:        'ai/from-note',
   },
   flashcards: {
     list:            'flashcards/list',

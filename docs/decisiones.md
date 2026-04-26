@@ -283,8 +283,8 @@ Documentación detallada en [`docs/notes-plan.md`](./notes-plan.md). Cambios de 
 
 ## ADR-07 — Cambio de proveedor IA: Gemini API en lugar de Ollama+PDFParser
 
-- **Fecha:** 2026-04-26
-- **Estado:** aceptado (integración diferida a la rama `ia-integration`)
+- **Fecha:** 2026-04-26 (planteamiento) · 2026-04-26 (implementación cerrada en rama `IA_Integration`)
+- **Estado:** aceptado e **implementado**
 
 ### Contexto
 
@@ -301,18 +301,20 @@ A la vez, Ollama tenía dos puntos defensivos fuertes que Gemini pierde:
 
 ### Decisión
 
-**Migrar la generación IA basada en apuntes (`POST ai/from-note`) a Gemini API**, dejando Ollama operativo para los endpoints existentes (`ai/expand` en Maps M4 y `flashcards/generate-from-map` en Flashcards F5) hasta que se decida si conviene unificar todo en un solo proveedor.
+**Migrar TODO el backend IA de StudyWeaver a Google Gemini API** (Opción A — migración total, ver "Alternativas consideradas" punto 4). Los tres endpoints IA del producto (`ai/expand`, `flashcards/generate-from-map` y el nuevo `ai/from-note`) hablan Gemini; Ollama queda fuera por completo del código activo.
 
-**La integración no se ejecuta en la rama `NotesNewZone`** que cierra el MVP de la fase Notes. Se delega a una rama futura `ia-integration` para que el cierre de Notes (CRUD + UI + visor PDF) no dependa de tener una API key Gemini válida ni de gestionar errores de cuota durante el desarrollo.
-
-Detalle de los pendientes técnicos en [`docs/notes-plan.md`](./notes-plan.md) §10 (lista canónica para la rama futura).
+La integración se ejecutó en la rama `IA_Integration` (subfases I0–I6, cerradas el 2026-04-26). El detalle técnico de la implementación queda en la sección "Detalles de implementación" más abajo. La sección §10 de [`docs/notes-plan.md`](./notes-plan.md) era la lista canónica de pendientes mientras la rama estaba abierta; con la rama cerrada, lo allí descrito vive ahora en código.
 
 ### Alternativas consideradas
 
 1. **Mantener Ollama + Smalot/PDFParser** (plan original) — descartada: pérdida de calidad sobre apuntes largos, dependencia de un parser PHP que falla en PDFs escaneados, y dependencia operativa de tener Ollama corriendo en la máquina local del alumno también en defensa.
 2. **OpenAI GPT-4o** — descartada: coste por token sensiblemente mayor que Gemini Flash a calidad equivalente para la tarea (extracción estructurada de texto académico), y disponibilidad de cuota gratuita más generosa en Gemini para un proyecto académico.
 3. **Anthropic Claude vía API** — descartada: el alumno no dispone de cuenta de pago al cierre de la fase; defendible pero no operativa en el plazo.
-4. **Coexistencia total** (Ollama para todo lo no-multimodal, Gemini sólo para `ai/from-note`) — abierta: es la opción aceptada en MVP. La rama `ia-integration` decidirá si refactoriza Maps/Flashcards también a Gemini o conserva Ollama por argumento de privacidad/sostenibilidad.
+4. **Coexistencia total** (Ollama para `expand` y `generateFlashcards`, Gemini sólo para `ai/from-note`) — **rechazada en la rama `IA_Integration`**. Razones de la decisión final:
+    - **Operativa de defensa.** Mantener Ollama vivo obliga a tener el PC con `gpt-oss:20b` accesible vía LAN durante la defensa. Cualquier problema de red en el aula del tribunal rompería la mitad de la demo IA. Gemini cloud es una sola dependencia HTTPS pública, mucho más estable.
+    - **Coherencia de comportamiento.** Dos proveedores significan dos formas de fallar, dos modos stub distintos, dos perfiles de latencia. Un único proveedor da un único patrón "503 + mensaje canónico" en los tres endpoints — más sencillo de defender ante el tribunal.
+    - **Capacidad multimodal.** Aunque `expand` y `generateFlashcards` no manipulan PDFs hoy, una evolución natural (p. ej. permitir adjuntar contexto en formato imagen al expandir un nodo) está bloqueada con Ollama y abierta con Gemini sin rediseñar nada.
+    - **Reducción de superficie de código.** Eliminar la lógica de stubs (`stubChildren`/`stubFlashcards`) ahorró ~80 líneas y un caso de comportamiento divergente que no aporta valor real (un mapa stub puede engañar al usuario que no se entera de que la IA falló).
 
 ### Consecuencias
 
@@ -327,11 +329,61 @@ Detalle de los pendientes técnicos en [`docs/notes-plan.md`](./notes-plan.md) �
 - **Línea futura:**
   - Posible refactor uniforme a un único `AIClient` agnóstico de proveedor (con un adaptador Ollama y otro Gemini) si la app crece más allá del TFG.
 
+### Detalles de implementación (rama `IA_Integration`, subfases I0–I6)
+
+**Modelo y configuración:**
+
+- Modelo elegido: **`gemini-2.5-flash`**. Pertenece al free tier con cuotas RPM/TPM/RPD generosas para volumen TFG (5–10 generaciones por sesión de demostración están holgadamente por debajo del cap). La alternativa `gemini-2.5-pro` queda como fallback si la calidad sobre apuntes muy técnicos no fuera suficiente; cambiar de modelo es una sola variable en `.env`.
+- Variables `.env` (sólo backend, nunca frontend): `GEMINI_API_KEY` (obligatoria), `GEMINI_MODEL` (obligatoria), `GEMINI_BASE_URL` (opcional, default `https://generativelanguage.googleapis.com`).
+- Endpoint Google: `POST {baseUrl}/v1beta/models/{model}:generateContent` con auth por header `x-goog-api-key`. La key NO va en query string para no aparecer en logs de proxy/CDN.
+
+**Arquitectura del código:**
+
+- `backend/API/services/GeminiClient.php` — cliente HTTP de bajo nivel. Único método público `GeminiClient::generateJson($userPrompt, $systemInstruction, $pdfPath, $options)`. Responsable de: construir el body v1beta, llamar curl con timeout (30 s total, 5 s connect), parsear el envelope Gemini (`candidates[0].content.parts[].text`), desnudar code fences `` ```json...``` `` defensivos, parsear el JSON del candidate y devolver array decodificado. NO conoce casos de uso concretos.
+- `backend/API/services/AIClient.php` — fachada de producto. Conoce los prompts en castellano y el saneo de la salida. Métodos públicos:
+  - `expand($label, $context)` — output 3-5 sub-conceptos.
+  - `generateFlashcards($mapTitle, $nodes)` — output 8-15 flashcards.
+  - `parseNoteToMap($title, $extractedText, $pdfPath)` — output `{title, nodes, edges}`.
+  - `parseNoteToFlashcards($title, $extractedText, $pdfPath)` — output 8-15 flashcards.
+- `backend/API/controllers/aiController.php` — endpoints `ai/expand` y `ai/from-note`.
+- `backend/API/controllers/flashcardController.php::generateFromMap` — sigue usando `AIClient::generateFlashcards`, sin saber que por dentro habla Gemini.
+
+**Cap de texto enviado a Gemini:** constante `AIClient::MAX_NOTE_CHARS = 30000` (≈ 8 000 tokens). Aunque `gemini-2.5-flash` acepta una ventana de contexto de ~1M tokens, se recorta agresivamente porque (1) cubre sobradamente un capítulo universitario de tamaño habitual, (2) reduce el coste por token y la latencia, (3) es defendible ante tribunal como decisión consciente. El recorte se aplica vía `mb_substr` con un `error_log` informativo (no se devuelve error al usuario). Para apuntes de tipo `pdf` el cap NO aplica: Gemini lee el binario completo via `inline_data`.
+
+**Multimodal — ingestión de PDFs:** vía `inline_data` base64 en el array `parts` del payload. Descartada la alternativa "File API + cleanup posterior" por simplicidad: para PDFs ≤ 5 MB (cap del controller `noteController::uploadPdf`) el base64 sale ≤ 7 MB, muy por debajo del tope de 20 MB inline de Gemini. Una sola llamada HTTP, sin tracking de IDs ni `files.delete` posterior.
+
+**`thinkingConfig.thinkingBudget` por endpoint:**
+
+- `expand`: `0` (desactivado). Output muy estructurado (3-5 entradas con label/hint cortos), no necesita razonamiento; minimizamos latencia para que la UX del editor siga siendo fluida.
+- `generateFlashcards`: `-1` (dynamic). El modelo decide cuánto razonar; merece la pena para 8-15 tarjetas bien formuladas.
+- `parseNoteToMap`, `parseNoteToFlashcards`: `-1` (dynamic). Apuntes largos requieren destilar el tema central y conectar sub-conceptos sin inventar relaciones.
+
+**Posicionado de nodos del mapa generado por IA:** `aiController::buildDrawflowJsonFromMap` aplica un layout en grid de 4 columnas. Raíz (id=1, o primer nodo si Gemini no respeta la convención) en (540, 60); hijos en grid 4 cols con stride 240×180 partiendo de (60, 260). Sin solape para 6-15 nodos. Defendible: posición inicial razonable; el alumno arrastra a mano después y el auto-save de Maps M3 persiste las nuevas coordenadas. Alternativa "radial" descartada porque exigía trigonometría con poca ganancia visual.
+
+**Política de error uniforme — sin modo stub:** los tres endpoints IA tratan cualquier fallo (config ausente, red, HTTP no-200, safety filter, JSON inválido) como `RuntimeException` traducida a HTTP **503** con mensaje canónico *"La IA no está disponible ahora."* Sin fallback determinístico. Esta uniformidad simplifica la defensa ("un solo patrón de fallo IA en toda la app") y evita el riesgo de que un usuario crea un mapa stub real cuando en realidad la IA no respondió. Decisión consciente que sustituye al `stubChildren`/`stubFlashcards` de la versión Ollama.
+
+**Persistencia con FK al apunte origen:**
+
+- Migración **009** (`009_alter_flashcards_source_note.sql`) — añade `flashcards.note_id INT NULL` con FK `ON DELETE SET NULL` hacia `notes(id)` e índice `idx_flashcards_note`. Misma estrategia que `maps.source_note_id` (migración 008): si el alumno borra el apunte, los artefactos derivados sobreviven y conservan su progreso SM-2.
+- `Map::create` y `Flashcard::createBatch` aceptan ahora un parámetro opcional al final (`$sourceNoteId` y `$noteId` respectivamente) para que `aiController::fromNote` los rellene. Compatibilidad preservada con los callers existentes que pasan menos argumentos.
+
+**Frontend:** [`frontend/src/features/notes/pages/NotePreviewPage.jsx`](../frontend/src/features/notes/pages/NotePreviewPage.jsx) cablea los dos botones IA contra el handler `runAiGeneration(target)` con state `aiBusy` single-track. Spinner overlay full-screen (`role=alertdialog`, `aria-live=assertive`, `aria-busy`) bloquea interacción durante los 10–30 s de espera. Post-éxito: `target=map` → `navigate('/mapas/:id')` + toast con `node_count`; `target=flashcards` → toast con cantidad creada (sin navegar). Sin `AbortController` en cliente: el control de timeout vive en `GeminiClient` (CURLOPT_TIMEOUT=30).
+
+**Auditoría de tokens:** `GeminiClient` loguea `usageMetadata` por llamada (`promptTokenCount`, `candidatesTokenCount`, `totalTokenCount`) en `error_log`. Defendible para sostenibilidad RA4: medimos consumo per-endpoint de cara a justificar el reorientado del argumento de eficiencia (ver siguiente punto).
+
+**Reorientación del argumento de sostenibilidad (RA4 1708190):** la versión Ollama defendía "cero coste por consulta + modelo open-weights ejecutándose en hardware del estudiante". Con Gemini, la memoria académica reorienta el argumento a:
+
+- **Eficiencia per-token.** Gemini-2.5-flash está optimizado para ratio calidad/coste energético en datacenter; el modelo no se ejecuta en la GPU local del alumno consumiendo electricidad doméstica.
+- **Cuota gratuita = cero facturación real.** Para volumen TFG el coste monetario es cero y el coste ambiental queda diluido en la operación agregada de Google.
+- **Trazabilidad.** El logging de `usageMetadata` permite cuantificar el consumo durante la defensa.
+- **Reversibilidad arquitectónica.** La decisión de aislar `GeminiClient` deja el camino abierto a un futuro `OllamaClient` con la misma firma `generateJson(...)`; cambiar de proveedor en producción sería un solo `require_once` distinto en `AIClient`.
+
 ### Referencias
 
-- [`docs/notes-plan.md`](./notes-plan.md) §2.3 (decisión documentada al cambiar el alcance de N1) y §10 (pendientes para la rama).
+- [`docs/notes-plan.md`](./notes-plan.md) §2.3 (decisión inicial al cambiar el alcance de N1) y §10 (lista canónica de pendientes — ya cerrada).
 - ADR-06 (origen de la fase Notes; este ADR-07 sustituye su mención de Smalot/PDFParser).
-- Ollama (`gpt-oss:20b`) — sigue cableado en `backend/API/services/AIClient.php` para `ai/expand` y `flashcards/generate-from-map`.
+- `backend/API/services/GeminiClient.php`, `backend/API/services/AIClient.php`, `backend/API/controllers/aiController.php`.
+- `backend/DATA/migrations/009_alter_flashcards_source_note.sql`.
 
 ---
 

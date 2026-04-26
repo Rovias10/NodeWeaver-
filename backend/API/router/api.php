@@ -30,8 +30,11 @@ $router->get('maps/get',     'mapController', 'get');
 $router->post('maps/save',   'mapController', 'save');
 $router->post('maps/delete', 'mapController', 'delete');
 
-// AI Routes — integración con Ollama (Fase Maps · M4).
-$router->post('ai/expand',   'aiController',  'expand');
+// AI Routes — integración con Gemini API (rama IA_Integration, ADR-07).
+//   ai/expand       : Maps M4 — expande un concepto en sub-conceptos.
+//   ai/from-note    : genera un mapa o flashcards a partir de un apunte.
+$router->post('ai/expand',     'aiController', 'expand');
+$router->post('ai/from-note',  'aiController', 'fromNote');
 
 // Notes Routes — Fase Notes / Apuntes · N1+N3 (CRUD + servir PDF;
 // la integración IA `ai/from-note` se cablea en la rama futura

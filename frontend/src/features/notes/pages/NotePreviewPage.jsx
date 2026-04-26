@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { Button } from '@/ui/Button.jsx';
 import { Card } from '@/ui/Card.jsx';
 import { Spinner } from '@/ui/Spinner.jsx';
 import { useNotification } from '@/ui/useNotification.js';
-import { getNote, getNoteFile } from '../services/notesService.js';
+import {
+  fromNoteToFlashcards,
+  fromNoteToMap,
+  getNote,
+  getNoteFile,
+} from '../services/notesService.js';
 
 /**
  * Vista preview de un apunte concreto.
@@ -18,13 +23,21 @@ import { getNote, getNoteFile } from '../services/notesService.js';
  *   el navegador haría un GET sin Authorization y el backend
  *   devolvería 401.
  *
- * Los botones de acción IA («Generar mapa», «Generar flashcards») se
- * incluyen ya como `disabled` con un tooltip "Próximamente". El cableado
- * real se hace en la rama futura `ia-integration` con Gemini.
+ * Acciones IA («Generar mapa», «Generar flashcards») cableadas contra
+ * `POST ai/from-note` (rama IA_Integration con Gemini API). Mientras
+ * la IA trabaja se monta un overlay full-screen bloqueante: la
+ * generación tarda 10-30 s y queremos evitar dobles clicks o
+ * navegaciones accidentales del usuario.
  */
 export function NotePreviewPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { notify } = useNotification();
+
+  // Estado de la generación IA. 'idle' = sin acción. 'map' / 'flashcards'
+  // = petición en vuelo del target indicado. Se usa tanto para deshabilitar
+  // los botones como para condicionar el overlay y su mensaje.
+  const [aiBusy, setAiBusy] = useState('idle');
 
   const [status, setStatus] = useState('loading'); // 'loading' | 'error' | 'ok'
   const [note, setNote] = useState(null);
@@ -95,6 +108,51 @@ export function NotePreviewPage() {
       if (createdUrl) URL.revokeObjectURL(createdUrl);
     };
   }, [status, note, notify]);
+
+  /**
+   * Lanza la generación IA contra el backend y, en éxito, navega o
+   * notifica según el target. Compartimos el flujo entre los dos
+   * targets porque el patrón es idéntico salvo por la respuesta
+   * concreta y la acción post-éxito.
+   *
+   * Errores conocidos del backend (ver aiController::fromNote):
+   *   400 → apunte sin contenido procesable.
+   *   404 → apunte no encontrado (carrera improbable: alguien lo borró).
+   *   410 → PDF físico desaparecido del storage.
+   *   503 → IA no disponible (Gemini caído, sin cuota o sin API key).
+   * En todos los casos `result.message` trae el texto canónico del
+   * backend en castellano y lo mostramos tal cual al usuario.
+   */
+  const runAiGeneration = async (target) => {
+    if (!note || aiBusy !== 'idle') return;
+    setAiBusy(target);
+    try {
+      const result = target === 'map'
+        ? await fromNoteToMap(note.id)
+        : await fromNoteToFlashcards(note.id);
+
+      if (!result.success) {
+        notify(result.message || 'No se pudo completar la generación.', 'error');
+        return;
+      }
+
+      if (target === 'map') {
+        const newMapId = result.data?.map_id;
+        const nodeCount = result.data?.node_count ?? 0;
+        notify(`Mapa generado con ${nodeCount} conceptos.`, 'success');
+        if (newMapId) navigate(`/mapas/${newMapId}`);
+      } else {
+        const created = result.data?.created ?? 0;
+        notify(`Generadas ${created} flashcards. Disponibles en /flashcards.`, 'success');
+      }
+    } catch {
+      // El wrapper apiPost lanza un Error genérico cuando la red cae
+      // o el JSON no parsea (raro: el backend responde JSON siempre).
+      notify('Error de red al contactar con la IA.', 'error');
+    } finally {
+      setAiBusy('idle');
+    }
+  };
 
   if (status === 'loading') {
     return (
@@ -167,13 +225,25 @@ export function NotePreviewPage() {
         )}
       </header>
 
-      {/* Acciones IA — disabled hasta la rama `ia-integration`. */}
+      {/* Acciones IA — cableadas contra POST ai/from-note (Gemini). */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <Button variant="primary" disabled title="Próximamente: integración con Gemini">
+        <Button
+          variant="primary"
+          onClick={() => runAiGeneration('map')}
+          disabled={aiBusy !== 'idle'}
+          isLoading={aiBusy === 'map'}
+          title="Generar un mapa conceptual con IA a partir de este apunte"
+        >
           <i className="fas fa-diagram-project" aria-hidden="true" />
           Generar mapa conceptual
         </Button>
-        <Button variant="ghost" disabled title="Próximamente: integración con Gemini">
+        <Button
+          variant="ghost"
+          onClick={() => runAiGeneration('flashcards')}
+          disabled={aiBusy !== 'idle'}
+          isLoading={aiBusy === 'flashcards'}
+          title="Generar flashcards SM-2 con IA a partir de este apunte"
+        >
           <i className="fas fa-clone" aria-hidden="true" />
           Generar flashcards
         </Button>
@@ -244,6 +314,34 @@ export function NotePreviewPage() {
             />
           )}
         </Card>
+      )}
+
+      {/* Overlay full-screen mientras la IA genera. Bloquea cualquier
+          interacción (clicks, foco, scroll) durante la espera larga
+          de Gemini (10-30 s). aria-live=assertive para que los lectores
+          de pantalla anuncien el inicio del proceso. */}
+      {aiBusy !== 'idle' && (
+        <div
+          role="alertdialog"
+          aria-live="assertive"
+          aria-busy="true"
+          className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm flex items-center justify-center"
+        >
+          <div className="bg-glass backdrop-blur-2xl border border-line rounded-2xl shadow-card px-8 py-7 max-w-sm w-[calc(100%-2rem)] text-center">
+            <div className="flex justify-center mb-4">
+              <Spinner size={36} />
+            </div>
+            <p className="font-semibold text-ink">
+              {aiBusy === 'map'
+                ? 'Generando mapa conceptual…'
+                : 'Generando flashcards…'}
+            </p>
+            <p className="text-sm text-ink-muted mt-2">
+              La IA está leyendo tu apunte. Esto puede tardar entre
+              10 y 30 segundos.
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );
