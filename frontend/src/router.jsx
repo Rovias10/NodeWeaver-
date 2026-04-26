@@ -15,6 +15,7 @@ import { MapEditorPage } from '@/features/maps/pages/MapEditorPage.jsx';
 import { FlashcardsListPage } from '@/features/flashcards/pages/FlashcardsListPage.jsx';
 import { ReviewSessionPage } from '@/features/flashcards/pages/ReviewSessionPage.jsx';
 import { CommunityFeedPage } from '@/features/community/pages/CommunityFeedPage.jsx';
+import { PublicMapPage } from '@/features/community/pages/PublicMapPage.jsx';
 
 /**
  * Definición central de rutas en modo "Library / Data Mode" (React Router v7).
@@ -57,8 +58,9 @@ export const router = createBrowserRouter([
       { path: '/mapas/:id', element: <MapEditorPage /> },
       { path: '/flashcards',        element: <FlashcardsListPage /> },
       { path: '/flashcards/repaso', element: <ReviewSessionPage /> },
-      { path: '/comunidad', element: <CommunityFeedPage /> },
-      { path: '/perfil', element: <ProfilePage /> },
+      { path: '/comunidad',           element: <CommunityFeedPage /> },
+      { path: '/comunidad/mapa/:id',   element: <PublicMapPage /> },
+      { path: '/perfil',               element: <ProfilePage /> },
     ],
   },
 
