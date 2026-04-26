@@ -135,8 +135,9 @@ class Flashcard {
 
     /**
      * Inserta varias flashcards en una sola sentencia SQL (un INSERT
-     * con N grupos de VALUES). Pensado para `generateFromMap`: si la
-     * IA devuelve 12 tarjetas, persistimos las 12 atómicamente.
+     * con N grupos de VALUES). Pensado para `generateFromMap` y
+     * `aiController::fromNote { target: 'flashcards' }`: si la IA
+     * devuelve 12 tarjetas, persistimos las 12 atómicamente.
      *
      * Las tarjetas se filtran: las que tengan front o back vacío se
      * descartan. Las que excedan 500 chars se truncan (mismo límite
@@ -145,11 +146,17 @@ class Flashcard {
      * pasa de largo en una sola).
      *
      * @param int      $userId
-     * @param int|null $mapId
+     * @param int|null $mapId   Mapa de origen. NULL = tarjetas sueltas
+     *                          o generadas desde un apunte.
      * @param array    $cards   Lista de ['front' => ..., 'back' => ...].
+     * @param int|null $noteId  Apunte de origen (rama IA_Integration).
+     *                          NULL en el flujo `generateFromMap`.
+     *                          Persistido en `flashcards.note_id` con
+     *                          FK ON DELETE SET NULL — si el alumno
+     *                          borra el apunte, las tarjetas sobreviven.
      * @return int  Número de filas realmente insertadas.
      */
-    public function createBatch($userId, $mapId, $cards) {
+    public function createBatch($userId, $mapId, $cards, $noteId = null) {
         // Saneamos primero para saber cuántas tarjetas válidas hay.
         $valid = [];
         foreach ($cards as $card) {
@@ -166,19 +173,21 @@ class Flashcard {
         $today = (new DateTimeImmutable('today'))->format('Y-m-d');
 
         // Construimos placeholders y params en paralelo.
-        // Cada tarjeta aporta un grupo "(?, ?, ?, ?, ?)" y 5 valores.
+        // Cada tarjeta aporta un grupo "(?, ?, ?, ?, ?, ?)" y 6 valores
+        // (con la columna note_id añadida por la migración 009).
         $groups = [];
         $params = [];
         foreach ($valid as $card) {
-            $groups[] = '(?, ?, ?, ?, ?)';
+            $groups[] = '(?, ?, ?, ?, ?, ?)';
             $params[] = $userId;
             $params[] = $mapId;
+            $params[] = $noteId;
             $params[] = $card['front'];
             $params[] = $card['back'];
             $params[] = $today;
         }
         $sql = "INSERT INTO {$this->table}
-                (user_id, map_id, front, back, next_review_at)
+                (user_id, map_id, note_id, front, back, next_review_at)
                 VALUES " . implode(', ', $groups);
 
         // Transacción defensiva: si el INSERT compuesto fallara (p.ej.

@@ -69,14 +69,19 @@ class Map {
      * @param string|null $description
      * @param int         $isPublic       0 ó 1.
      * @param string|null $drawflowJson   String JSON ya validado por el controller.
+     * @param int|null    $sourceNoteId   FK opcional al apunte de origen
+     *                                    (rama IA_Integration, columna
+     *                                    `maps.source_note_id` con ON
+     *                                    DELETE SET NULL). NULL para
+     *                                    mapas creados a mano sin apunte.
      * @return string|false
      */
-    public function create($userId, $title, $description, $isPublic, $drawflowJson) {
+    public function create($userId, $title, $description, $isPublic, $drawflowJson, $sourceNoteId = null) {
         $query = "INSERT INTO {$this->table}
-                  (user_id, title, description, is_public, drawflow_json)
-                  VALUES (?, ?, ?, ?, ?)";
+                  (user_id, source_note_id, title, description, is_public, drawflow_json)
+                  VALUES (?, ?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($query);
-        if ($stmt->execute([$userId, $title, $description, $isPublic, $drawflowJson])) {
+        if ($stmt->execute([$userId, $sourceNoteId, $title, $description, $isPublic, $drawflowJson])) {
             return $this->conn->lastInsertId();
         }
         return false;
