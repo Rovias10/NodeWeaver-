@@ -128,5 +128,175 @@ class Map {
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row['updated_at'] ?? null;
     }
+
+    // ──────────────────────────────────────────────────────────────────
+    // Métodos para la capa social (Fase Comunidad · C1).
+    //
+    // A diferencia de findByIdForUser, estos NO filtran por user_id
+    // de propietario: sirven mapas con `is_public = 1` a cualquier
+    // usuario autenticado y enriquecen la fila con autor + counts +
+    // liked_by_me. El filtro de seguridad ahora es `is_public`, no
+    // ownership.
+    // ──────────────────────────────────────────────────────────────────
+
+    /**
+     * Lookup mínimo por id, sin filtro de ownership ni de is_public.
+     * Devuelve sólo {id, user_id, is_public}. Lo usan los controllers
+     * de la capa social (LikeController, CommentController) para
+     * decidir autorización en una sola query antes de actuar.
+     *
+     * Importante: NO usar para servir datos al cliente — es un helper
+     * interno. Las lecturas con datos sensibles van por findByIdForUser
+     * o findPublicByIdWithMeta según el caso.
+     *
+     * @return array|false
+     */
+    public function findBasicById($id) {
+        $stmt = $this->conn->prepare(
+            "SELECT id, user_id, is_public FROM {$this->table} WHERE id = ? LIMIT 1"
+        );
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Mapas públicos para el feed comunidad. Soporta ordenación,
+     * búsqueda simple y paginación posicional.
+     *
+     *   sort = 'recent'  → updated_at DESC (default).
+     *   sort = 'popular' → COUNT(likes) DESC, tie-breaker updated_at DESC.
+     *   q              → filtro `LIKE '%q%'` sobre title o description
+     *                    (vacío = sin filtro).
+     *
+     * Excluye `drawflow_json` (la lista del feed sería pesada). El
+     * detalle del mapa se sirve por findPublicByIdWithMeta.
+     *
+     * @return array Filas con: id, title, description, is_public,
+     *               created_at, updated_at, author_id, author_name,
+     *               author_avatar, likes_count, comments_count,
+     *               liked_by_me (0/1).
+     */
+    public function findPublicForFeed($currentUserId, $sort, $q, $limit, $offset) {
+        $sortSql = ($sort === 'popular')
+            ? 'likes_count DESC, m.updated_at DESC'
+            : 'm.updated_at DESC';
+
+        $hasQ   = ($q !== null && $q !== '');
+        $whereQ = $hasQ ? 'AND (m.title LIKE ? OR m.description LIKE ?)' : '';
+
+        $sql = "SELECT m.id, m.title, m.description, m.is_public,
+                       m.created_at, m.updated_at,
+                       u.id          AS author_id,
+                       u.name        AS author_name,
+                       u.avatar_url  AS author_avatar,
+                       (SELECT COUNT(*) FROM likes    WHERE map_id = m.id) AS likes_count,
+                       (SELECT COUNT(*) FROM comments WHERE map_id = m.id) AS comments_count,
+                       EXISTS (SELECT 1 FROM likes WHERE map_id = m.id AND user_id = ?) AS liked_by_me
+                FROM {$this->table} m
+                INNER JOIN users u ON u.id = m.user_id
+                WHERE m.is_public = 1
+                {$whereQ}
+                ORDER BY {$sortSql}
+                LIMIT ? OFFSET ?";
+
+        $stmt = $this->conn->prepare($sql);
+        $idx = 1;
+        $stmt->bindValue($idx++, $currentUserId, PDO::PARAM_INT);
+        if ($hasQ) {
+            $like = '%' . $q . '%';
+            $stmt->bindValue($idx++, $like, PDO::PARAM_STR);
+            $stmt->bindValue($idx++, $like, PDO::PARAM_STR);
+        }
+        $stmt->bindValue($idx++, $limit,  PDO::PARAM_INT);
+        $stmt->bindValue($idx++, $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Total de mapas públicos que coinciden con el filtro `q`.
+     * Necesario para `has_more` en la paginación load-more.
+     */
+    public function countPublicForFeed($q) {
+        $hasQ   = ($q !== null && $q !== '');
+        $whereQ = $hasQ ? 'AND (title LIKE ? OR description LIKE ?)' : '';
+        $sql = "SELECT COUNT(*) FROM {$this->table}
+                WHERE is_public = 1 {$whereQ}";
+        $stmt = $this->conn->prepare($sql);
+        if ($hasQ) {
+            $like = '%' . $q . '%';
+            $stmt->execute([$like, $like]);
+        } else {
+            $stmt->execute();
+        }
+        return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * Mapa público completo (incluye drawflow_json) más metadatos:
+     * autor, counts y liked_by_me. Devuelve false si el mapa no
+     * existe o si `is_public = 0` — el controller traduce a 404 con
+     * el mismo mensaje en ambos casos para no filtrar la existencia
+     * de mapas privados ajenos.
+     *
+     * @return array|false
+     */
+    public function findPublicByIdWithMeta($mapId, $currentUserId) {
+        $sql = "SELECT m.id, m.title, m.description, m.is_public, m.drawflow_json,
+                       m.created_at, m.updated_at,
+                       m.user_id     AS owner_user_id,
+                       u.id          AS author_id,
+                       u.name        AS author_name,
+                       u.avatar_url  AS author_avatar,
+                       (SELECT COUNT(*) FROM likes    WHERE map_id = m.id) AS likes_count,
+                       (SELECT COUNT(*) FROM comments WHERE map_id = m.id) AS comments_count,
+                       EXISTS (SELECT 1 FROM likes WHERE map_id = m.id AND user_id = ?) AS liked_by_me
+                FROM {$this->table} m
+                INNER JOIN users u ON u.id = m.user_id
+                WHERE m.id = ? AND m.is_public = 1
+                LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([$currentUserId, $mapId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Mapas públicos del autor indicado, paginados, ordenados por
+     * última edición. Misma forma de fila que findPublicForFeed.
+     */
+    public function findPublicByUser($currentUserId, $authorUserId, $limit, $offset) {
+        $sql = "SELECT m.id, m.title, m.description, m.is_public,
+                       m.created_at, m.updated_at,
+                       u.id          AS author_id,
+                       u.name        AS author_name,
+                       u.avatar_url  AS author_avatar,
+                       (SELECT COUNT(*) FROM likes    WHERE map_id = m.id) AS likes_count,
+                       (SELECT COUNT(*) FROM comments WHERE map_id = m.id) AS comments_count,
+                       EXISTS (SELECT 1 FROM likes WHERE map_id = m.id AND user_id = ?) AS liked_by_me
+                FROM {$this->table} m
+                INNER JOIN users u ON u.id = m.user_id
+                WHERE m.user_id = ? AND m.is_public = 1
+                ORDER BY m.updated_at DESC, m.id DESC
+                LIMIT ? OFFSET ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(1, $currentUserId, PDO::PARAM_INT);
+        $stmt->bindValue(2, $authorUserId,  PDO::PARAM_INT);
+        $stmt->bindValue(3, $limit,         PDO::PARAM_INT);
+        $stmt->bindValue(4, $offset,        PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Total de mapas públicos del autor (perfil público + paginación).
+     */
+    public function countPublicByUser($authorUserId) {
+        $stmt = $this->conn->prepare(
+            "SELECT COUNT(*) FROM {$this->table}
+             WHERE user_id = ? AND is_public = 1"
+        );
+        $stmt->execute([$authorUserId]);
+        return (int) $stmt->fetchColumn();
+    }
 }
 ?>

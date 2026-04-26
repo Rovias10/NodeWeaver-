@@ -41,6 +41,22 @@ $router->post('flashcards/review',             'flashcardController', 'review');
 $router->post('flashcards/delete',             'flashcardController', 'delete');
 $router->post('flashcards/generate-from-map',  'flashcardController', 'generateFromMap');
 
+// Community Routes — Fase Comunidad · C1 (feed, likes, comments).
+// Decisión confirmada: la comunidad es sólo para usuarios logueados
+// (community-plan §9.1). Cada controller llama a verifyToken() y los
+// 401 se manejan ya por el wrapper único de fetch en el frontend.
+$router->get ('community/feed',           'feedController',    'list');
+$router->get ('community/map',            'feedController',    'getPublicMap');
+$router->get ('community/profile',        'feedController',    'getProfile');
+$router->get ('community/profile-maps',   'feedController',    'getProfileMaps');
+$router->get ('community/favorites',      'feedController',    'getMyFavorites');
+
+$router->post('community/like',           'likeController',    'toggle');
+
+$router->get ('community/comments',       'commentController', 'list');
+$router->post('community/comment',        'commentController', 'create');
+$router->post('community/comment-delete', 'commentController', 'delete');
+
 // Receive the incoming request variables
 $route = $_GET['route'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];
