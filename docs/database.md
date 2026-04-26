@@ -11,23 +11,22 @@
 
 StudyWeaver vive físicamente en la base **`autoflow`** (nombre histórico heredado del repositorio `NodeWeaver-`, ver ADR-01). El nombre se mantiene para no tener que tocar `.env` ni `DATA/database.php`.
 
-Tras las migraciones `001` (drop legacy), `002` (maps), `003` (flashcards), `004` (likes), `005` (comments), `006` (login tracking), `007` (notes) y `008` (maps.source_note_id), la base contiene **6 tablas activas**:
+Tras las migraciones `001` (drop legacy), `002` (maps), `003` (flashcards), `004` (likes), `005` (comments), `006` (login tracking), `007` (notes), `008` (maps.source_note_id) y `009` (flashcards.note_id), la base contiene **6 tablas activas**:
 
 ```
 users (1) ── (N) notes
         │       │
-        │       └── (referencia opcional source_note_id) ──► maps
-        │                                                   ├── (N) likes
-        │                                                   └── (N) comments
+        │       ├── (referencia opcional source_note_id) ──► maps
+        │       └── (referencia opcional note_id)        ──► flashcards
+        │
         └── (N) maps ── (N) flashcards (map_id opcional, ON DELETE SET NULL)
+                        ├── (N) likes
+                        └── (N) comments
 ```
 
-`ON DELETE CASCADE` propaga el borrado de la cuenta hacia el resto del rastro del usuario (RGPD); el borrado de un mapa arrastra sus likes y comments; el borrado de un apunte deja el mapa derivado intacto (FK `source_note_id` con `ON DELETE SET NULL`) para no perder el trabajo de estudio. Las flashcards usan la misma estrategia sobre `map_id`.
+`ON DELETE CASCADE` propaga el borrado de la cuenta hacia el resto del rastro del usuario (RGPD); el borrado de un mapa arrastra sus likes y comments; el borrado de un apunte deja el mapa derivado y las flashcards derivadas intactos (FKs `source_note_id` y `note_id` con `ON DELETE SET NULL`) para no perder el trabajo de estudio. Las flashcards usan la misma estrategia sobre `map_id`: si el alumno borra el mapa origen, las tarjetas sobreviven y conservan su progreso SM-2.
 
 > **Nota de estado:** la sección §3.1 (`flashcards`) sigue redactada como "tabla planificada" por inercia del orden histórico de fases. La tabla está activa desde la Fase Flashcards; mover su sección a §2 queda como limpieza pendiente (no bloquea esta documentación).
-
-Pendiente para la rama `ia-integration`:
-- **`009_alter_flashcards_source_note.sql`** — añadirá `flashcards.note_id` con FK a `notes(id)` ON DELETE SET NULL. Necesaria para que las flashcards generadas desde un apunte queden vinculadas al origen y sobrevivan a su borrado.
 
 ---
 
@@ -210,6 +209,7 @@ Repetición espaciada con algoritmo **SM-2 simplificado**. Cada flashcard puede 
 | `id`               | INT PK AUTO_INCREMENT                 |                                                                |
 | `user_id`          | INT NOT NULL                          | → `users.id` ON DELETE CASCADE.                                |
 | `map_id`           | INT NULL                              | → `maps.id` **ON DELETE SET NULL**: la tarjeta sobrevive si se borra el mapa origen (no perder progreso de estudio). |
+| `note_id`          | INT NULL                              | → `notes.id` **ON DELETE SET NULL**. Añadida por migración 009 (rama `IA_Integration`) para vincular las flashcards generadas desde un apunte con su origen. NULL en flashcards creadas a mano o desde un mapa. |
 | `front`            | TEXT NOT NULL                         | Pregunta o concepto.                                           |
 | `back`             | TEXT NOT NULL                         | Respuesta o explicación.                                       |
 | `ease_factor`      | DECIMAL(3,2) NOT NULL DEFAULT 2.50    | Facilidad subjetiva. Mínimo 1.30, típico 2.50.                 |
@@ -227,26 +227,16 @@ Repetición espaciada con algoritmo **SM-2 simplificado**. Cada flashcard puede 
 - "Fallo" → `repetitions = 0`, `interval_days = 1`, `ease_factor = max(1.30, ease_factor - 0.20)`.
 - `next_review_at = CURDATE() + INTERVAL interval_days DAY`.
 
-**Índices:** `idx_user_due (user_id, next_review_at)` para "tarjetas a repasar hoy".
+**Índices:**
+
+- `idx_user_due (user_id, next_review_at)` — listado "tarjetas a repasar hoy" del dashboard.
+- `idx_flashcards_note (note_id)` — añadido por la migración 009; acelera la query "flashcards derivadas de este apunte" si la UI llega a exponerla.
 
 ---
 
-### 3.2 `flashcards.note_id` (Fase IA) — DDL pendiente de redactar
+### 3.2 `flashcards.note_id` — APLICADA por migración 009
 
-Cuando la rama `ia-integration` cablee la generación de flashcards desde un apunte (`POST ai/from-note { target: 'flashcards' }`), se redactará una migración `009_alter_flashcards_source_note.sql` con la siguiente forma:
-
-```sql
-ALTER TABLE flashcards
-    ADD COLUMN IF NOT EXISTS note_id INT NULL DEFAULT NULL
-        COMMENT 'FK al apunte origen. NULL si la flashcard se creó a mano o desde un mapa.'
-        AFTER map_id,
-    ADD CONSTRAINT fk_flashcards_note
-        FOREIGN KEY (note_id) REFERENCES notes(id)
-        ON DELETE SET NULL ON UPDATE CASCADE,
-    ADD INDEX IF NOT EXISTS idx_flashcards_note (note_id);
-```
-
-Misma estrategia que `maps.source_note_id` (ON DELETE SET NULL): si el alumno borra el apunte, las flashcards generadas sobreviven y conservan su progreso SM-2.
+DDL aplicado en la rama `IA_Integration` mediante [`009_alter_flashcards_source_note.sql`](../backend/DATA/migrations/009_alter_flashcards_source_note.sql). Misma estrategia que `maps.source_note_id` (ON DELETE SET NULL): si el alumno borra el apunte, las flashcards generadas desde él sobreviven y conservan su progreso SM-2 — pierden únicamente la referencia al origen. Detalle de la columna en la tabla de §3.1 (fila `note_id`).
 
 ---
 
