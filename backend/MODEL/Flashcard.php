@@ -375,5 +375,120 @@ class Flashcard {
         $stmt->execute([$id, $userId]);
         return $stmt->rowCount() > 0;
     }
+
+    // ──────────────────────────────────────────────────────────────────
+    // Métricas para el panel de inicio (`GET dashboard/stats`).
+    //
+    // Tres helpers de sólo lectura que no dependen del algoritmo SM-2
+    // ni del flujo de repaso. Todos filtran por user_id en la query.
+    // ──────────────────────────────────────────────────────────────────
+
+    /**
+     * Cuenta cuántas flashcards posee el usuario en total.
+     *
+     * @param int $userId
+     * @return int
+     */
+    public function countByUser($userId) {
+        $stmt = $this->conn->prepare(
+            "SELECT COUNT(*) FROM {$this->table} WHERE user_id = ?"
+        );
+        $stmt->execute([$userId]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * Cuenta cuántas flashcards del usuario han sido repasadas alguna
+     * vez (`last_reviewed_at IS NOT NULL`).
+     *
+     * Decisión defendible ante tribunal: el modelo de datos actual NO
+     * guarda historial de repasos individuales (eso requeriría una
+     * tabla `flashcard_reviews` aparte y queda fuera del alcance del
+     * TFG). Por eso "flashcards repasadas" significa **tarjetas
+     * únicas que han recibido al menos un repaso**, no "número total
+     * de repasos hechos". Es la métrica más precisa que la BD permite
+     * sin inflar el esquema, y se mantiene coherente con la columna
+     * `last_reviewed_at` introducida en la migración 003.
+     *
+     * @param int $userId
+     * @return int
+     */
+    public function countReviewedByUser($userId) {
+        $stmt = $this->conn->prepare(
+            "SELECT COUNT(*) FROM {$this->table}
+             WHERE user_id = ? AND last_reviewed_at IS NOT NULL"
+        );
+        $stmt->execute([$userId]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * Calcula la racha actual de días consecutivos del usuario con
+     * al menos un repaso.
+     *
+     * Política de cálculo (defendible ante tribunal):
+     *   - Se obtienen los días distintos con repaso
+     *     (`SELECT DISTINCT DATE(last_reviewed_at)`) ordenados de más
+     *     reciente a más antiguo.
+     *   - Si el último día con repaso es **hoy**, la racha empieza a
+     *     contar desde hoy.
+     *   - Si el último día con repaso es **ayer**, la racha empieza
+     *     desde ayer (no se "rompe" por no haber repasado todavía
+     *     hoy: el día aún no ha terminado).
+     *   - Si el último día es anterior a ayer, la racha es 0.
+     *   - A partir del día semilla, se descuentan días uno a uno
+     *     mientras los días con repaso sean consecutivos.
+     *
+     * Esta política se alinea con el comportamiento estándar de apps
+     * de repetición espaciada (Anki, Duolingo) y es coherente con la
+     * idea de motivación: el usuario no pierde la racha a las 00:01
+     * por no haber empezado aún el día.
+     *
+     * Se hace en PHP en lugar de en SQL puro porque MySQL no expone
+     * de forma portable un cálculo de "días consecutivos hacia atrás
+     * con tolerancia al día actual" en una sola query, y resolverlo
+     * con variables de sesión sería críptico de defender. El recorrido
+     * en PHP se hace sobre un array ya filtrado a días distintos
+     * (típicamente unas pocas decenas de filas como mucho).
+     *
+     * @param int $userId
+     * @return int  Días consecutivos (0 si no aplica).
+     */
+    public function computeStreakDays($userId) {
+        $stmt = $this->conn->prepare(
+            "SELECT DISTINCT DATE(last_reviewed_at) AS d
+             FROM {$this->table}
+             WHERE user_id = ? AND last_reviewed_at IS NOT NULL
+             ORDER BY d DESC"
+        );
+        $stmt->execute([$userId]);
+        $days = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        if (empty($days)) {
+            return 0;
+        }
+
+        $today     = (new DateTimeImmutable('today'))->format('Y-m-d');
+        $yesterday = (new DateTimeImmutable('yesterday'))->format('Y-m-d');
+
+        // Día semilla de la racha.
+        if ($days[0] === $today) {
+            $expected = new DateTimeImmutable($today);
+        } elseif ($days[0] === $yesterday) {
+            $expected = new DateTimeImmutable($yesterday);
+        } else {
+            return 0;
+        }
+
+        $streak = 0;
+        foreach ($days as $d) {
+            if ($d === $expected->format('Y-m-d')) {
+                $streak += 1;
+                $expected = $expected->modify('-1 day');
+            } else {
+                break;
+            }
+        }
+        return $streak;
+    }
 }
 ?>

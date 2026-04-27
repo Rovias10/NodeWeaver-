@@ -1,21 +1,85 @@
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/auth/useAuth.js';
-import { StatsCard } from './StatsCard.jsx';
+import { useNotification } from '@/ui/useNotification.js';
+import { listMaps } from '@/features/maps/services/mapsService.js';
+import { DashboardStatsSection } from './DashboardStatsSection.jsx';
 import { RecentMapsList } from './RecentMapsList.jsx';
+import { fetchStats } from './services/dashboardService.js';
+
+/** Cuántos mapas pintar en la sección "Tus últimos mapas". */
+const RECENT_MAPS_LIMIT = 5;
 
 /**
- * Página de inicio del shell autenticado.
+ * Página de inicio del shell autenticado (`/dashboard`).
  *
- * En Fase 3 todas las métricas son MOCK (0). El propósito es validar
- * que el shell + ProtectedRoute + AuthContext funcionan, y dejar el
- * andamiaje listo para enchufarlo a /maps/list y /flashcards/stats
- * en fases posteriores.
+ * Carga en paralelo dos cosas al montar:
+ *   1. Las métricas reales del usuario (`GET dashboard/stats`),
+ *      pintadas por `DashboardStatsSection`.
+ *   2. Los últimos mapas del usuario (`GET maps/list`, recortado a
+ *      los primeros 5 — el endpoint ya viene ordenado por
+ *      `updated_at DESC` desde `Map::findByUser`), pintados por
+ *      `RecentMapsList`. Reusamos el endpoint existente en lugar de
+ *      crear uno dedicado: la respuesta de `maps/list` excluye
+ *      `drawflow_json`, así que es ligera y no merece la pena
+ *      duplicar.
  *
- * No introducimos llamadas reales a backend aún para no añadir endpoints
- * y errores que distraigan del objetivo de Fase 3.
+ * Estados estándar `loading | error | ok` para las stats. Para los
+ * mapas recientes el fallo es silencioso (cae al EmptyState): es
+ * información secundaria y no queremos romper la página por ello.
  */
 export function DashboardPage() {
   const { user } = useAuth();
+  const { notify } = useNotification();
   const firstName = (user?.name ?? '').split(' ')[0] || 'estudiante';
+
+  const [statsStatus, setStatsStatus] = useState('loading');
+  const [stats, setStats]             = useState(null);
+
+  const [recentMaps, setRecentMaps]   = useState([]);
+  const [hasMoreMaps, setHasMoreMaps] = useState(false);
+
+  const loadStats = useCallback(async (signal) => {
+    setStatsStatus('loading');
+    try {
+      const res = await fetchStats(signal);
+      if (signal?.aborted) return;
+      if (!res?.success) {
+        setStatsStatus('error');
+        notify(res?.message || 'No se pudieron cargar tus estadísticas.', 'error');
+        return;
+      }
+      setStats(res.data ?? null);
+      setStatsStatus('ok');
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+      setStatsStatus('error');
+      notify('Error de red al cargar tus estadísticas.', 'error');
+    }
+  }, [notify]);
+
+  const loadRecentMaps = useCallback(async (signal) => {
+    try {
+      const res = await listMaps(signal);
+      if (signal?.aborted) return;
+      if (!res?.success || !Array.isArray(res.data)) {
+        // Fallo silencioso: dejamos el EmptyState. Las stats sí
+        // emitirán el toast si hay un problema general.
+        return;
+      }
+      setRecentMaps(res.data.slice(0, RECENT_MAPS_LIMIT));
+      setHasMoreMaps(res.data.length > RECENT_MAPS_LIMIT);
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+      // Igual que arriba: fallo silencioso para la sección secundaria.
+    }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    loadStats(controller.signal);
+    loadRecentMaps(controller.signal);
+    return () => controller.abort();
+  }, [loadStats, loadRecentMaps]);
 
   return (
     <div className="max-w-6xl mx-auto flex flex-col gap-8">
@@ -32,34 +96,13 @@ export function DashboardPage() {
         </p>
       </header>
 
-      <section
-        aria-label="Resumen de estudio"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-      >
-        <StatsCard
-          icon="fa-diagram-project"
-          tone="brand"
-          value={0}
-          label="Mapas creados"
-          hint="datos de ejemplo"
-        />
-        <StatsCard
-          icon="fa-clone"
-          tone="sun"
-          value={0}
-          label="Flashcards repasadas"
-          hint="datos de ejemplo"
-        />
-        <StatsCard
-          icon="fa-fire-flame-curved"
-          tone="coral"
-          value="0 días"
-          label="Racha actual"
-          hint="datos de ejemplo"
-        />
-      </section>
+      <DashboardStatsSection
+        status={statsStatus}
+        stats={stats}
+        onRetry={() => loadStats()}
+      />
 
-      <RecentMapsList maps={[]} />
+      <RecentMapsList maps={recentMaps} showSeeAll={hasMoreMaps} />
     </div>
   );
 }
