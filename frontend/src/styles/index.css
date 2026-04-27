@@ -105,3 +105,24 @@ body {
   font-feature-settings: 'ss01', 'cv11';
   letter-spacing: -0.005em;
 }
+
+/* =============================================================
+   <dialog> nativo HTML5 — reset de centrado.
+
+   El navegador, por defecto, centra un <dialog open> modal
+   combinando `position: fixed; inset: 0; margin: auto;`. Tailwind 4
+   Preflight aplica `margin: 0` a todos los elementos, pisando ese
+   `margin: auto` y dejando el dialog pegado a la esquina superior
+   izquierda del viewport.
+
+   Restauramos el centrado aquí, en una capa global, para no repetir
+   las clases de margen en los 5 dialogs del proyecto y para que el
+   sexto (cuando llegue) ya nazca alineado. `max-height` defensivo
+   evita que un dialog largo (UploadNoteDialog con textarea grande)
+   desborde el viewport en mobile.
+   ============================================================= */
+dialog[open] {
+  margin: auto;
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+}

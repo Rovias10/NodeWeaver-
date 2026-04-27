@@ -55,7 +55,7 @@ class Flashcard {
      * @return array
      */
     public function findByUser($userId) {
-        $query = "SELECT id, user_id, map_id, front, back,
+        $query = "SELECT id, user_id, map_id, note_id, front, back,
                          ease_factor, interval_days, repetitions,
                          next_review_at, last_reviewed_at,
                          created_at, updated_at
@@ -76,7 +76,7 @@ class Flashcard {
      * @return array
      */
     public function findDue($userId, $today) {
-        $query = "SELECT id, user_id, map_id, front, back,
+        $query = "SELECT id, user_id, map_id, note_id, front, back,
                          ease_factor, interval_days, repetitions,
                          next_review_at, last_reviewed_at,
                          created_at, updated_at
@@ -97,7 +97,7 @@ class Flashcard {
      * @return array|false
      */
     public function findByIdForUser($id, $userId) {
-        $query = "SELECT id, user_id, map_id, front, back,
+        $query = "SELECT id, user_id, map_id, note_id, front, back,
                          ease_factor, interval_days, repetitions,
                          next_review_at, last_reviewed_at,
                          created_at, updated_at
