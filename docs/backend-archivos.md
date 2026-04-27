@@ -95,6 +95,7 @@ Las rutas están agrupadas por feature, lo que sirve también como índice del b
 | --- | --- | --- |
 | Auth | `auth/login`, `auth/register`, `auth/forgot-password`, `auth/reset-password`, `auth/confirm-account`, `auth/google` | `authController` |
 | Profile | `profile/me`, `profile/update`, `profile/password`, `profile/avatar`, `profile/delete` | `profileController` |
+| Dashboard | `dashboard/stats` | `dashboardController` |
 | Maps | `maps/list`, `maps/get`, `maps/save`, `maps/delete` | `mapController` |
 | AI | `ai/expand`, `ai/from-note` | `aiController` |
 | Notes | `notes/list`, `notes/get`, `notes/file`, `notes/upload`, `notes/delete` | `noteController` |
@@ -212,10 +213,10 @@ Tabla `users`. Métodos clave:
 
 Tabla `maps`. Tiene dos zonas claramente separadas:
 
-- **Operaciones del propietario** (`findByUser`, `findByIdForUser`, `create`, `update`, `delete`, `getUpdatedAt`). Todas filtran por `user_id`.
+- **Operaciones del propietario** (`findByUser`, `findByIdForUser`, `create`, `update`, `delete`, `getUpdatedAt`, `countByUser`). Todas filtran por `user_id`. `countByUser` alimenta la métrica `maps_total` del panel de inicio (`GET dashboard/stats`).
 - **Operaciones públicas para la capa social**:
   - `findBasicById($id)` — lookup mínimo `{id, user_id, is_public}` para que `LikeController` y `CommentController` decidan autorización en una sola query.
-  - `findPublicForFeed($currentUserId, $sort, $q, $limit, $offset)` — feed comunidad. Recibe el id del usuario actual para calcular `liked_by_me` por mapa. Hace JOIN con `users` para autor y subqueries `COUNT(*)` para likes y comentarios. El parámetro `$sort` admite `recent` (por `updated_at DESC`) y `popular` (por `likes_count DESC`).
+  - `findPublicForFeed($currentUserId, $sort, $q, $limit, $offset)` — feed comunidad. Recibe el id del usuario actual para calcular `liked_by_me` por mapa. Hace JOIN con `users` para autor y subqueries `COUNT(*)` para likes y comentarios. El parámetro `$sort` admite `recent` (por `updated_at DESC`) y `popular` (por `(likes_count + comments_count) DESC, updated_at DESC` — suma sin peso de las dos señales de interacción social, con tie-break temporal para evitar orden aleatorio entre empates).
   - `findPublicByIdWithMeta($mapId, $currentUserId)` — detalle de un mapa público con autor, counts y `liked_by_me`. Filtra por `is_public = 1`. Si el mapa existe pero es privado, devuelve `false` (mismo trato que "no existe", para no filtrar la existencia ajena).
   - `findPublicByUser($currentUserId, $authorUserId, $limit, $offset)` y `countPublicByUser($authorUserId)` — listado paginado de mapas públicos del autor visitado, para el perfil público.
   - `countPublicForFeed($q)` — total para `has_more` en la paginación.
@@ -256,6 +257,12 @@ El método `applyReview($id, $userId, $current, $grade)` aplica el cálculo y pe
 El `WHERE` se construye en variables para que el prepared statement siga siendo seguro: la rama `'none'` añade SQL literal pero no parámetros; la rama entera añade un `?` y su valor.
 
 `deleteByNote($userId, $noteId)` borra todas las flashcards de una carpeta en un único `DELETE`. Si `$noteId === null` aplica `note_id IS NULL` (carpeta "Sin apunte"); si es entero, `note_id = ?`. Devuelve el número de filas eliminadas para que el controller pueda traducir 0 filas en `404`.
+
+Métricas para el panel de inicio (consumidas por `dashboardController::stats`):
+
+- `countByUser($userId)` — total de flashcards del usuario.
+- `countReviewedByUser($userId)` — total de flashcards con `last_reviewed_at IS NOT NULL`. Es la métrica más precisa que el modelo de datos actual permite: la BD no guarda historial de repasos individuales, así que cuenta tarjetas únicas que han recibido al menos un repaso (no el número total de repasos efectuados). Decisión documentada en el docstring del método.
+- `computeStreakDays($userId)` — racha actual de días consecutivos con repaso. Una sola query (`SELECT DISTINCT DATE(last_reviewed_at)`) ordenada DESC y un recorrido en PHP. Política: el día semilla es **hoy** si hubo repaso hoy o **ayer** si no, para no romper la racha por no haber empezado todavía el día actual (alineado con Anki/Duolingo). Si el último repaso es anterior a ayer, la racha es 0.
 
 ### 4.5. `Like.php`
 
@@ -402,6 +409,14 @@ Tres métodos:
 
 No hay endpoint de edición. Decisión documentada en `community-plan §1.3`: KISS y evita ataques tipo "edito mi comentario después de que me lo respondan/likeen".
 
+### 6.10. `dashboardController.php`
+
+Agregador transversal para la página de Inicio (`/dashboard`). Único método:
+
+- **`stats` (GET `dashboard/stats`)** — devuelve cuatro métricas del usuario autenticado: `maps_total`, `flashcards_total`, `flashcards_reviewed_total` y `streak_days`. Cada métrica se delega a un método del modelo correspondiente (`Map::countByUser`, `Flashcard::countByUser`, `Flashcard::countReviewedByUser`, `Flashcard::computeStreakDays`); el controller no construye SQL a mano, respeta la regla MVC del proyecto. Para el Super User (id 999) responde `200` con todos los contadores a 0 en lugar de `403`: no tiene fila en `users`, pero romperle el panel con un error sería peor UX y la lectura es inocua. Coherente con la doctrina del proyecto: bloqueamos al Super User en escrituras (mapController::save, etc.) pero no en lecturas.
+
+**Por qué un controller propio en lugar de añadir el endpoint a `mapController` o `flashcardController`**: el dashboard es un agregador transversal que cruza varias features (mapas, flashcards y, en el futuro, apuntes). Meterlo en un controller de dominio rompería la regla 1 controller ↔ 1 feature que sigue el resto del backend. Un archivo dedicado es la decisión más limpia y la más fácil de defender en pizarra.
+
 ---
 
 ## 7. Capa Servicios
@@ -520,6 +535,7 @@ backend/
 │   ├── controllers/
 │   │   ├── authController.php          Login, registro, reset, Google, confirm
 │   │   ├── profileController.php       /me, update, password, avatar
+│   │   ├── dashboardController.php     Métricas agregadas página Inicio
 │   │   ├── mapController.php           CRUD mapas conceptuales
 │   │   ├── aiController.php            ai/expand
 │   │   ├── noteController.php          CRUD apuntes + servir PDF

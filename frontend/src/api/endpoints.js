@@ -19,6 +19,9 @@ export const ENDPOINTS = {
     confirmAccount:  'auth/confirm-account',
     google:          'auth/google',
   },
+  dashboard: {
+    stats:           'dashboard/stats',
+  },
   profile: {
     me:              'profile/me',
     update:          'profile/update',

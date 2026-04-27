@@ -25,6 +25,11 @@ $router->post('profile/password', 'profileController', 'changePassword');
 $router->post('profile/avatar', 'profileController', 'uploadAvatar');
 $router->post('profile/delete', 'profileController', 'deleteAccount');
 
+// Dashboard Routes — métricas agregadas para la página de Inicio.
+//   dashboard/stats : { maps_total, flashcards_total,
+//                       flashcards_reviewed_total, streak_days }.
+$router->get('dashboard/stats', 'dashboardController', 'stats');
+
 // Map Routes — CRUD de mapas conceptuales StudyWeaver (Fase Maps · M1).
 $router->get('maps/list',    'mapController', 'list');
 $router->get('maps/get',     'mapController', 'get');

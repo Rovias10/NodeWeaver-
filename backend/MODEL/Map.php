@@ -120,6 +120,23 @@ class Map {
     }
 
     /**
+     * Cuenta cuántos mapas tiene el usuario. Métrica para el panel
+     * de inicio (`GET dashboard/stats`). Filtra por user_id en la
+     * query (anti-IDOR a nivel de BD); el COUNT siempre devuelve
+     * un entero, así que se castea sin necesidad de fallback.
+     *
+     * @param int $userId
+     * @return int
+     */
+    public function countByUser($userId) {
+        $stmt = $this->conn->prepare(
+            "SELECT COUNT(*) FROM {$this->table} WHERE user_id = ?"
+        );
+        $stmt->execute([$userId]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    /**
      * Lee el updated_at actual del mapa. Lo usa el controller tras un
      * save() para devolver al frontend la marca de tiempo definitiva
      * (la calculó el ON UPDATE CURRENT_TIMESTAMP de la tabla).
@@ -169,9 +186,21 @@ class Map {
      * búsqueda simple y paginación posicional.
      *
      *   sort = 'recent'  → updated_at DESC (default).
-     *   sort = 'popular' → COUNT(likes) DESC, tie-breaker updated_at DESC.
+     *   sort = 'popular' → (likes_count + comments_count) DESC,
+     *                      tie-breaker updated_at DESC.
      *   q              → filtro `LIKE '%q%'` sobre title o description
      *                    (vacío = sin filtro).
+     *
+     * Decisión de la fórmula "popular" (defendible ante tribunal):
+     * sumamos likes y comentarios sin ponderar para tratar ambas
+     * señales de interacción como equivalentes. Un like y un
+     * comentario son los dos compromisos sociales que ofrece la
+     * plataforma; ponderar uno sobre otro requeriría datos de uso que
+     * todavía no tenemos. El tie-break por `updated_at DESC` evita
+     * orden aleatorio entre mapas con la misma actividad y favorece
+     * los más vivos. Los alias `likes_count` / `comments_count` se
+     * pueden usar en ORDER BY (MySQL los resuelve tras el SELECT)
+     * pero no en WHERE, por eso aquí no hay filtro adicional.
      *
      * Excluye `drawflow_json` (la lista del feed sería pesada). El
      * detalle del mapa se sirve por findPublicByIdWithMeta.
@@ -183,7 +212,7 @@ class Map {
      */
     public function findPublicForFeed($currentUserId, $sort, $q, $limit, $offset) {
         $sortSql = ($sort === 'popular')
-            ? 'likes_count DESC, m.updated_at DESC'
+            ? '(likes_count + comments_count) DESC, m.updated_at DESC'
             : 'm.updated_at DESC';
 
         $hasQ   = ($q !== null && $q !== '');

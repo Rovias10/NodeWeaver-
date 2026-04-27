@@ -374,10 +374,12 @@ Estructura común a **todas** las páginas privadas. Centralizar el shell aquí 
 
 Resumen al entrar a la app. Equivalente al `home.html` legacy.
 
-- `DashboardPage.jsx` — saludo personalizado, grid de `StatsCard` (Mis mapas, Flashcards, Apuntes) y `RecentMapsList`. En la fase actual algunas métricas son mock (definidas en su día durante Fase 3 para validar el shell sin distraerse con endpoints; las que están conectadas leen del backend).
-- `StatsCard.jsx` — tarjeta con icono, número grande y label.
+- `DashboardPage.jsx` — saludo personalizado, sección de stats reales y `RecentMapsList`. Carga las métricas con `useEffect` + `AbortController` al montar (mismo patrón de cancelación que el resto de páginas privadas) y delega el render en `DashboardStatsSection` con estados `loading | error | ok`.
+- `DashboardStatsSection.jsx` — tres `StatsCard` cableados a `GET dashboard/stats`: "Mapas creados" (`maps_total`), "Flashcards repasadas" (`flashcards_reviewed_total`) y "Racha actual" (`streak_days`, formateado como "N días"). Sustituye al antiguo `StudyStatsSection` huérfano de la feature profile que pintaba siempre ceros mock. La sección expone botón "Reintentar" en estado de error y un spinner durante la carga.
+- `StatsCard.jsx` — tarjeta con icono, número grande y label. Reutilizada por `DashboardStatsSection` (no se duplica el componente visual).
 - `RecentMapsList.jsx` — listado vertical de los últimos mapas creados/editados, con click → editor.
 - `EmptyState.jsx` — componente genérico para "no tienes nada aún" reutilizado por varias listas (mapas, apuntes…). Ilustración + copy + CTA configurable.
+- `services/dashboardService.js` — `fetchStats(signal?)`, una sola función envolvente sobre `apiGet(ENDPOINTS.dashboard.stats)`. Sigue la convención "una función por endpoint" del resto de servicios del proyecto.
 
 ### 7.5. `features/maps/` — Editor Drawflow
 
@@ -519,9 +521,8 @@ Pantalla de gestión del usuario autenticado.
 - `AccountInfoSection.jsx` — formulario con nombre, teléfono, empresa, idioma, zona horaria. POST `profile/update` al guardar.
 - `SecuritySection.jsx` — cambio de contraseña: pide actual + nueva, llama a `profile/password`. Sin opción "olvidé mi contraseña actual" porque ese flujo va por `/recuperar`.
 - `AvatarSection.jsx` — subida de avatar con `apiUpload` (multipart). Vista previa local con `URL.createObjectURL` antes de confirmar.
-- `DangerZoneSection.jsx` — sección final de la pantalla con dos acciones reales: **Cerrar sesión** (limpia el JWT del `AuthContext` y vuelve a `/`, mismo efecto que el item del `UserMenu` pero más visible para el usuario que está editando su cuenta) y **Eliminar cuenta** (abre `DeleteAccountDialog` y, al confirmar, llama a `deleteAccount(email)` → al éxito hace `logout()` + `navigate('/')`). Sustituye al `StudyStatsSection` original que mostraba siempre ceros mock; las stats reales se reactivan en una rama futura para la página Inicio.
+- `DangerZoneSection.jsx` — sección final de la pantalla con dos acciones reales: **Cerrar sesión** (limpia el JWT del `AuthContext` y vuelve a `/`, mismo efecto que el item del `UserMenu` pero más visible para el usuario que está editando su cuenta) y **Eliminar cuenta** (abre `DeleteAccountDialog` y, al confirmar, llama a `deleteAccount(email)` → al éxito hace `logout()` + `navigate('/')`). Sustituye al antiguo `StudyStatsSection` (sección de ceros mock) que se eliminó al cablear las stats reales en la página Inicio.
 - `DeleteAccountDialog.jsx` — `<dialog>` nativo con campo "tipea tu email" que habilita el botón danger sólo cuando el email tipeado coincide con el de la cuenta (case-insensitive). Patrón anti-misclick estilo Vercel/Cloudflare; la prueba de identidad real sigue siendo el JWT en la cabecera `Authorization`. El backend revalida el email también por defensa en profundidad.
-- `StudyStatsSection.jsx` — (sin import vivo en `ProfilePage`) métricas del usuario que se reaprovecharán en la página Inicio cuando se cableen los endpoints reales. Se mantiene el archivo como punto de partida para esa rama futura.
 - `profileService.js` — `fetchMe`, `updateProfile`, `changePassword`, `uploadAvatar`, `deleteAccount(emailConfirmation)`. La última envía `POST profile/delete` con `{ email_confirmation }`.
 
 ### 7.10. `pages/NotFoundPage.jsx`
@@ -685,13 +686,14 @@ frontend/
         │
         ├── dashboard/                      Inicio del usuario (/dashboard)
         │   ├── DashboardPage.jsx
+        │   ├── DashboardStatsSection.jsx
         │   ├── StatsCard.jsx, RecentMapsList.jsx, EmptyState.jsx
+        │   └── services/dashboardService.js
         │
         ├── profile/                        Mi perfil (/perfil)
         │   ├── ProfilePage.jsx
         │   ├── SectionCard.jsx, AccountInfoSection.jsx, SecuritySection.jsx,
         │   │   AvatarSection.jsx, DangerZoneSection.jsx, DeleteAccountDialog.jsx
-        │   ├── StudyStatsSection.jsx       (huérfano · reservado para Inicio)
         │   └── profileService.js
         │
         ├── notes/                          Apuntes (zona principal — /apuntes)

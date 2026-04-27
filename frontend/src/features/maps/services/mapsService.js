@@ -11,9 +11,12 @@ import { ENDPOINTS } from '@/api/endpoints';
  *   { success, message?, data? }
  */
 
-/** GET maps/list → { success, data: [{id, title, description, is_public, created_at, updated_at}] } */
-export function listMaps() {
-  return apiGet(ENDPOINTS.maps.list);
+/**
+ * GET maps/list → { success, data: [{id, title, description, is_public, created_at, updated_at}] }
+ * @param {AbortSignal} [signal] Para cancelar desde un useEffect al desmontar.
+ */
+export function listMaps(signal) {
+  return apiGet(ENDPOINTS.maps.list, undefined, signal);
 }
 
 /** GET maps/get?id=N → { success, data: {...incluye drawflow_json} } */
