@@ -24,7 +24,16 @@ export function FlashcardCard({ card, onEdit, onDelete }) {
 
   return (
     <Card padded className="flex flex-col gap-4 h-full">
-      {/* Cabecera: vencimiento + origen */}
+      {/* Cabecera: vencimiento + origen.
+
+          Tres badges posibles según la procedencia de la tarjeta:
+          - "Mapa"   → generada desde un mapa (map_id != null).
+          - "Apunte" → generada por IA desde un apunte (note_id != null
+                       y map_id == null).
+          - "Suelta" → creada a mano sin origen ligado.
+
+          Mostrar el origen ayuda al alumno a recordar de qué tema sale
+          cada tarjeta. */}
       <div className="flex items-start justify-between gap-3">
         <DueBadge nextReviewAt={card.next_review_at} />
         {card.map_id ? (
@@ -34,6 +43,14 @@ export function FlashcardCard({ card, onEdit, onDelete }) {
           >
             <i className="fas fa-link" aria-hidden="true" />
             Mapa
+          </span>
+        ) : card.note_id ? (
+          <span
+            className="text-xs text-ink-faint inline-flex items-center gap-1"
+            title={`Generada desde el apunte #${card.note_id}`}
+          >
+            <i className="fas fa-file-lines" aria-hidden="true" />
+            Apunte
           </span>
         ) : (
           <span className="text-xs text-ink-faint">Suelta</span>

@@ -477,6 +477,14 @@ class FlashcardController {
             'map_id'           => isset($row['map_id']) && $row['map_id'] !== null
                                     ? (int) $row['map_id']
                                     : null,
+            // note_id se rellena cuando la flashcard se generó desde un
+            // apunte (rama IA_Integration: aiController::fromNote target=
+            // flashcards). El frontend lo usa para pintar el badge
+            // "Apunte" como contraparte del badge "Mapa", manteniendo la
+            // trazabilidad del origen de cada tarjeta.
+            'note_id'          => isset($row['note_id']) && $row['note_id'] !== null
+                                    ? (int) $row['note_id']
+                                    : null,
             'front'            => isset($row['front']) ? (string) $row['front'] : '',
             'back'             => isset($row['back'])  ? (string) $row['back']  : '',
             'ease_factor'      => isset($row['ease_factor'])   ? (float) $row['ease_factor']    : null,

@@ -21,6 +21,16 @@ dist-ssr/
 frontend/dist/
 *.local
 
+# --- Uploads (backend/frontend) ---
+backend/uploads/
+frontend/uploads/
+
+# --- Frontend: archivos de configuración/documentación locales ---
+frontend/eslint.config.*
+frontend/package-lock.json
+frontend/README.md
+frontend/vite.config.*
+
 # --- Logs ---
 logs
 *.log
@@ -47,3 +57,8 @@ Thumbs.db
 # --- Herramientas internas ---
 .claude/
 claude.md
+.cursor/
+.playwright-mcp/
+.mcp.json
+gemini.md
+.docs/

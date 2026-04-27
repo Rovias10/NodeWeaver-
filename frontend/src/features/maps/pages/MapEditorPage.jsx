@@ -12,6 +12,7 @@ import { useEditorKeybindings } from '../hooks/useEditorKeybindings.js';
 import { DrawflowEditor } from '../components/DrawflowEditor.jsx';
 import { EditorToolbar } from '../components/EditorToolbar.jsx';
 import { MapTitleEditor } from '../components/MapTitleEditor.jsx';
+import { MapMetadataDialog } from '../components/MapMetadataDialog.jsx';
 import { SaveIndicator } from '../components/SaveIndicator.jsx';
 import { ShareToggle } from '@/features/community/components/ShareToggle.jsx';
 
@@ -62,6 +63,8 @@ export function MapEditorPage() {
   const [expandingNodeId, setExpandingNodeId] = useState(null);
   const [isGeneratingFlashcards, setIsGeneratingFlashcards] = useState(false);
   const [isSharingPending, setIsSharingPending] = useState(false);
+  const [showMetadataDialog, setShowMetadataDialog] = useState(false);
+  const [isSavingMetadata, setIsSavingMetadata] = useState(false);
 
   // ── Carga inicial ────────────────────────────────────────────────
   useEffect(() => {
@@ -234,6 +237,41 @@ export function MapEditorPage() {
     }
   }, [isPublic, mapId, title, description, initialJson, notify, auto]);
 
+  // Handler del dialog "Editar metadatos": persiste título + descripción
+  // a la vez. Mismo patrón que handleSharingChange (saveMap directo en
+  // lugar de pasar por el auto-save debounced) para que el spinner del
+  // botón refleje el estado real de la petición y para evitar carrera
+  // con un payload viejo del auto-save.
+  //
+  // Si el guardado va bien, sincronizamos el estado local con los nuevos
+  // valores y cerramos el dialog. Si falla, dejamos el dialog abierto
+  // para que el usuario pueda corregir o reintentar.
+  const handleSaveMetadata = useCallback(async ({ title: newTitle, description: newDescription }) => {
+    setIsSavingMetadata(true);
+    auto.cancelSave();
+    try {
+      const res = await saveMap({
+        id: mapId,
+        title: newTitle,
+        description: newDescription,
+        is_public: isPublic,
+        drawflow_json: lastJsonRef.current ?? initialJson,
+      });
+      if (!res.success) {
+        notify(res.message || 'No se pudieron guardar los metadatos.', 'error');
+        return;
+      }
+      setTitle(newTitle);
+      setDescription(newDescription);
+      setShowMetadataDialog(false);
+      notify('Metadatos actualizados.', 'success');
+    } catch {
+      notify('Error de red al guardar los metadatos.', 'error');
+    } finally {
+      setIsSavingMetadata(false);
+    }
+  }, [mapId, isPublic, initialJson, notify, auto]);
+
   // Handler de "+ IA": llama a /api/ai/expand con el label del nodo
   // y, si hay hijos, los pinta con addChildNodes (que también los
   // conecta al padre). El auto-save se dispara solo gracias a los
@@ -297,9 +335,29 @@ export function MapEditorPage() {
 
   return (
     <div className="flex flex-col gap-4 h-[calc(100dvh-160px)] min-h-[520px]">
-      {/* Cabecera: título + visibilidad + indicador de guardado */}
+      {/* Cabecera: título (editable inline) + botón "Editar metadatos"
+          (dialog con título + descripción) + visibilidad + indicador
+          de guardado.
+
+          El botón "Editar metadatos" se agrupa visualmente con el
+          título porque ambos controlan los datos del mapa. La
+          visibilidad queda separada (gestionada por ShareToggle) para
+          mantener un único punto de edición por dato. */}
       <header className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
-        <MapTitleEditor value={title} onChange={handleTitleChange} />
+        <div className="flex-1 min-w-0 flex items-start gap-2">
+          <MapTitleEditor value={title} onChange={handleTitleChange} />
+          <button
+            type="button"
+            onClick={() => setShowMetadataDialog(true)}
+            disabled={status !== 'ok'}
+            className="shrink-0 mt-1 sm:mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-line text-sm text-ink-muted hover:text-ink hover:bg-paper/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Editar título y descripción"
+            aria-label="Editar metadatos del mapa"
+          >
+            <i className="fas fa-pen" aria-hidden="true" />
+            <span className="hidden md:inline">Editar metadatos</span>
+          </button>
+        </div>
         <div className="flex items-center gap-4 shrink-0 pt-1 sm:pt-2 flex-wrap">
           <ShareToggle
             isPublic={isPublic}
@@ -362,6 +420,21 @@ export function MapEditorPage() {
           </div>
         )}
       </Card>
+
+      {/* Dialog de edición de metadatos. Renderizado fuera del Card del
+          canvas para que el backdrop cubra toda la pantalla y no quede
+          atrapado en el contenedor con overflow hidden. */}
+      <MapMetadataDialog
+        open={showMetadataDialog}
+        title={title}
+        description={description}
+        isSaving={isSavingMetadata}
+        onSubmit={handleSaveMetadata}
+        onCancel={() => {
+          if (isSavingMetadata) return;
+          setShowMetadataDialog(false);
+        }}
+      />
     </div>
   );
 }
