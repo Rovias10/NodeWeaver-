@@ -23,6 +23,7 @@ $router->get('profile/me', 'profileController', 'getProfile');
 $router->post('profile/update', 'profileController', 'updateProfile');
 $router->post('profile/password', 'profileController', 'changePassword');
 $router->post('profile/avatar', 'profileController', 'uploadAvatar');
+$router->post('profile/delete', 'profileController', 'deleteAccount');
 
 // Map Routes — CRUD de mapas conceptuales StudyWeaver (Fase Maps · M1).
 $router->get('maps/list',    'mapController', 'list');
@@ -51,6 +52,7 @@ $router->get('flashcards/due',                 'flashcardController', 'due');
 $router->post('flashcards/save',               'flashcardController', 'save');
 $router->post('flashcards/review',             'flashcardController', 'review');
 $router->post('flashcards/delete',             'flashcardController', 'delete');
+$router->post('flashcards/delete-by-note',     'flashcardController', 'deleteByNote');
 $router->post('flashcards/generate-from-map',  'flashcardController', 'generateFromMap');
 
 // Community Routes — Fase Comunidad · C1 (feed, likes, comments).

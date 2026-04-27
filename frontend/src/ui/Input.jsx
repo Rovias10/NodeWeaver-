@@ -45,6 +45,7 @@ export const Input = forwardRef(function Input(
             'w-full bg-white/70 border rounded-xl py-3 text-ink placeholder-ink-faint ' +
             'shadow-inner transition-all ' +
             'focus:outline-none focus:ring-2 focus:ring-brand-400/60 focus:border-brand-400/60 ' +
+            'disabled:bg-slate-100 disabled:text-ink-muted disabled:border-slate-200 disabled:shadow-none disabled:cursor-not-allowed disabled:opacity-100 ' +
             (hasIcon ? 'pl-11 ' : 'pl-4 ') +
             (hasRight ? 'pr-11 ' : 'pr-4 ') +
             (error ? 'border-coral-400/70' : 'border-line')

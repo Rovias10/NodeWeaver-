@@ -15,9 +15,24 @@ export function listFlashcards() {
   return apiGet(ENDPOINTS.flashcards.list);
 }
 
-/** GET flashcards/due → flashcards con next_review_at <= hoy. */
-export function listDue() {
-  return apiGet(ENDPOINTS.flashcards.due);
+/**
+ * GET flashcards/due → flashcards con next_review_at <= hoy.
+ *
+ * Acepta un filtro opcional por carpeta de apunte para que la
+ * sesión de repaso se pueda limitar a una sola carpeta:
+ *   - 'none' → sólo huérfanas (note_id IS NULL).
+ *   - número → sólo las de ese apunte concreto.
+ *   - omitido / null → todas las pendientes (modo global).
+ *
+ * Va por query string `?note_id=...` que el controller parsea con
+ * ctype_digit + el caso especial 'none'.
+ */
+export function listDue(noteFilter) {
+  const params =
+    noteFilter === 'none' || (typeof noteFilter === 'number' && noteFilter > 0)
+      ? { note_id: noteFilter }
+      : undefined;
+  return apiGet(ENDPOINTS.flashcards.due, params);
 }
 
 /**
@@ -39,6 +54,16 @@ export function reviewFlashcard(id, grade) {
 /** POST flashcards/delete con { id }. */
 export function deleteFlashcard(id) {
   return apiPost(ENDPOINTS.flashcards.remove, { id });
+}
+
+/**
+ * POST flashcards/delete-by-note — borra todas las flashcards de
+ * una carpeta. `noteId` puede ser un número (apunte concreto) o
+ * null (carpeta "Sin apunte" → huérfanas con note_id IS NULL).
+ * Devuelve { success, message, data: { deleted: N } }.
+ */
+export function deleteFlashcardsByNote(noteId) {
+  return apiPost(ENDPOINTS.flashcards.removeByNote, { note_id: noteId });
 }
 
 /**

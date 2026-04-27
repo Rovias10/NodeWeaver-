@@ -24,6 +24,7 @@ export const ENDPOINTS = {
     update:          'profile/update',
     password:        'profile/password',
     avatar:          'profile/avatar',
+    remove:          'profile/delete',
   },
   maps: {
     list:            'maps/list',
@@ -41,6 +42,7 @@ export const ENDPOINTS = {
     save:            'flashcards/save',
     review:          'flashcards/review',
     remove:          'flashcards/delete',
+    removeByNote:    'flashcards/delete-by-note',
     generateFromMap: 'flashcards/generate-from-map',
   },
   notes: {

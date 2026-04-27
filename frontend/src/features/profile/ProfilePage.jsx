@@ -8,7 +8,7 @@ import { fetchMe } from './profileService.js';
 import { AccountInfoSection } from './AccountInfoSection.jsx';
 import { SecuritySection } from './SecuritySection.jsx';
 import { AvatarSection } from './AvatarSection.jsx';
-import { StudyStatsSection } from './StudyStatsSection.jsx';
+import { DangerZoneSection } from './DangerZoneSection.jsx';
 
 /**
  * Pantalla de "Mi perfil". Equivalente React (rediseñado) de
@@ -16,7 +16,9 @@ import { StudyStatsSection } from './StudyStatsSection.jsx';
  *
  * Cambios respecto al original:
  *   - Eliminadas las secciones de workflows, ejecuciones y conexiones n8n.
- *   - Sustituidas por StudyStatsSection (mapas, flashcards, racha).
+ *   - DangerZoneSection cierra la pantalla con dos acciones reales
+ *     (cerrar sesión y eliminar cuenta), sustituyendo al panel de
+ *     estadísticas mock que mostraba ceros.
  *   - Sin tabs animadas: secciones apiladas. Defendible por timebox.
  *
  * Ciclo de vida:
@@ -98,7 +100,7 @@ export function ProfilePage() {
       <AvatarSection profile={profile} onAvatarChanged={loadProfile} />
       <AccountInfoSection profile={profile} />
       <SecuritySection profile={profile} />
-      <StudyStatsSection />
+      <DangerZoneSection profile={profile} />
 
       {profile?.created_at && (
         <p className="text-center text-xs text-ink-faint pb-4">

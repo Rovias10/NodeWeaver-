@@ -5,15 +5,20 @@ import { UserMenu } from './UserMenu.jsx';
 /**
  * Barra superior fija del shell autenticado.
  *
- * Compone:
- *   - Botón hamburguesa (visible en < lg) que abre el drawer móvil.
- *   - Wordmark "StudyWeaver" sólo en mobile (en desktop ya lo
- *     enseña la sidebar y duplicarlo es ruido).
- *   - Breadcrumb sencillo: nombre de la sección actual derivado de
- *     la URL contra NAV_ITEMS. No es jerárquico (no hay subrutas
- *     todavía); cuando aparezcan, basta con encadenar en este
- *     componente.
- *   - UserMenu a la derecha.
+ * Layout en 3 columnas (flex-1 a izquierda y derecha) para que el
+ * logo del centro quede ópticamente centrado independientemente del
+ * ancho del texto de la sección o del nombre del usuario:
+ *
+ *   [hamburguesa? · sección]   [LOGO StudyWeaver]   [UserMenu]
+ *
+ * - Hamburguesa: sólo en < lg, abre el MobileDrawer.
+ * - Sección: nombre + icono de la entrada de NAV_ITEMS que casa con
+ *   el pathname actual. Visible en todos los viewports.
+ * - Logo: lleva al home (/dashboard).
+ * - UserMenu: avatar + dropdown de cuenta a la derecha.
+ *
+ * No es jerárquico (no hay subrutas todavía); cuando aparezcan,
+ * basta con encadenar el breadcrumb dentro del bloque izquierdo.
  */
 export function AppNavbar({ onOpenDrawer }) {
   const location = useLocation();
@@ -29,34 +34,40 @@ export function AppNavbar({ onOpenDrawer }) {
         'flex items-center px-4 sm:px-6'
       }
     >
-      <button
-        type="button"
-        onClick={onOpenDrawer}
-        aria-label="Abrir menú"
-        className={
-          'lg:hidden mr-3 p-2 rounded-xl text-ink-muted hover:text-ink hover:bg-brand-50 ' +
-          'focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 transition-colors'
-        }
-      >
-        <i className="fas fa-bars text-lg" aria-hidden="true" />
-      </button>
+      <div className="flex-1 flex items-center gap-3 min-w-0">
+        <button
+          type="button"
+          onClick={onOpenDrawer}
+          aria-label="Abrir menú"
+          className={
+            'lg:hidden p-2 rounded-xl text-ink-muted hover:text-ink hover:bg-brand-50 ' +
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 transition-colors'
+          }
+        >
+          <i className="fas fa-bars text-lg" aria-hidden="true" />
+        </button>
 
-      <Link to="/apuntes" className="lg:hidden">
-        <span className="block text-lg font-extrabold tracking-tight bg-gradient-to-r from-brand-600 via-brand-500 to-coral-400 bg-clip-text text-transparent">
-          StudyWeaver
-        </span>
+        {currentSection && (
+          <h1 className="flex items-center gap-3 text-base font-semibold text-ink min-w-0">
+            <i className={`fas ${currentSection.icon} text-brand-500 shrink-0`} aria-hidden="true" />
+            <span className="truncate">{currentSection.label}</span>
+          </h1>
+        )}
+      </div>
+
+      <Link
+        to="/dashboard"
+        className="shrink-0 flex items-center group"
+        aria-label="Ir al inicio de StudyWeaver"
+      >
+        <img
+          src="/Logotipo.svg"
+          alt="Logotipo de StudyWeaver"
+          className="h-14 w-auto group-hover:brightness-110 transition"
+        />
       </Link>
 
-      <h1 className="hidden lg:flex items-center gap-3 text-base font-semibold text-ink">
-        {currentSection && (
-          <>
-            <i className={`fas ${currentSection.icon} text-brand-500`} aria-hidden="true" />
-            <span>{currentSection.label}</span>
-          </>
-        )}
-      </h1>
-
-      <div className="ml-auto flex items-center gap-3">
+      <div className="flex-1 flex items-center justify-end gap-3">
         <UserMenu />
       </div>
     </header>

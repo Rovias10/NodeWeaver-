@@ -74,8 +74,21 @@ class FlashcardController {
 
         $today = (new DateTimeImmutable('today'))->format('Y-m-d');
 
+        // Filtro opcional por carpeta de apunte. Lo lee de la query
+        // string (?note_id=123 o ?note_id=none) para que la URL del
+        // repaso sea compartible/recargable. Validamos antes de pasar
+        // al modelo: cualquier valor que no sea 'none' o entero > 0
+        // se ignora silenciosamente y se cae al modo global.
+        $noteFilter = null;
+        $rawNote    = $_GET['note_id'] ?? null;
+        if ($rawNote === 'none') {
+            $noteFilter = 'none';
+        } elseif ($rawNote !== null && ctype_digit((string) $rawNote) && (int) $rawNote > 0) {
+            $noteFilter = (int) $rawNote;
+        }
+
         try {
-            $rows = $this->flashcardModel->findDue($userId, $today);
+            $rows = $this->flashcardModel->findDue($userId, $today, $noteFilter);
             http_response_code(200);
             echo json_encode([
                 'success' => true,
@@ -87,6 +100,76 @@ class FlashcardController {
             echo json_encode([
                 'success' => false,
                 'message' => 'Error al consultar las flashcards pendientes.',
+            ]);
+        }
+    }
+
+    /**
+     * POST flashcards/delete-by-note
+     * Borra todas las flashcards del usuario que pertenezcan a un
+     * apunte (carpeta) o las huérfanas (carpeta "Sin apunte").
+     *
+     * Body:
+     *   { note_id: number }  → borra las de ese apunte concreto.
+     *   { note_id: null }    → borra las huérfanas (note_id IS NULL).
+     *
+     * Devuelve { data: { deleted: N } }. Si no había nada que borrar
+     * responde 404 con un mensaje claro (ayuda al frontend a no
+     * mostrar un toast de éxito vacío).
+     */
+    public function deleteByNote($data = []) {
+        $auth   = AuthMiddleware::verifyToken();
+        $userId = $auth['id'];
+
+        if ($userId == 999) {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false,
+                'message' => 'El usuario administrador no puede borrar flashcards.',
+            ]);
+            return;
+        }
+
+        // Distinguimos "no enviaron la clave" de "la enviaron como null":
+        // la clave puede llegar literalmente como null desde el JSON y
+        // significa "carpeta huérfanas". array_key_exists conserva esa
+        // diferencia (isset trataría null como ausencia).
+        $noteId = null;
+        if (array_key_exists('note_id', $data) && $data['note_id'] !== null) {
+            if (!is_numeric($data['note_id']) || (int) $data['note_id'] <= 0) {
+                http_response_code(400);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'note_id no válido.',
+                ]);
+                return;
+            }
+            $noteId = (int) $data['note_id'];
+        }
+
+        try {
+            $deleted = $this->flashcardModel->deleteByNote($userId, $noteId);
+            if ($deleted === 0) {
+                http_response_code(404);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Esa carpeta ya no tiene flashcards que borrar.',
+                ]);
+                return;
+            }
+
+            http_response_code(200);
+            echo json_encode([
+                'success' => true,
+                'message' => "Eliminadas {$deleted} flashcards.",
+                'data'    => ['deleted' => $deleted],
+            ], JSON_UNESCAPED_UNICODE);
+        } catch (PDOException $e) {
+            error_log('[FlashcardController::deleteByNote] ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error al eliminar la carpeta de flashcards.',
             ]);
         }
     }
@@ -484,6 +567,12 @@ class FlashcardController {
             // trazabilidad del origen de cada tarjeta.
             'note_id'          => isset($row['note_id']) && $row['note_id'] !== null
                                     ? (int) $row['note_id']
+                                    : null,
+            // note_title sólo viene relleno desde findByUser (LEFT JOIN con
+            // notes). En save/review el normalize se ejecuta sobre filas que
+            // no traen esa columna, así que cae a null sin estorbar.
+            'note_title'       => isset($row['note_title']) && $row['note_title'] !== null
+                                    ? (string) $row['note_title']
                                     : null,
             'front'            => isset($row['front']) ? (string) $row['front'] : '',
             'back'             => isset($row['back'])  ? (string) $row['back']  : '',

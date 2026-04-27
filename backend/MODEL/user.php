@@ -120,5 +120,24 @@ class User {
         $stmt = $this->conn->prepare($query);
         return $stmt->execute([$url, $id]);
     }
+
+    /**
+     * Borra definitivamente la cuenta del usuario.
+     *
+     * Las FKs `ON DELETE CASCADE` desde users hacia maps, notes, likes
+     * y comments se encargan de arrastrar todo el rastro del usuario
+     * (ver docs/database.md §1). Las flashcards van pegadas a maps o
+     * notes, así que también desaparecen por la cadena de cascadas.
+     *
+     * Devuelve true si se borró exactamente una fila, false si el id
+     * no existía. Cualquier excepción de PDO se deja propagar para que
+     * el controller la pille en su try/catch y devuelva HTTP 500.
+     */
+    public function deleteById($id) {
+        $query = "DELETE FROM " . $this->table_name . " WHERE id = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute([$id]);
+        return $stmt->rowCount() === 1;
+    }
 }
 ?>

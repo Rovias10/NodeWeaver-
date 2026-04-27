@@ -81,7 +81,7 @@ export function SecuritySection({ profile }) {
   if (isGoogleOnly) {
     return (
       <SectionCard
-        icon="fa-shield-halved"
+        icon="fa-shield-alt"
         title="Seguridad"
         description="Tu acceso está gestionado por Google."
       >
@@ -98,7 +98,7 @@ export function SecuritySection({ profile }) {
 
   return (
     <SectionCard
-      icon="fa-shield-halved"
+      icon="fa-shield-alt"
       title="Seguridad"
       description="Cambia tu contraseña. Te pedimos la actual por seguridad."
     >
