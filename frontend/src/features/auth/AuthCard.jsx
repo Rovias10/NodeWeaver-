@@ -33,9 +33,11 @@ export function AuthCard({ title, subtitle, width = 'md', icon, children }) {
               </div>
             ) : (
               <Link to="/" className="inline-block mb-4 group">
-                <span className="block text-3xl font-extrabold tracking-tight bg-linear-to-r from-brand-600 via-brand-500 to-coral-400 bg-clip-text text-transparent group-hover:brightness-110 transition">
-                  StudyWeaver
-                </span>
+                <img
+                  src="/Logotipo.svg"
+                  alt="Logotipo de StudyWeaver"
+                  className="h-16 w-auto mx-auto group-hover:brightness-110 transition"
+                />
               </Link>
             )}
             {title && <h1 className="text-2xl font-bold text-ink mb-2">{title}</h1>}

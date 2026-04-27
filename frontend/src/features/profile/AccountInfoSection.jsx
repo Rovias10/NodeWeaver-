@@ -111,9 +111,6 @@ export function AccountInfoSection({ profile }) {
           disabled
           aria-describedby="email-hint"
         />
-        <p id="email-hint" className="-mt-2 text-xs text-ink-faint">
-          El email no se puede cambiar desde aquí todavía.
-        </p>
 
         <Input
           label="Institución educativa (opcional)"

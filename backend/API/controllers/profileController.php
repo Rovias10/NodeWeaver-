@@ -202,5 +202,82 @@ class ProfileController {
             echo json_encode(['success' => false, 'message' => 'Error al guardar en base de datos.']);
         }
     }
+
+    /**
+     * POST profile/delete — Elimina la cuenta del usuario autenticado.
+     *
+     * Seguridad:
+     *   - El JWT es la prueba de identidad (verificado en getAuthenticatedUser).
+     *   - El frontend obliga al usuario a tipear su email exacto antes de
+     *     llegar aquí: ese paso es UX anti-misclick, no autenticación
+     *     adicional. Validamos también aquí por si alguien llama el
+     *     endpoint a mano con el JWT pero con un email distinto.
+     *   - El Super User virtual (id=999) no se puede borrar: no existe
+     *     en la base y la operación devolvería false silenciosamente.
+     *
+     * Cascadas: la BD tiene ON DELETE CASCADE desde users → maps, notes,
+     * likes y comments (ver docs/database.md §1). Un solo DELETE arrastra
+     * todo el rastro del usuario, en línea con el "derecho al olvido"
+     * del RGPD.
+     */
+    public function deleteAccount($data = []) {
+        $user_id = $this->getAuthenticatedUser();
+
+        if ($user_id == 999) {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false,
+                'message' => 'La cuenta de administrador no se puede eliminar desde aquí.',
+            ]);
+            return;
+        }
+
+        $confirmation = trim($data['email_confirmation'] ?? '');
+        if ($confirmation === '') {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Confirma escribiendo tu email para borrar la cuenta.',
+            ]);
+            return;
+        }
+
+        $user = $this->userModel->searchById($user_id);
+        if (!$user) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'La cuenta ya no existe.']);
+            return;
+        }
+
+        if (strcasecmp($confirmation, $user['email']) !== 0) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'El email introducido no coincide con el de la cuenta.',
+            ]);
+            return;
+        }
+
+        try {
+            $deleted = $this->userModel->deleteById($user_id);
+            if ($deleted) {
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Cuenta eliminada. Sentimos verte ir.',
+                ]);
+            } else {
+                http_response_code(500);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'No se pudo eliminar la cuenta. Inténtalo de nuevo.',
+                ]);
+            }
+        } catch (Throwable $e) {
+            error_log('[profile/delete] ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error interno al eliminar la cuenta.',
+            ]);
+        }
+    }
 }
 ?>

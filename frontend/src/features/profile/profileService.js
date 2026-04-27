@@ -32,3 +32,14 @@ export function uploadAvatar(file) {
   formData.append('avatar', file);
   return apiUpload(ENDPOINTS.profile.avatar, formData);
 }
+
+/**
+ * Elimina la cuenta del usuario autenticado.
+ * Backend: POST profile/delete con { email_confirmation }.
+ * El backend exige que `email_confirmation` coincida con el email de
+ * la cuenta (caso-insensitive) para evitar borrados accidentales si
+ * alguien llamase el endpoint a mano.
+ */
+export function deleteAccount(emailConfirmation) {
+  return apiPost(ENDPOINTS.profile.remove, { email_confirmation: emailConfirmation });
+}

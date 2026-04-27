@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { Spinner } from '@/ui/Spinner.jsx';
 import { Card } from '@/ui/Card.jsx';
 import { Button } from '@/ui/Button.jsx';
@@ -34,6 +34,8 @@ import { useReviewKeybindings } from '../hooks/useReviewKeybindings.js';
 export function ReviewSessionPage() {
   const navigate = useNavigate();
   const { notify } = useNotification();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
 
   // 'loading' → spinner
   // 'error'   → mensaje + volver
@@ -44,13 +46,30 @@ export function ReviewSessionPage() {
   const [queue, setQueue] = useState([]);
   const [revealed, setRevealed] = useState(false);
   const [stats, setStats] = useState({ total: 0, fail: 0, good: 0, easy: 0 });
+  // Título humano de la carpeta cuando filtramos. La fuente preferida
+  // es location.state.folderTitle (lo pasa FlashcardsListPage al hacer
+  // navigate). Si el usuario recarga la URL directamente perdemos ese
+  // state — caemos al note_title del primer card cargado, y si la
+  // carpeta no tiene ninguna pendiente, a un texto genérico.
+  const [folderTitle, setFolderTitle] = useState(
+    () => location.state?.folderTitle ?? null,
+  );
+
+  // Filtro de carpeta extraído de ?note=. Memoizado para que no
+  // dispare el efecto de carga en cada render.
+  const noteFilter = useMemo(() => {
+    const raw = searchParams.get('note');
+    if (raw === 'none') return 'none';
+    if (raw && /^\d+$/.test(raw)) return Number.parseInt(raw, 10);
+    return null;
+  }, [searchParams]);
 
   // ── Carga inicial ────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await listDue();
+        const res = await listDue(noteFilter);
         if (cancelled) return;
         if (!res.success) {
           setStatus('error');
@@ -58,6 +77,18 @@ export function ReviewSessionPage() {
           return;
         }
         const cards = Array.isArray(res.data) ? res.data : [];
+        // Etiqueta de la carpeta para la cabecera. Si ya nos llegó por
+        // location.state (camino normal: pulsar "Jugar" en la lista) la
+        // dejamos. Si la URL se cargó directa, inferimos del primer
+        // card o caemos a un texto genérico.
+        setFolderTitle((prev) => {
+          if (prev) return prev;
+          if (noteFilter === 'none') return 'Sin apunte';
+          if (typeof noteFilter === 'number') {
+            return cards[0]?.note_title || 'Carpeta seleccionada';
+          }
+          return null;
+        });
         if (cards.length === 0) {
           setStatus('empty');
           return;
@@ -72,7 +103,7 @@ export function ReviewSessionPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [notify]);
+  }, [notify, noteFilter]);
 
   const handleReveal = useCallback(() => {
     setRevealed(true);
@@ -135,8 +166,14 @@ export function ReviewSessionPage() {
   return (
     <div className="max-w-3xl mx-auto">
       <header className="flex items-center justify-between gap-4 mb-6">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-xl md:text-2xl font-bold text-ink">Sesión de repaso</h1>
+          {folderTitle && (
+            <p className="text-xs text-brand-700 mt-1 truncate">
+              <i className="fas fa-folder-open mr-1.5" aria-hidden="true" />
+              Carpeta: <strong>{folderTitle}</strong>
+            </p>
+          )}
           {status === 'reviewing' && (
             <p className="text-ink-muted text-sm mt-1">
               Quedan <strong className="text-ink">{queue.length}</strong>

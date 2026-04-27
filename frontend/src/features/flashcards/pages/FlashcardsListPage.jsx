@@ -9,11 +9,92 @@ import {
   listDue,
   saveFlashcard,
   deleteFlashcard,
+  deleteFlashcardsByNote,
 } from '../services/flashcardsService.js';
 import { FlashcardCard } from '../components/FlashcardCard.jsx';
 import { FlashcardEditDialog } from '../components/FlashcardEditDialog.jsx';
 import { DeleteFlashcardDialog } from '../components/DeleteFlashcardDialog.jsx';
+import { DeleteFolderDialog } from '../components/DeleteFolderDialog.jsx';
 import { EmptyFlashcardsState } from '../components/EmptyFlashcardsState.jsx';
+import { FlashcardFolder } from '../components/FlashcardFolder.jsx';
+
+/**
+ * "¿Esta tarjeta vence hoy o antes?".
+ *
+ * El backend serializa next_review_at como string 'Y-m-d', sin hora.
+ * Comparar strings ISO funciona porque están normalizados (siempre
+ * con padding) y porque la fecha del cliente se calcula con
+ * Intl.DateTimeFormat para no depender de la zona horaria del SO.
+ */
+function isDueToday(card, todayIso) {
+  if (!card?.next_review_at) return false;
+  return String(card.next_review_at).slice(0, 10) <= todayIso;
+}
+
+/**
+ * Agrupa la lista plana de flashcards por apunte de origen.
+ *
+ * Reglas:
+ *   - Cada `note_id` distinto da una carpeta etiquetada con su
+ *     `note_title`.
+ *   - Las tarjetas con `note_id === null` (manuales o generadas
+ *     desde un mapa) caen en una carpeta "Sin apunte" al final.
+ *   - El orden de las carpetas con apunte sigue la primera aparición
+ *     en `cards` — como `cards` ya viene ordenado por urgencia
+ *     (next_review_at ASC) desde el backend, las carpetas más
+ *     urgentes salen arriba sin ordenación extra.
+ *
+ * Devuelve un array de objetos { key, title, icon, items } listo
+ * para renderizar.
+ */
+function groupCardsByNote(cards, todayIso) {
+  const byNote = new Map(); // note_id → folder
+  const orphans = [];
+
+  for (const card of cards) {
+    if (card.note_id == null) {
+      orphans.push(card);
+      continue;
+    }
+    const key = String(card.note_id);
+    const existing = byNote.get(key);
+    if (existing) {
+      existing.items.push(card);
+      if (isDueToday(card, todayIso)) existing.dueCount += 1;
+    } else {
+      byNote.set(key, {
+        key,
+        // noteId numérico (no la string del Map.key) — el handler de
+        // "Jugar" y "Borrar" lo necesita tipado para componer la URL
+        // y el body del DELETE.
+        noteId: card.note_id,
+        // Si el JOIN no devolvió título (apunte borrado pero la FK
+        // ON DELETE SET NULL aún no se aplicó por algún motivo) caemos
+        // a un nombre genérico defensivo.
+        title: card.note_title || 'Apunte sin título',
+        icon: 'fa-folder-open',
+        items: [card],
+        dueCount: isDueToday(card, todayIso) ? 1 : 0,
+      });
+    }
+  }
+
+  const folders = Array.from(byNote.values());
+  if (orphans.length > 0) {
+    folders.push({
+      key: 'orphans',
+      noteId: null, // null marca la carpeta "Sin apunte" para los handlers.
+      title: 'Sin apunte',
+      icon: 'fa-layer-group',
+      items: orphans,
+      dueCount: orphans.reduce(
+        (acc, c) => acc + (isDueToday(c, todayIso) ? 1 : 0),
+        0,
+      ),
+    });
+  }
+  return folders;
+}
 
 /**
  * Listado de flashcards del usuario autenticado.
@@ -50,9 +131,22 @@ export function FlashcardsListPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Borrado.
+  // Borrado individual.
   const [pendingDelete, setPendingDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Borrado masivo de carpeta entera. Guardamos el folder completo
+  // para que el diálogo pueda mostrar el título y el conteo correctos.
+  const [pendingDeleteFolder, setPendingDeleteFolder] = useState(null);
+  const [isDeletingFolder, setIsDeletingFolder] = useState(false);
+
+  // Cadena 'Y-m-d' del día de hoy en el cliente. Lo memoizamos por
+  // render para no llamar a Date.now() N veces dentro de groupCardsByNote.
+  // Si el usuario deja la pestaña abierta varios días, el contador de
+  // pendientes podría desincronizarse hasta el siguiente refresh — es
+  // un trade-off aceptable: el "due" real lo decide el backend al
+  // pulsar "Jugar".
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   // ── Carga inicial / refresh ───────────────────────────────────────
   const refresh = useCallback(async () => {
@@ -99,6 +193,43 @@ export function FlashcardsListPage() {
       notify('Error de red al guardar la flashcard.', 'error');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // ── Acciones de carpeta ──────────────────────────────────────────
+  // "Jugar carpeta" → navegamos a la sesión de repaso con el filtro
+  // adecuado en query string. Pasamos el título por location.state
+  // para que la cabecera del repaso no necesite hacer otro fetch sólo
+  // para mostrar el nombre del apunte.
+  const handlePlayFolder = (folder) => {
+    const noteParam = folder.noteId === null ? 'none' : String(folder.noteId);
+    navigate(`/flashcards/repaso?note=${noteParam}`, {
+      state: { folderTitle: folder.title },
+    });
+  };
+
+  const handleConfirmDeleteFolder = async () => {
+    if (!pendingDeleteFolder || isDeletingFolder) return;
+    setIsDeletingFolder(true);
+    try {
+      const res = await deleteFlashcardsByNote(pendingDeleteFolder.noteId);
+      if (!res.success) {
+        notify(res.message || 'No se pudo borrar la carpeta.', 'error');
+        return;
+      }
+      notify(res.message || 'Carpeta eliminada.', 'success');
+      // Optimismo local: filtramos las dos listas en memoria sin
+      // refetch. Mismo criterio que usa groupCardsByNote para casar
+      // tarjeta ↔ carpeta (note_id numérico o null).
+      const noteId = pendingDeleteFolder.noteId;
+      const matches = (c) => (noteId === null ? c.note_id == null : c.note_id === noteId);
+      setAll((prev) => prev.filter((c) => !matches(c)));
+      setDue((prev) => prev.filter((c) => !matches(c)));
+      setPendingDeleteFolder(null);
+    } catch {
+      notify('Error de red al borrar la carpeta.', 'error');
+    } finally {
+      setIsDeletingFolder(false);
     }
   };
 
@@ -254,14 +385,28 @@ export function FlashcardsListPage() {
             onGoToMaps={() => navigate('/mapas')}
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {all.map((card) => (
-              <FlashcardCard
-                key={card.id}
-                card={card}
-                onEdit={(c) => setEditing(c)}
-                onDelete={(c) => setPendingDelete(c)}
-              />
+          <div className="flex flex-col gap-4">
+            {groupCardsByNote(all, todayIso).map((folder) => (
+              <FlashcardFolder
+                key={folder.key}
+                title={folder.title}
+                icon={folder.icon}
+                count={folder.items.length}
+                dueCount={folder.dueCount}
+                onPlay={() => handlePlayFolder(folder)}
+                onDelete={() => setPendingDeleteFolder(folder)}
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {folder.items.map((card) => (
+                    <FlashcardCard
+                      key={card.id}
+                      card={card}
+                      onEdit={(c) => setEditing(c)}
+                      onDelete={(c) => setPendingDelete(c)}
+                    />
+                  ))}
+                </div>
+              </FlashcardFolder>
             ))}
           </div>
         )
@@ -286,6 +431,15 @@ export function FlashcardsListPage() {
         isDeleting={isDeleting}
         onConfirm={handleConfirmDelete}
         onCancel={() => (isDeleting ? null : setPendingDelete(null))}
+      />
+
+      <DeleteFolderDialog
+        open={pendingDeleteFolder !== null}
+        folderTitle={pendingDeleteFolder?.title}
+        count={pendingDeleteFolder?.items.length ?? 0}
+        isDeleting={isDeletingFolder}
+        onConfirm={handleConfirmDeleteFolder}
+        onCancel={() => (isDeletingFolder ? null : setPendingDeleteFolder(null))}
       />
     </div>
   );

@@ -55,13 +55,22 @@ class Flashcard {
      * @return array
      */
     public function findByUser($userId) {
-        $query = "SELECT id, user_id, map_id, note_id, front, back,
-                         ease_factor, interval_days, repetitions,
-                         next_review_at, last_reviewed_at,
-                         created_at, updated_at
-                  FROM {$this->table}
-                  WHERE user_id = ?
-                  ORDER BY next_review_at ASC, id DESC";
+        // LEFT JOIN con notes para que el listado pueda agrupar las
+        // flashcards por apunte de origen sin un segundo viaje a la BD.
+        // El JOIN añade `n.user_id = f.user_id` además del `n.id = f.note_id`
+        // como cinturón anti-IDOR: si por algún bug el note_id apuntara a
+        // un apunte de otro usuario, el LEFT JOIN devolvería NULL para
+        // note_title en lugar de filtrar el título ajeno.
+        $query = "SELECT f.id, f.user_id, f.map_id, f.note_id, f.front, f.back,
+                         f.ease_factor, f.interval_days, f.repetitions,
+                         f.next_review_at, f.last_reviewed_at,
+                         f.created_at, f.updated_at,
+                         n.title AS note_title
+                  FROM {$this->table} f
+                  LEFT JOIN notes n
+                    ON n.id = f.note_id AND n.user_id = f.user_id
+                  WHERE f.user_id = ?
+                  ORDER BY f.next_review_at ASC, f.id DESC";
         $stmt = $this->conn->prepare($query);
         $stmt->execute([$userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -75,17 +84,63 @@ class Flashcard {
      * @param string $today   Cadena 'Y-m-d' (la pasa el controller).
      * @return array
      */
-    public function findDue($userId, $today) {
+    public function findDue($userId, $today, $noteFilter = null) {
+        // Filtro opcional por carpeta de apunte. Tres modos:
+        //   - null            → todas las pendientes (comportamiento global).
+        //   - 'none'          → sólo las huérfanas (note_id IS NULL),
+        //                        usado por la carpeta "Sin apunte".
+        //   - int positivo    → sólo las de ese apunte concreto.
+        // Construimos el WHERE en variables para que el prepared
+        // statement siga siendo seguro (la rama 'none' no añade
+        // parámetros, la rama int sí).
+        $where  = 'WHERE user_id = ? AND next_review_at <= ?';
+        $params = [$userId, $today];
+
+        if ($noteFilter === 'none') {
+            $where .= ' AND note_id IS NULL';
+        } elseif (is_int($noteFilter) && $noteFilter > 0) {
+            $where .= ' AND note_id = ?';
+            $params[] = $noteFilter;
+        }
+
         $query = "SELECT id, user_id, map_id, note_id, front, back,
                          ease_factor, interval_days, repetitions,
                          next_review_at, last_reviewed_at,
                          created_at, updated_at
                   FROM {$this->table}
-                  WHERE user_id = ? AND next_review_at <= ?
+                  {$where}
                   ORDER BY next_review_at ASC, id DESC";
         $stmt = $this->conn->prepare($query);
-        $stmt->execute([$userId, $today]);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Borra todas las flashcards del usuario que pertenezcan a un
+     * apunte concreto (o todas las huérfanas si $noteId es null).
+     *
+     * Se llama desde flashcards/delete-by-note al pulsar "Borrar
+     * carpeta" en la lista. Devuelve el número de filas eliminadas
+     * para que el frontend pueda mostrarlo en el toast de éxito y
+     * para que el controller responda 404 si no había nada que borrar.
+     *
+     * @param int      $userId
+     * @param int|null $noteId  null → carpeta "Sin apunte" (huérfanas).
+     * @return int               Filas borradas.
+     */
+    public function deleteByNote($userId, $noteId) {
+        if ($noteId === null) {
+            $query = "DELETE FROM {$this->table}
+                      WHERE user_id = ? AND note_id IS NULL";
+            $params = [$userId];
+        } else {
+            $query = "DELETE FROM {$this->table}
+                      WHERE user_id = ? AND note_id = ?";
+            $params = [$userId, $noteId];
+        }
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute($params);
+        return $stmt->rowCount();
     }
 
     /**
