@@ -1,0 +1,38 @@
+<svg width="500" height="120" viewBox="0 0 500 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sw-grad" x1="8" y1="56" x2="56" y2="8" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="55%" stop-color="#7c5cff" />
+      <stop offset="100%" stop-color="#a855f7" />
+    </linearGradient>
+    
+    <linearGradient id="sw-accent" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#fb7185" />
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(20, 28) scale(1.2)">
+    <path d="M16 18 C 22 8, 42 8, 48 18 S 58 42, 48 50 S 22 58, 16 50 S 6 28, 16 18 Z" 
+          fill="none" stroke="url(#sw-grad)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.35" />
+    
+    <g stroke="url(#sw-grad)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M32 32 L16 18" />
+      <path d="M32 32 L48 18" />
+      <path d="M32 32 L16 50" />
+      <path d="M32 32 L48 50" />
+    </g>
+
+    <circle cx="16" cy="18" r="3.6" fill="url(#sw-grad)" />
+    <circle cx="48" cy="18" r="3.6" fill="url(#sw-grad)" />
+    <circle cx="16" cy="50" r="3.6" fill="url(#sw-grad)" />
+    <circle cx="48" cy="50" r="3.6" fill="url(#sw-grad)" />
+
+    <circle cx="32" cy="32" r="6" fill="url(#sw-accent)" />
+  </g>
+
+  <text x="115" y="75" style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 52px; letter-spacing: -0.02em;">
+    <tspan fill="#333333" font-weight="400">Study</tspan>
+    <tspan fill="#7c5cff" font-family="'Georgia', 'Times New Roman', serif" font-weight="900" font-style="italic" dx="8">Weaver</tspan>
+  </text>
+</svg>

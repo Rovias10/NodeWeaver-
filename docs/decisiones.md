@@ -1,0 +1,471 @@
+# Decisiones técnicas (ADRs)
+
+> *Architecture Decision Records*. Cada decisión no trivial debe tener una entrada aquí, escrita el mismo día que se toma. Es la fuente de verdad para la memoria y la defensa.
+
+---
+
+## Plantilla
+
+```markdown
+## ADR-NN — Título corto
+
+- **Fecha:** YYYY-MM-DD
+- **Estado:** propuesto / aceptado / rechazado / superado por ADR-XX
+
+### Contexto
+Qué problema o necesidad provoca esta decisión.
+
+### Decisión
+Qué se decide hacer.
+
+### Alternativas consideradas
+1. Alternativa A — por qué se descartó.
+2. Alternativa B — por qué se descartó.
+
+### Consecuencias
+- Positivas: …
+- Negativas / trade-offs: …
+
+### Referencias
+Enlaces, libros, papers.
+```
+
+---
+
+## ADR-01 — Pivotación de NodeWeaver a StudyWeaver
+
+- **Fecha:** 2026-04-25
+- **Estado:** aceptado
+
+### Contexto
+
+El proyecto inicial NodeWeaver (plataforma no-code de automatización con bridge a n8n) había alcanzado complejidad técnica alta (Drawflow→n8n parser, fail-soft con HMAC callbacks, vault cifrado, rate limiter, suite de tests E2E, ~6.100 líneas de cambios en `n8nConection`). La fecha de entrega del Proyecto Final 2 DAW es el 3 de mayo de 2026 y la defensa requiere dominar todo el código presentado.
+
+Dado el riesgo de no poder defender la complejidad acumulada de la rama `n8nConection`, y tras revisar los criterios reales del PDF *"Criterios para evaluar Proyecto intermodular 2"*, se observa que **ninguno de los criterios DAW exige las features avanzadas de NodeWeaver** (n8n bridge, vault, rate limiter, tests E2E). Lo exigido es: SPA cliente, MVC servidor, acceso seguro a datos, despliegue cloud, diseño responsive con Grid + Figma 3 devices, capítulos de cloud y sostenibilidad.
+
+### Decisión
+
+Pivotar el proyecto a **StudyWeaver**: plataforma de estudio personal con mapas conceptuales visuales, IA y capa social. Mantener el repositorio original (`NodeWeaver-`) por motivos de historial git. Trabajar sobre nueva rama `studyweaver` partiendo de `develop` (no de `n8nConection`). Archivar `n8nConection` como rama de I+D (línea futura mencionada en la memoria).
+
+### Alternativas consideradas
+
+1. **Mergear `n8nConection` en `develop` y entregar tal cual** — descartada: complejidad indefendible en el plazo disponible.
+2. **Empezar proyecto totalmente nuevo en otro repo** — descartada: pierde activos reutilizables (auth JWT + SendGrid, theming, Drawflow, MVC base).
+3. **Quedarse en `develop` con tema "automatización"** — descartada: el dominio queda artificial sin el bridge n8n.
+
+### Consecuencias
+
+- **Positivas:** se reutiliza ~70% del código de `develop` (auth, perfil, theming, MVC, Drawflow). Reduce riesgo de defensa. Permite cumplir RAs DAW con margen.
+- **Negativas:** algunas verrugas heredadas (rutas erróneas en `apiCall`, `MODEL/automation.php` vacío) requieren limpieza al migrar.
+- **Línea futura:** la rama `n8nConection` queda como "evolución posible" mencionada en la memoria.
+
+### Referencias
+
+- PDF criterios DAW (`docs/criterios-daw.md`).
+- Rama archivada: `n8nConection`.
+
+---
+
+## ADR-02 — React 18 como framework de frontend
+
+- **Fecha:** 2026-04-25
+- **Estado:** aceptado (sujeto a confirmación del tutor por email)
+
+### Contexto
+
+El PDF de criterios indica como opciones para el RA7 (módulo 0612): *Vanilla JS arquitectura SPA similar a `sum-flow-spa-v3`* o *Vue 3*. React no aparece en la lista. Sin embargo, el estudiante usa React profesionalmente y lo controla mejor que Vue.
+
+### Decisión
+
+Usar **React 18 + Vite + Tailwind CSS** como sustituto válido de Vue 3, previa confirmación por correo del tutor. React cumple el espíritu del RA7 (SPA + comunicación asíncrona) y es framework reconocido por el sector.
+
+### Alternativas consideradas
+
+1. **Vanilla JS estilo SPA** — descartada: el estudiante quiere demostrar dominio de React, que es lo que usa profesionalmente.
+2. **Vue 3** — descartada: el estudiante no domina Vue, defenderlo sería forzado.
+3. **Next.js** — descartada: SSR añade complejidad innecesaria, el proyecto no requiere SEO ni hydratation server-side.
+
+### Consecuencias
+
+- Positivas: stack alineado con experiencia profesional del estudiante, defensa más sólida.
+- Negativas: requiere build separado (Vite), arquitectura monorepo backend+frontend, configuración CORS adicional.
+- **Riesgo:** si el tutor no acepta, plan B es Vanilla JS estilo `sum-flow-spa-v3` con la misma arquitectura headless de backend.
+
+---
+
+## ADR-03 — Arquitectura "Headless MVC + Fetch & Render"
+
+- **Fecha:** 2026-04-25
+- **Estado:** aceptado
+
+### Contexto
+
+NodeWeaver original mezclaba dos paradigmas: el backend devolvía JSON para auth y HTML chunks para tablas dinámicas, inyectados con `.innerHTML`. Con React, esa mezcla genera anti-patrones (`dangerouslySetInnerHTML`).
+
+### Decisión
+
+Aplicar **Headless MVC**: el backend PHP queda como API REST que devuelve **siempre JSON**. El frontend React es la View completa. Patrón rebautizado a **"Fetch & Render"** (vs el "Fetch & Inject" original).
+
+### Consecuencias
+
+- Positivas: separación clara de responsabilidades, frontend desacoplado, defensa más sencilla.
+- Negativas: requiere CORS, no hay SSR, hay que manejar estado de autenticación en cliente.
+
+---
+
+## ADR-04 — Esquema de mapas: tabla `maps` nueva, `automations` queda DEPRECATED
+
+- **Fecha:** 2026-04-25
+- **Estado:** **superado por ADR-05** (al revisar el dump real `autoflow.sql` se vio que el esquema legacy era minimalista y borrable; la decisión "dejar como zombie" se reemplazó por "DROP físico en migración 001"). El ADR queda como traza histórica del razonamiento previo a ver el dump.
+
+### Contexto
+
+La feature core de StudyWeaver (Fase Maps, ver [`docs/maps-plan.md`](./maps-plan.md)) requiere persistir mapas conceptuales: cada mapa es un grafo de nodos y aristas serializado por Drawflow vía `editor.export()`.
+
+El backend heredado de NodeWeaver ya tiene una tabla `automations` con un campo `flow_data JSON` que también almacena el output de `editor.export()`. La pregunta es si reciclarla o crear una tabla nueva. Los caminos posibles eran:
+
+1. **Reciclar** `automations` renombrando o sólo dejando de poblar las columnas n8n.
+2. **Crear** tabla `maps` nueva con esquema mínimo de StudyWeaver.
+3. **Vista** sobre `automations` que exponga sólo las columnas relevantes.
+
+La tabla `automations` arrastra 11 columnas n8n-específicas que no aplican a un mapa conceptual: `trigger_type`, `schedule_expression`, `tags`, `version`, `is_active`, `last_run_at`, `last_run_status`, `total_runs`, `total_errors`, además de la relación con `webhooks`, `execution_logs`, `execution_node_logs`, `automation_stats`. Documentado en [`DATA/database_context.md` §2.2](../DATA/database_context.md).
+
+### Decisión
+
+Crear **tabla nueva `maps`** con esquema mínimo viable centrado en el dominio de mapas conceptuales (ver migración [`DATA/migrations/001_create_maps.sql`](../DATA/migrations/001_create_maps.sql) y [`DATA/database_context.md` §2.9](../DATA/database_context.md)):
+
+```sql
+maps(id, user_id, title, description, is_public, drawflow_json, created_at, updated_at)
++ FK fk_maps_user(user_id) → users(id) ON DELETE CASCADE
++ INDEX idx_user_updated(user_id, updated_at)
+```
+
+`drawflow_json` (LONGTEXT) es la fuente de verdad. **No se denormalizan** nodos/edges en tablas separadas en el MVP.
+
+La tabla `automations` (y todo su árbol heredado: `sessions`, `credentials_vault`, `webhooks`, `execution_logs`, `execution_node_logs`, `automation_stats`) queda **DEPRECATED**: ningún controller del backend StudyWeaver la consulta. Físicamente se mantiene en MySQL local para preservar el historial de la fase pre-pivote, pero se omitiría al provisionar el esquema en producción cloud.
+
+### Alternativas consideradas
+
+1. **Reciclar `automations` renombrando** — descartada: dejaría 11 columnas n8n inertes que el tribunal preguntaría inevitablemente («¿qué hace `trigger_type='webhook'` en un mapa conceptual?»). Indefendible. El coste de "ahorrar" un `CREATE TABLE` no compensa la deuda de explicación.
+2. **Vista** sobre `automations` que exponga sólo las columnas relevantes — descartada: no resuelve nada, la tabla física sigue ahí con su deuda y añade indirección que complica los `INSERT`/`UPDATE` (vistas en MySQL no son siempre actualizables).
+3. **Denormalizar nodos/edges** ya en M0 (tablas `nodes` y `edges` aparte como plantea [`docs/arquitectura.md` §2](./arquitectura.md)) — descartada para el MVP: introduce el clásico bug de "guardas en JSON, olvidas guardar en `nodes`, lectura desincronizada". Se mantiene una sola fuente de verdad y se planifica como mejora futura cuando aparezcan queries que filtren por concepto individual (búsqueda full-text, stats por nodo, feed social).
+4. **Eliminar físicamente** `automations` y dependientes con `DROP TABLE` en M0 — descartada: rompe backups y no aporta valor en local; la limpieza definitiva se hace en el script de provisión cloud (Fase Despliegue), donde el esquema se genera desde cero a partir de las migraciones activas.
+
+### Consecuencias
+
+- **Positivas:** vocabulario limpio (`title`, `description`, `is_public`, `drawflow_json`); ninguna columna inerte que defender; coste de migración ≈ 5 min (un `CREATE TABLE`); ownership por `user_id` claramente reflejada en el índice y la FK; `ON DELETE CASCADE` cubre RGPD sin código extra.
+- **Negativas / trade-offs:** convivencia temporal en local de las dos capas (StudyWeaver activa vs NodeWeaver heredada); requiere disciplina para no reusar tablas DEPRECATED desde código nuevo (mitigado con la marca explícita en el `database_context.md`).
+- **Línea futura:** denormalización opcional `nodes` + `edges` cuando lleguen queries por concepto. Limpieza física del árbol NodeWeaver en el script de despliegue cloud.
+
+### Referencias
+
+- [`docs/maps-plan.md` §1.1](./maps-plan.md) — análisis comparado de las 3 opciones.
+- [`DATA/migrations/001_create_maps.sql`](../DATA/migrations/001_create_maps.sql) — DDL aplicado.
+- [`DATA/database_context.md` §2.9](../DATA/database_context.md) — esquema y reglas de negocio.
+
+---
+
+## ADR-05 — Rediseño completo del esquema StudyWeaver: drop legacy, MVP mínimo, planificadas con DDL
+
+- **Fecha:** 2026-04-25
+- **Estado:** aceptado (supera al ADR-04)
+
+### Contexto
+
+Tras aceptar el ADR-04, el alumno proporcionó el dump real de `autoflow` (`autoflow.sql`, generado desde phpMyAdmin). Comparando con [`DATA/database_context.md`](../DATA/database_context.md) que había sido escrito inicialmente, se constataron varias divergencias importantes:
+
+1. El doc anterior describía 8 tablas (incluyendo `webhooks`, `execution_node_logs`, `automation_stats`, `credentials_vault`); el dump muestra **5 tablas reales**: `users`, `automations`, `credentials`, `execution_logs`, `sessions`.
+2. El esquema real de `automations` es minimalista (10 columnas con `n8n_workflow_id`, sin `tags`/`version`/`last_run_*`/contadores), no las 17 inventadas por el doc.
+3. El esquema real de `credentials` no tiene cifrado AES-256-GCM ni `fingerprint`; sólo `service`, `encrypted_data`, `is_valid`.
+4. `sessions` guarda `token` en claro (500 chars), no `token_hash` SHA-256, y nunca se consultaba ni siquiera en NodeWeaver (JWT es stateless).
+5. La columna del flow es `automations.flow_config` (con `CHECK (json_valid(...))`), no `automations.flow_data` como decían el doc y el `MODEL/automation.php` ya borrado.
+
+Con esta información real, mantener las 4 tablas legacy "como zombies" (decisión del ADR-04) es injustificable: ningún código activo las usa, son minimalistas y su presencia confunde al tribunal y a futuros agentes IA.
+
+Además, el alumno decidió **diseñar la BD desde la perspectiva StudyWeaver**, no parchear sobre la de NodeWeaver. Esto incluye documentar y dejar el DDL listo de las tablas que aún no se implementan pero están en el roadmap (Fase Flashcards y Fase Comunidad), de manera que el RA "diseño completo de BD" del módulo 0613 se cubra sin obligar a implementar todo en MVP.
+
+### Decisión
+
+1. **Drop físico** del legacy NodeWeaver en una migración inicial: ejecutar `DROP TABLE IF EXISTS execution_logs, automations, credentials, sessions;` (con `FOREIGN_KEY_CHECKS = 0` para libertad de orden). Migración: [`DATA/migrations/001_init_studyweaver.sql`](../DATA/migrations/001_init_studyweaver.sql).
+2. **Mantener `users`** tal cual, con sus columnas 2FA inertes (`two_factor_enabled`, `two_factor_secret`) documentadas como tales. Razón: tres usuarios reales con password hashes y tokens activos; reescribirla pierde la cuenta de prueba (id=2 `active`).
+3. **Mantener el nombre de la base `autoflow`** para no tocar `.env` ni `DATA/database.php`. Defendible: nombre histórico ligado al repositorio `NodeWeaver-`. Renombrar a `studyweaver` se puede plantear en el script de provisión cloud.
+4. **Renombrar la migración de `maps`** de `001_create_maps.sql` a `002_create_maps.sql` para que el orden lógico quede `001 init → 002 maps → 003+ futuras`.
+5. **Diseñar y dejar listo el DDL** de las 3 tablas planificadas, en archivos `.sql.planned` que NO se ejecutan hasta que llegue su Fase:
+    - `flashcards` (Fase Flashcards) con algoritmo SM-2 simplificado: `ease_factor`, `interval_days`, `repetitions`, `next_review_at`. FK al mapa con `ON DELETE SET NULL` para que la tarjeta sobreviva al borrado del mapa origen.
+    - `likes` (Fase Comunidad) con PK compuesta `(user_id, map_id)` para impedir duplicados a nivel de BD.
+    - `comments` (Fase Comunidad) planos, sin replies/threading, índice compuesto `(map_id, created_at)` para listado paginado.
+6. **No diseñar todavía** `quizzes` y `quiz_attempts`: la Fase Quizzes (si llega) generará el quiz vía IA bajo demanda y no necesita cachear. Si en el momento se decide cachear, se redacta el DDL entonces.
+
+Justificación de no denormalizar `nodes`/`edges` en MVP heredada del ADR-04: `maps.drawflow_json` como única fuente de verdad evita el bug clásico de "guardar en JSON, olvidar guardar en `nodes`, lectura desincronizada". La denormalización se añade cuando aparezcan queries que la justifiquen (búsqueda full-text, stats por concepto).
+
+### Alternativas consideradas
+
+1. **Mantener legacy como zombie** (decisión inicial ADR-04) — descartada al ver el dump: las tablas legacy son minimalistas y borrarlas no tiene riesgo. Mantenerlas confunde al tribunal y a futuros agentes.
+2. **Reescribir `users` desde cero** quitando las columnas 2FA — descartada: tres usuarios reales (incluyendo la cuenta de prueba `id=2 active`) se perderían. La columna inerte sólo cuesta 9 bytes y queda documentada.
+3. **Renombrar la base a `studyweaver`** — descartada en este sprint: obliga a tocar `.env` (regla CLAUDE.md prohíbe) y reconfigurar todas las herramientas locales (phpMyAdmin, Workbench). Defendible mantener `autoflow` como nombre histórico, replanificable en provisión cloud.
+4. **No documentar las tablas planificadas** hasta que se implementen — descartada: el RA "diseño completo de BD" valora ver el roadmap reflejado en archivos concretos. Coste de documentación ≈ 30 min, beneficio defensivo claro.
+5. **Implementar ya `flashcards`/`likes`/`comments`** en MVP — descartada por timebox (8 días hasta entrega): sin `maps` funcionando primero, las dependencias rompen el orden lógico.
+
+### Consecuencias
+
+- **Positivas:** base limpia con sólo lo que StudyWeaver necesita (`users` + `maps`); roadmap completo documentado y con DDL listo en `.planned`; convenciones uniformes (`utf8mb4_unicode_ci`, `INT AUTO_INCREMENT`, FKs CASCADE); tribunal puede revisar el diseño completo en `database_context.md` sin abrir MySQL; el alumno defiende cada columna activa sin columnas inertes que justificar (salvo las 2FA en `users`, ya documentadas).
+- **Negativas / trade-offs:** el alumno debe ejecutar `001_init_studyweaver.sql` en phpMyAdmin antes de seguir; convivencia temporal con la columna `verified_at` que el backend no rellena (deuda técnica documentada); `users.password` permite NULL por compatibilidad con login Google, lo cual obliga a comprobar en código que el usuario tenga `password` antes de validar (`AuthController::login` ya lo hace).
+- **Línea futura:** simplificación de `users` (drop `two_factor_*`, drop `verified_at`) cuando se implemente o se descarte definitivamente 2FA. Renombrado de la base a `studyweaver` en script de provisión cloud.
+
+### Referencias
+
+- Dump real: `autoflow.sql` aportado por el alumno (no commiteado por contener datos personales).
+- [`DATA/migrations/`](../DATA/migrations/) — `001_init_studyweaver.sql`, `002_create_maps.sql`, `003_create_flashcards.sql.planned`, `004_create_likes.sql.planned`, `005_create_comments.sql.planned`.
+- [`DATA/database_context.md`](../DATA/database_context.md) reescrito para reflejar la realidad y las planificadas.
+
+---
+
+## ADR-06 — Apuntes como zona principal: pivote de narrativa
+
+- **Fecha:** 2026-04-26
+- **Estado:** aceptado
+
+### Contexto
+
+Tras cerrar Fase Maps M0–M5 (editor Drawflow funcional con auto-save, IA de expansión por nodo, atajos de teclado), surgió la pregunta de si el mapa conceptual **solo** es lo bastante diferencial para defenderlo en el tribunal. La conclusión honesta es que no del todo:
+
+- **Lo que aporta el mapa solo:** organización visual + jerarquía de un tema en una pantalla. La IA reduce el cuello de botella histórico de los mapas (construirlos era lento).
+- **Lo que NO aporta:** una vez construido, **estudiar consultándolo es peor** que un resumen lineal o flashcards. La utilidad académica medida (Novak 1990; Hay et al. 2008) está en *construir* el mapa, no en revisarlo. Y si el alumno tiene ChatGPT a mano, ya consigue esquemas con un prompt rápido.
+
+A la vez, las features que faltaban en el roadmap (Flashcards, Comunidad) tampoco resuelven solas el "¿por qué usaría yo esto?". Hace falta una narrativa que las una.
+
+### Decisión
+
+**Pivotar la narrativa** del producto sin tirar nada de lo construido. La nueva zona principal de StudyWeaver es **Mis apuntes** (`/apuntes`):
+
+```
+Usuario ─▶ Apunte (PDF / texto pegado / markdown)
+              ├─▶ Mapa conceptual    (IA estructura el contenido)
+              ├─▶ Flashcards SM-2     (IA genera tarjetas de repaso)
+              └─▶ Resumen / Quiz      (futuro, opcional)
+```
+
+- El **apunte** es la fuente de verdad. El alumno sube un PDF (o pega texto) y de ahí parten los demás artefactos.
+- El **mapa** sigue siendo editor Drawflow tal cual; ahora puede generarse desde un apunte vía IA y queda vinculado con `maps.source_note_id`.
+- Las **flashcards** se generan desde un mapa (Fase Flashcards F5) o directamente desde un apunte (Fase Notes N4 con `target='flashcards'`).
+- El dashboard `/dashboard` deja de ser la página de aterrizaje post-login; pasa a ser una vista futura de estadísticas. El redirect post-login pasa a `/apuntes`.
+
+Documentación detallada en [`docs/notes-plan.md`](./notes-plan.md). Cambios de BD planificados (no aplicados aún): tabla `notes` (migración 007) + columna `source_note_id` en `maps` (migración 008) + columna `note_id` en `flashcards` (migración 009 o incluida directamente en la 003).
+
+### Alternativas consideradas
+
+1. **Mantener el mapa como producto principal** y vender la app como "mapas conceptuales colaborativos con IA" — descartada: narrativa floja vs ChatGPT, depende solo del "wow" visual.
+2. **Cambiar de dominio entero** (p. ej. asistente conversacional o generador de resúmenes) — descartada: a menos de 8 días de la entrega, tirar 25 archivos commiteados es suicidio académico.
+3. **Reordenar prioridades hacia Comunidad** (mapas públicos + likes) en lugar de hacia Apuntes — descartada: la Comunidad sí es vistosa en demo pero no resuelve la pregunta de "¿por qué construir el mapa?". Apuntes sí.
+4. **Sólo añadir resumen/quiz como vistas adicionales del mapa** sin tabla `notes` — descartada: el apunte original (PDF, texto largo) tiene valor por sí mismo; convertirlo en metadato de un mapa pierde la fuente.
+
+### Consecuencias
+
+- **Positivas:**
+  - Narrativa con valor real medible: combina **comprensión** (mapa) y **retención** (flashcards SM-2). Bibliografía sólida (Novak, Ebbinghaus, SuperMemo/Anki).
+  - El mapa queda justificado como paso intermedio editable, no como producto final indefendible.
+  - La capa social (Fase Comunidad) tiene más sentido: compartes el mapa **derivado de tus apuntes**, no un mapa hecho a mano sin contexto.
+  - IA local (Ollama gpt-oss:20b) refuerza el ángulo de privacidad (apuntes nunca salen del PC del estudiante) y sostenibilidad (RA4 1708190): cero coste por consulta, modelo open-weights.
+- **Negativas / trade-offs:**
+  - Añade ~12-17h de trabajo (Fase Notes N0-N5). En el tiempo restante hay que descartar features menos defendibles (Quizzes, undo, comunidad full).
+  - Requiere instalar `Smalot/PDFParser` vía Composer (primera dep PHP del proyecto). ADR-07 documentará la elección cuando se ejecute la fase.
+  - El dashboard pierde su rol como home y queda como placeholder hasta que se implementen estadísticas.
+- **Línea futura:** quizá merezca la pena permitir adjuntar apuntes a mapas existentes (no solo generar mapa desde apunte), para que el flujo sea bidireccional.
+
+### Referencias
+
+- [`docs/notes-plan.md`](./notes-plan.md) — plan completo con BD, backend, frontend, IA, defensa.
+- [`docs/database.md`](./database.md) §3.4 — esquema `notes`.
+- [`CLAUDE.md`](../CLAUDE.md) §1 — narrativa actualizada.
+- [`Gemini.md`](../Gemini.md) §3 — `notes` añadida a la lista de features.
+
+---
+
+## ADR-07 — Cambio de proveedor IA: Gemini API en lugar de Ollama+PDFParser
+
+- **Fecha:** 2026-04-26 (planteamiento) · 2026-04-26 (implementación cerrada en rama `IA_Integration`)
+- **Estado:** aceptado e **implementado**
+
+### Contexto
+
+La Fase Notes (ADR-06) se planificó originalmente con **Ollama local** (`gpt-oss:20b`) como proveedor IA y **Smalot/PDFParser** vía Composer para extraer el texto de los PDFs antes de mandárselo al modelo. Ese diseño hereda la decisión de la Fase Maps M4, donde `ai/expand` ya funciona contra Ollama.
+
+A los pocos días de empezar la Fase Notes, el alumno reevalúa la elección por dos razones prácticas:
+
+1. **Latencia y calidad sobre apuntes largos.** `gpt-oss:20b` con un prompt largo (apuntes truncados a ~6 000 chars) genera respuestas en 10-30 s en la GPU local del alumno. Los modelos cloud ofrecen latencias menores y mejor seguimiento del schema JSON (`format:'json'` no garantiza schema, sólo "es JSON").
+2. **PDFs multimodales nativos.** Gemini API acepta PDFs como input directo (multimodal), eliminando la necesidad de un parser server-side. Ahorra una dependencia Composer, una capa de manipulación de texto y un modo de fallo (PDFs escaneados con OCR no resoluble por Smalot).
+
+A la vez, Ollama tenía dos puntos defensivos fuertes que Gemini pierde:
+- **Privacidad** — los apuntes nunca salen de la máquina del alumno.
+- **Coste cero por consulta** — sin facturación por token.
+
+### Decisión
+
+**Migrar TODO el backend IA de StudyWeaver a Google Gemini API** (Opción A — migración total, ver "Alternativas consideradas" punto 4). Los tres endpoints IA del producto (`ai/expand`, `flashcards/generate-from-map` y el nuevo `ai/from-note`) hablan Gemini; Ollama queda fuera por completo del código activo.
+
+La integración se ejecutó en la rama `IA_Integration` (subfases I0–I6, cerradas el 2026-04-26). El detalle técnico de la implementación queda en la sección "Detalles de implementación" más abajo. La sección §10 de [`docs/notes-plan.md`](./notes-plan.md) era la lista canónica de pendientes mientras la rama estaba abierta; con la rama cerrada, lo allí descrito vive ahora en código.
+
+### Alternativas consideradas
+
+1. **Mantener Ollama + Smalot/PDFParser** (plan original) — descartada: pérdida de calidad sobre apuntes largos, dependencia de un parser PHP que falla en PDFs escaneados, y dependencia operativa de tener Ollama corriendo en la máquina local del alumno también en defensa.
+2. **OpenAI GPT-4o** — descartada: coste por token sensiblemente mayor que Gemini Flash a calidad equivalente para la tarea (extracción estructurada de texto académico), y disponibilidad de cuota gratuita más generosa en Gemini para un proyecto académico.
+3. **Anthropic Claude vía API** — descartada: el alumno no dispone de cuenta de pago al cierre de la fase; defendible pero no operativa en el plazo.
+4. **Coexistencia total** (Ollama para `expand` y `generateFlashcards`, Gemini sólo para `ai/from-note`) — **rechazada en la rama `IA_Integration`**. Razones de la decisión final:
+    - **Operativa de defensa.** Mantener Ollama vivo obliga a tener el PC con `gpt-oss:20b` accesible vía LAN durante la defensa. Cualquier problema de red en el aula del tribunal rompería la mitad de la demo IA. Gemini cloud es una sola dependencia HTTPS pública, mucho más estable.
+    - **Coherencia de comportamiento.** Dos proveedores significan dos formas de fallar, dos modos stub distintos, dos perfiles de latencia. Un único proveedor da un único patrón "503 + mensaje canónico" en los tres endpoints — más sencillo de defender ante el tribunal.
+    - **Capacidad multimodal.** Aunque `expand` y `generateFlashcards` no manipulan PDFs hoy, una evolución natural (p. ej. permitir adjuntar contexto en formato imagen al expandir un nodo) está bloqueada con Ollama y abierta con Gemini sin rediseñar nada.
+    - **Reducción de superficie de código.** Eliminar la lógica de stubs (`stubChildren`/`stubFlashcards`) ahorró ~80 líneas y un caso de comportamiento divergente que no aporta valor real (un mapa stub puede engañar al usuario que no se entera de que la IA falló).
+
+### Consecuencias
+
+- **Positivas:**
+  - Multimodal nativo: el backend deja de extraer texto del PDF y se ahorra `Smalot/PDFParser`. La fase Notes cierra sin nuevas dependencias Composer.
+  - Mejor calidad esperada de la respuesta sobre apuntes largos.
+  - Defensa cloud más coherente: el RA1 0614 (despliegue cloud) encaja con un proveedor IA cloud sin exigir Ollama-as-a-service.
+- **Negativas / trade-offs:**
+  - Pérdida del argumento de **privacidad** ("los apuntes no salen de tu PC"). El alumno deberá explicarlo en la memoria como una concesión consciente y, si es relevante, mencionar que la arquitectura permite volver a Ollama en producción cambiando una variable de entorno.
+  - Coste **per-consulta** distinto de cero. Para volumen TFG es despreciable, pero el argumento de "sostenibilidad cero coste" del plan original (RA4 1708190) se debilita; la memoria reorientará la sostenibilidad hacia "modelo elegido por eficiencia energética per-token".
+  - Dependencia de que `GEMINI_API_KEY` esté presente en el `.env` de producción y no expire/se rote sin avisar.
+- **Línea futura:**
+  - Posible refactor uniforme a un único `AIClient` agnóstico de proveedor (con un adaptador Ollama y otro Gemini) si la app crece más allá del TFG.
+
+### Detalles de implementación (rama `IA_Integration`, subfases I0–I6)
+
+**Modelo y configuración:**
+
+- Modelo elegido: **`gemini-2.5-flash`**. Pertenece al free tier con cuotas RPM/TPM/RPD generosas para volumen TFG (5–10 generaciones por sesión de demostración están holgadamente por debajo del cap). La alternativa `gemini-2.5-pro` queda como fallback si la calidad sobre apuntes muy técnicos no fuera suficiente; cambiar de modelo es una sola variable en `.env`.
+- Variables `.env` (sólo backend, nunca frontend): `GEMINI_API_KEY` (obligatoria), `GEMINI_MODEL` (obligatoria), `GEMINI_BASE_URL` (opcional, default `https://generativelanguage.googleapis.com`).
+- Endpoint Google: `POST {baseUrl}/v1beta/models/{model}:generateContent` con auth por header `x-goog-api-key`. La key NO va en query string para no aparecer en logs de proxy/CDN.
+
+**Arquitectura del código:**
+
+- `backend/API/services/GeminiClient.php` — cliente HTTP de bajo nivel. Único método público `GeminiClient::generateJson($userPrompt, $systemInstruction, $pdfPath, $options)`. Responsable de: construir el body v1beta, llamar curl con timeout (30 s total, 5 s connect), parsear el envelope Gemini (`candidates[0].content.parts[].text`), desnudar code fences `` ```json...``` `` defensivos, parsear el JSON del candidate y devolver array decodificado. NO conoce casos de uso concretos.
+- `backend/API/services/AIClient.php` — fachada de producto. Conoce los prompts en castellano y el saneo de la salida. Métodos públicos:
+  - `expand($label, $context)` — output 3-5 sub-conceptos.
+  - `generateFlashcards($mapTitle, $nodes)` — output 8-15 flashcards.
+  - `parseNoteToMap($title, $extractedText, $pdfPath)` — output `{title, nodes, edges}`.
+  - `parseNoteToFlashcards($title, $extractedText, $pdfPath)` — output 8-15 flashcards.
+- `backend/API/controllers/aiController.php` — endpoints `ai/expand` y `ai/from-note`.
+- `backend/API/controllers/flashcardController.php::generateFromMap` — sigue usando `AIClient::generateFlashcards`, sin saber que por dentro habla Gemini.
+
+**Cap de texto enviado a Gemini:** constante `AIClient::MAX_NOTE_CHARS = 30000` (≈ 8 000 tokens). Aunque `gemini-2.5-flash` acepta una ventana de contexto de ~1M tokens, se recorta agresivamente porque (1) cubre sobradamente un capítulo universitario de tamaño habitual, (2) reduce el coste por token y la latencia, (3) es defendible ante tribunal como decisión consciente. El recorte se aplica vía `mb_substr` con un `error_log` informativo (no se devuelve error al usuario). Para apuntes de tipo `pdf` el cap NO aplica: Gemini lee el binario completo via `inline_data`.
+
+**Multimodal — ingestión de PDFs:** vía `inline_data` base64 en el array `parts` del payload. Descartada la alternativa "File API + cleanup posterior" por simplicidad: para PDFs ≤ 5 MB (cap del controller `noteController::uploadPdf`) el base64 sale ≤ 7 MB, muy por debajo del tope de 20 MB inline de Gemini. Una sola llamada HTTP, sin tracking de IDs ni `files.delete` posterior.
+
+**`thinkingConfig.thinkingBudget` por endpoint:**
+
+- `expand`: `0` (desactivado). Output muy estructurado (3-5 entradas con label/hint cortos), no necesita razonamiento; minimizamos latencia para que la UX del editor siga siendo fluida.
+- `generateFlashcards`: `-1` (dynamic). El modelo decide cuánto razonar; merece la pena para 8-15 tarjetas bien formuladas.
+- `parseNoteToMap`, `parseNoteToFlashcards`: `-1` (dynamic). Apuntes largos requieren destilar el tema central y conectar sub-conceptos sin inventar relaciones.
+
+**Posicionado de nodos del mapa generado por IA:** `aiController::buildDrawflowJsonFromMap` aplica un layout en grid de 4 columnas. Raíz (id=1, o primer nodo si Gemini no respeta la convención) en (540, 60); hijos en grid 4 cols con stride 240×180 partiendo de (60, 260). Sin solape para 6-15 nodos. Defendible: posición inicial razonable; el alumno arrastra a mano después y el auto-save de Maps M3 persiste las nuevas coordenadas. Alternativa "radial" descartada porque exigía trigonometría con poca ganancia visual.
+
+**Política de error uniforme — sin modo stub:** los tres endpoints IA tratan cualquier fallo (config ausente, red, HTTP no-200, safety filter, JSON inválido) como `RuntimeException` traducida a HTTP **503** con mensaje canónico *"La IA no está disponible ahora."* Sin fallback determinístico. Esta uniformidad simplifica la defensa ("un solo patrón de fallo IA en toda la app") y evita el riesgo de que un usuario crea un mapa stub real cuando en realidad la IA no respondió. Decisión consciente que sustituye al `stubChildren`/`stubFlashcards` de la versión Ollama.
+
+**Persistencia con FK al apunte origen:**
+
+- Migración **009** (`009_alter_flashcards_source_note.sql`) — añade `flashcards.note_id INT NULL` con FK `ON DELETE SET NULL` hacia `notes(id)` e índice `idx_flashcards_note`. Misma estrategia que `maps.source_note_id` (migración 008): si el alumno borra el apunte, los artefactos derivados sobreviven y conservan su progreso SM-2.
+- `Map::create` y `Flashcard::createBatch` aceptan ahora un parámetro opcional al final (`$sourceNoteId` y `$noteId` respectivamente) para que `aiController::fromNote` los rellene. Compatibilidad preservada con los callers existentes que pasan menos argumentos.
+
+**Frontend:** [`frontend/src/features/notes/pages/NotePreviewPage.jsx`](../frontend/src/features/notes/pages/NotePreviewPage.jsx) cablea los dos botones IA contra el handler `runAiGeneration(target)` con state `aiBusy` single-track. Spinner overlay full-screen (`role=alertdialog`, `aria-live=assertive`, `aria-busy`) bloquea interacción durante los 10–30 s de espera. Post-éxito: `target=map` → `navigate('/mapas/:id')` + toast con `node_count`; `target=flashcards` → toast con cantidad creada (sin navegar). Sin `AbortController` en cliente: el control de timeout vive en `GeminiClient` (CURLOPT_TIMEOUT=30).
+
+**Auditoría de tokens:** `GeminiClient` loguea `usageMetadata` por llamada (`promptTokenCount`, `candidatesTokenCount`, `totalTokenCount`) en `error_log`. Defendible para sostenibilidad RA4: medimos consumo per-endpoint de cara a justificar el reorientado del argumento de eficiencia (ver siguiente punto).
+
+**Reorientación del argumento de sostenibilidad (RA4 1708190):** la versión Ollama defendía "cero coste por consulta + modelo open-weights ejecutándose en hardware del estudiante". Con Gemini, la memoria académica reorienta el argumento a:
+
+- **Eficiencia per-token.** Gemini-2.5-flash está optimizado para ratio calidad/coste energético en datacenter; el modelo no se ejecuta en la GPU local del alumno consumiendo electricidad doméstica.
+- **Cuota gratuita = cero facturación real.** Para volumen TFG el coste monetario es cero y el coste ambiental queda diluido en la operación agregada de Google.
+- **Trazabilidad.** El logging de `usageMetadata` permite cuantificar el consumo durante la defensa.
+- **Reversibilidad arquitectónica.** La decisión de aislar `GeminiClient` deja el camino abierto a un futuro `OllamaClient` con la misma firma `generateJson(...)`; cambiar de proveedor en producción sería un solo `require_once` distinto en `AIClient`.
+
+### Referencias
+
+- [`docs/notes-plan.md`](./notes-plan.md) §2.3 (decisión inicial al cambiar el alcance de N1) y §10 (lista canónica de pendientes — ya cerrada).
+- ADR-06 (origen de la fase Notes; este ADR-07 sustituye su mención de Smalot/PDFParser).
+- `backend/API/services/GeminiClient.php`, `backend/API/services/AIClient.php`, `backend/API/controllers/aiController.php`.
+- `backend/DATA/migrations/009_alter_flashcards_source_note.sql`.
+
+---
+
+## ADR-08 — Cascada de modelos Gemini ante errores transitorios
+
+- **Fecha:** 2026-04-28
+- **Estado:** aceptado e implementado
+
+### Contexto
+
+Tras cerrar la integración con Gemini (ADR-07), durante un día completo de pruebas el endpoint `:generateContent` del free tier de `gemini-2.5-flash` devolvió respuestas erráticas: combinación de HTTP 503 ("model overloaded") y HTTP 429 ("rate limit") sostenidas. La causa más probable es saturación global de la cuota free tier de Google, no un problema en el código del proyecto.
+
+El problema operativo es real: la defensa del Proyecto Final 2 DAW es el 3 de mayo de 2026 y la demo en directo de las 3 features IA (`ai/expand`, `ai/from-note`, flashcards) depende de una sola llamada HTTPS contra un único modelo. Si en ese momento Google está saturado, la demo se cae con el mensaje canónico "La IA no está disponible ahora.". Indefendible delante del tribunal cuando la integración IA es uno de los argumentos centrales del proyecto.
+
+El cliente `GeminiClient` actual (cerrado en ADR-07) hace **una sola llamada** y propaga cualquier no-200 como `RuntimeException` → 503 al cliente. Sin reintento, sin fallback, sin distinción entre errores transitorios (cuota, sobrecarga) y terminales (prompt mal formado, key inválida).
+
+### Decisión
+
+Implementar **cascada de modelos** en `GeminiClient::generateJson` con dos categorías de error:
+
+1. **Errores TRANSITORIOS** (HTTP 429, 500, 503, 504, errores de red curl) → reintenta con el siguiente modelo de la cascada. Cada modelo se prueba **una sola vez**; no hay retry contra el mismo modelo ya saturado.
+2. **Errores TERMINALES** (HTTP 4xx no-429, safety filter, candidate vacío, JSON inválido) → propaga inmediatamente sin reintento. Cambiar de modelo no resuelve un prompt malo, una key inválida ni un filtro de seguridad bloqueando contenido.
+
+La cascada se configura por dos variables `.env`:
+
+- `GEMINI_MODEL` (existente) — modelo principal.
+- `GEMINI_FALLBACK_MODELS` (nueva, opcional) — lista CSV de modelos de respaldo. Recomendado: `gemini-2.5-flash-lite,gemini-2.0-flash`.
+
+Si `GEMINI_FALLBACK_MODELS` está vacío o ausente, el comportamiento es **idéntico al anterior** (una sola llamada al principal): el cambio es retro-compatible y no rompe los entornos ya desplegados.
+
+Implementación:
+
+- Excepción interna `GeminiTransientException extends RuntimeException` como marker para distinguir transitorio vs terminal en el bucle. NO escapa del archivo.
+- Constante de clase `TRANSIENT_HTTP_CODES = [429, 500, 503, 504]` documentada con el motivo de cada código.
+- Helper privado `buildModelChain($primary, $fallbackRaw)` que normaliza el prefijo `models/` y deduplica preservando orden.
+- Helper privado `executeRequest($model, $bodyJson, $apiKey, $baseUrl)` que ejecuta una llamada HTTP a un modelo concreto. Devuelve array decodificado o lanza `GeminiTransientException` (transitorio) o `RuntimeException` (terminal).
+- `generateJson` construye el body **una sola vez** (es independiente del modelo) y luego itera la cascada.
+
+### Alternativas consideradas
+
+1. **Retry con backoff exponencial sobre el mismo modelo** — descartada como solución única: si el free tier de `gemini-2.5-flash` está globalmente saturado, esperar 1-2 s y reintentar contra la misma cuota no cambia nada. La cascada cubre mejor el caso real (cada modelo tiene quota independiente). Combinable con backoff en una iteración futura, pero no necesario hoy.
+2. **Activar pay-as-you-go en Google AI Studio** — recomendada **en paralelo**, no como sustituto. Las cuentas con billing tienen mayores cuotas y prioridad, pero seguir teniendo una sola línea de fallo (un modelo, un proveedor) es frágil. La cascada protege incluso al billing activo si Google sufre incidente puntual en un modelo concreto.
+3. **Volver a Ollama como fallback** — descartada: ADR-07 cerró Ollama por buenas razones (operativa de defensa, multimodal, coherencia de comportamiento). Reabrir esa rama a 5 días de la entrega introduce más riesgo del que mitiga.
+4. **Modo stub determinístico cuando todos los modelos fallan** — descartada por las mismas razones del ADR-07: un mapa stub puede engañar al usuario haciéndole creer que la IA respondió, y un mapa hardcoded delante del tribunal es indefendible.
+5. **Hardcodear la cascada en código** sin variable `.env` — descartada: las variables `.env` permiten al alumno ajustar la lista en producción sin redeploy si Google cambia los nombres de modelo o si aparece un modelo nuevo. Coste de la opción ≈ 5 líneas extra.
+6. **Reintentar también en errores de safety filter o JSON inválido** — descartada: sortear filtros de seguridad probando otro modelo es indefendible ante tribunal ("¿usas el modelo más permisivo en lugar del más adecuado?"). JSON inválido suele ser un problema del prompt o del schema, no del modelo, así que tampoco aplica.
+
+### Consecuencias
+
+- **Positivas:**
+  - Resiliencia frente a saturación global del free tier de un modelo concreto. Si `gemini-2.5-flash` está caído, `gemini-2.5-flash-lite` y `gemini-2.0-flash` son 99% probables de estar disponibles (cuotas y clusters distintos).
+  - Cero coste cuando funciona: la primera llamada al principal es la única; los fallbacks sólo se invocan en fallo.
+  - Backwards compatible: si `GEMINI_FALLBACK_MODELS` no está en `.env`, el comportamiento es idéntico al de antes.
+  - Auditoría completa por modelo: cada intento queda en `error_log` con el código HTTP y el modelo, lo que facilita la defensa ("aquí se ve que el principal cayó por 503 y el fallback tomó el relevo en X ms").
+  - Refuerza la separación cliente HTTP / fachada: la cascada vive en `GeminiClient` (transporte), `AIClient` no se entera de qué modelo respondió.
+- **Negativas / trade-offs:**
+  - Latencia peor en el peor caso: si los 3 modelos cayeran por 503 con timeout de 30 s cada uno, el endpoint tarda hasta 90 s en devolver 503 al cliente. En la práctica el código HTTP llega en milisegundos (no en el timeout completo) salvo en errores de red puros, así que el peor real es 3-6 s.
+  - Calidad heterogénea: los fallbacks (`flash-lite`, `2.0-flash`) generan resultados ligeramente peores que `2.5-flash`. Aceptable: mejor un mapa razonable que ningún mapa.
+  - Más superficie de código a defender en el tribunal (≈ 80 líneas extra), pero es código directo y bien comentado.
+- **Línea futura:**
+  - Combinar con backoff exponencial sobre el mismo modelo cuando el error es 429 con `Retry-After` corto (< 2 s). Hoy no se hace porque la cascada cubre el caso común y el backoff añade complejidad.
+  - Métrica agregada de "tasa de fallback" en logs para detectar degradación sostenida del modelo principal y reorganizar la cascada si procede.
+  - Si la app crece más allá del TFG, abstraer el patrón en un `RetryPolicy` reutilizable (cliente OpenAI, cliente Claude, etc.).
+
+### Acción manual requerida
+
+Añadir al `.env` del backend (no commiteado):
+
+```ini
+GEMINI_FALLBACK_MODELS=gemini-2.5-flash-lite,gemini-2.0-flash
+```
+
+Sin esta línea, la cascada queda inactiva (comportamiento idéntico al anterior).
+
+### Referencias
+
+- [`backend/API/services/GeminiClient.php`](../backend/API/services/GeminiClient.php) — implementación.
+- ADR-07 — establece el cliente Gemini base sobre el que se construye esta cascada.
+- Documentación oficial de cuotas Gemini: <https://ai.google.dev/gemini-api/docs/rate-limits>
+
+---
+
+## ADR-09 — *(siguiente decisión)*
+
+*Cuando tomes la siguiente decisión técnica no trivial, añade aquí. Ejemplos pendientes: proveedor cloud (AWS vs VPS+Vercel) y forma del despliegue, estrategia de paginación del feed Comunidad si crece.*
