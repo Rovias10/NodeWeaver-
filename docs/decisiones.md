@@ -387,6 +387,85 @@ La integración se ejecutó en la rama `IA_Integration` (subfases I0–I6, cerra
 
 ---
 
-## ADR-08 — *(siguiente decisión)*
+## ADR-08 — Cascada de modelos Gemini ante errores transitorios
 
-*Cuando tomes la siguiente decisión técnica no trivial, añade aquí. Ejemplos pendientes: proveedor cloud (AWS vs VPS+Vercel) y forma del despliegue, estrategia de paginación del feed Comunidad si crece, decisión sobre si la rama `ia-integration` unifica todo en Gemini o mantiene Ollama coexistiendo.*
+- **Fecha:** 2026-04-28
+- **Estado:** aceptado e implementado
+
+### Contexto
+
+Tras cerrar la integración con Gemini (ADR-07), durante un día completo de pruebas el endpoint `:generateContent` del free tier de `gemini-2.5-flash` devolvió respuestas erráticas: combinación de HTTP 503 ("model overloaded") y HTTP 429 ("rate limit") sostenidas. La causa más probable es saturación global de la cuota free tier de Google, no un problema en el código del proyecto.
+
+El problema operativo es real: la defensa del Proyecto Final 2 DAW es el 3 de mayo de 2026 y la demo en directo de las 3 features IA (`ai/expand`, `ai/from-note`, flashcards) depende de una sola llamada HTTPS contra un único modelo. Si en ese momento Google está saturado, la demo se cae con el mensaje canónico "La IA no está disponible ahora.". Indefendible delante del tribunal cuando la integración IA es uno de los argumentos centrales del proyecto.
+
+El cliente `GeminiClient` actual (cerrado en ADR-07) hace **una sola llamada** y propaga cualquier no-200 como `RuntimeException` → 503 al cliente. Sin reintento, sin fallback, sin distinción entre errores transitorios (cuota, sobrecarga) y terminales (prompt mal formado, key inválida).
+
+### Decisión
+
+Implementar **cascada de modelos** en `GeminiClient::generateJson` con dos categorías de error:
+
+1. **Errores TRANSITORIOS** (HTTP 429, 500, 503, 504, errores de red curl) → reintenta con el siguiente modelo de la cascada. Cada modelo se prueba **una sola vez**; no hay retry contra el mismo modelo ya saturado.
+2. **Errores TERMINALES** (HTTP 4xx no-429, safety filter, candidate vacío, JSON inválido) → propaga inmediatamente sin reintento. Cambiar de modelo no resuelve un prompt malo, una key inválida ni un filtro de seguridad bloqueando contenido.
+
+La cascada se configura por dos variables `.env`:
+
+- `GEMINI_MODEL` (existente) — modelo principal.
+- `GEMINI_FALLBACK_MODELS` (nueva, opcional) — lista CSV de modelos de respaldo. Recomendado: `gemini-2.5-flash-lite,gemini-2.0-flash`.
+
+Si `GEMINI_FALLBACK_MODELS` está vacío o ausente, el comportamiento es **idéntico al anterior** (una sola llamada al principal): el cambio es retro-compatible y no rompe los entornos ya desplegados.
+
+Implementación:
+
+- Excepción interna `GeminiTransientException extends RuntimeException` como marker para distinguir transitorio vs terminal en el bucle. NO escapa del archivo.
+- Constante de clase `TRANSIENT_HTTP_CODES = [429, 500, 503, 504]` documentada con el motivo de cada código.
+- Helper privado `buildModelChain($primary, $fallbackRaw)` que normaliza el prefijo `models/` y deduplica preservando orden.
+- Helper privado `executeRequest($model, $bodyJson, $apiKey, $baseUrl)` que ejecuta una llamada HTTP a un modelo concreto. Devuelve array decodificado o lanza `GeminiTransientException` (transitorio) o `RuntimeException` (terminal).
+- `generateJson` construye el body **una sola vez** (es independiente del modelo) y luego itera la cascada.
+
+### Alternativas consideradas
+
+1. **Retry con backoff exponencial sobre el mismo modelo** — descartada como solución única: si el free tier de `gemini-2.5-flash` está globalmente saturado, esperar 1-2 s y reintentar contra la misma cuota no cambia nada. La cascada cubre mejor el caso real (cada modelo tiene quota independiente). Combinable con backoff en una iteración futura, pero no necesario hoy.
+2. **Activar pay-as-you-go en Google AI Studio** — recomendada **en paralelo**, no como sustituto. Las cuentas con billing tienen mayores cuotas y prioridad, pero seguir teniendo una sola línea de fallo (un modelo, un proveedor) es frágil. La cascada protege incluso al billing activo si Google sufre incidente puntual en un modelo concreto.
+3. **Volver a Ollama como fallback** — descartada: ADR-07 cerró Ollama por buenas razones (operativa de defensa, multimodal, coherencia de comportamiento). Reabrir esa rama a 5 días de la entrega introduce más riesgo del que mitiga.
+4. **Modo stub determinístico cuando todos los modelos fallan** — descartada por las mismas razones del ADR-07: un mapa stub puede engañar al usuario haciéndole creer que la IA respondió, y un mapa hardcoded delante del tribunal es indefendible.
+5. **Hardcodear la cascada en código** sin variable `.env` — descartada: las variables `.env` permiten al alumno ajustar la lista en producción sin redeploy si Google cambia los nombres de modelo o si aparece un modelo nuevo. Coste de la opción ≈ 5 líneas extra.
+6. **Reintentar también en errores de safety filter o JSON inválido** — descartada: sortear filtros de seguridad probando otro modelo es indefendible ante tribunal ("¿usas el modelo más permisivo en lugar del más adecuado?"). JSON inválido suele ser un problema del prompt o del schema, no del modelo, así que tampoco aplica.
+
+### Consecuencias
+
+- **Positivas:**
+  - Resiliencia frente a saturación global del free tier de un modelo concreto. Si `gemini-2.5-flash` está caído, `gemini-2.5-flash-lite` y `gemini-2.0-flash` son 99% probables de estar disponibles (cuotas y clusters distintos).
+  - Cero coste cuando funciona: la primera llamada al principal es la única; los fallbacks sólo se invocan en fallo.
+  - Backwards compatible: si `GEMINI_FALLBACK_MODELS` no está en `.env`, el comportamiento es idéntico al de antes.
+  - Auditoría completa por modelo: cada intento queda en `error_log` con el código HTTP y el modelo, lo que facilita la defensa ("aquí se ve que el principal cayó por 503 y el fallback tomó el relevo en X ms").
+  - Refuerza la separación cliente HTTP / fachada: la cascada vive en `GeminiClient` (transporte), `AIClient` no se entera de qué modelo respondió.
+- **Negativas / trade-offs:**
+  - Latencia peor en el peor caso: si los 3 modelos cayeran por 503 con timeout de 30 s cada uno, el endpoint tarda hasta 90 s en devolver 503 al cliente. En la práctica el código HTTP llega en milisegundos (no en el timeout completo) salvo en errores de red puros, así que el peor real es 3-6 s.
+  - Calidad heterogénea: los fallbacks (`flash-lite`, `2.0-flash`) generan resultados ligeramente peores que `2.5-flash`. Aceptable: mejor un mapa razonable que ningún mapa.
+  - Más superficie de código a defender en el tribunal (≈ 80 líneas extra), pero es código directo y bien comentado.
+- **Línea futura:**
+  - Combinar con backoff exponencial sobre el mismo modelo cuando el error es 429 con `Retry-After` corto (< 2 s). Hoy no se hace porque la cascada cubre el caso común y el backoff añade complejidad.
+  - Métrica agregada de "tasa de fallback" en logs para detectar degradación sostenida del modelo principal y reorganizar la cascada si procede.
+  - Si la app crece más allá del TFG, abstraer el patrón en un `RetryPolicy` reutilizable (cliente OpenAI, cliente Claude, etc.).
+
+### Acción manual requerida
+
+Añadir al `.env` del backend (no commiteado):
+
+```ini
+GEMINI_FALLBACK_MODELS=gemini-2.5-flash-lite,gemini-2.0-flash
+```
+
+Sin esta línea, la cascada queda inactiva (comportamiento idéntico al anterior).
+
+### Referencias
+
+- [`backend/API/services/GeminiClient.php`](../backend/API/services/GeminiClient.php) — implementación.
+- ADR-07 — establece el cliente Gemini base sobre el que se construye esta cascada.
+- Documentación oficial de cuotas Gemini: <https://ai.google.dev/gemini-api/docs/rate-limits>
+
+---
+
+## ADR-09 — *(siguiente decisión)*
+
+*Cuando tomes la siguiente decisión técnica no trivial, añade aquí. Ejemplos pendientes: proveedor cloud (AWS vs VPS+Vercel) y forma del despliegue, estrategia de paginación del feed Comunidad si crece.*
