@@ -63,6 +63,14 @@ async function safeFetch(url, options) {
   try {
     return await fetch(url, options);
   } catch (error) {
+    // Si la petición se canceló desde el cliente (AbortController) hay
+    // que re-lanzar el AbortError tal cual: los callers ya filtran por
+    // `error.name === 'AbortError'` para distinguir cancelaciones de
+    // errores de red reales. Envolverlo perdería esa señal y haría que
+    // un cleanup normal de useEffect (típico bajo React StrictMode, que
+    // ejecuta el efecto dos veces en dev) parezca un fallo de red al
+    // usuario.
+    if (error?.name === 'AbortError') throw error;
     // Error de red/CORS: normalmente indica VITE_API_BASE incorrecta o backend caído.
     throw new Error(
       `No se pudo conectar con la API en "${url}". Revisa VITE_API_BASE y que el backend esté levantado.`
