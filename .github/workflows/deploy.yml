@@ -85,7 +85,11 @@ jobs:
           # carpeta dist/ en sí. Sin el /* acabaríamos con
           # /villanuevarodrigo.com/dist/index.html, que no es lo que queremos.
           local_path: './frontend/dist/*'
-          remote_path: '/villanuevarodrigo.com/'
+          # IONOS no permite puntos en los nombres de carpeta del hosting,
+          # por eso las carpetas reales son `villanuevarodrigocom` y
+          # `APIvillanuevarodrigo` aunque los DOMINIOS sí los lleven
+          # (villanuevarodrigo.com y api.villanuevarodrigo.com).
+          remote_path: '/villanuevarodrigocom/'
           sftp_only: true
 
       # ---------------------------------------------------------------
@@ -125,7 +129,8 @@ jobs:
           server: ${{ secrets.SFTP_HOST }}
           port: 22
           local_path: './backend-deploy/*'
-          remote_path: '/api.villanuevarodrigo.com/'
+          # Misma razón que el frontend: IONOS sin puntos en carpetas.
+          remote_path: '/APIvillanuevarodrigo/'
           sftp_only: true
 
       - name: Resumen
