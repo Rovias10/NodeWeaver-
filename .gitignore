@@ -27,9 +27,7 @@ frontend/uploads/
 
 # --- Frontend: archivos de configuración/documentación locales ---
 frontend/eslint.config.*
-frontend/package-lock.json
 frontend/README.md
-frontend/vite.config.*
 
 # --- Logs ---
 logs

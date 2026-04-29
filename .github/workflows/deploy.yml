@@ -1,0 +1,131 @@
+name: Deploy a IONOS Hosting Plus
+
+# Pipeline de despliegue de StudyWeaver. Cada push a `main` reconstruye
+# el frontend, instala las dependencias PHP del backend y sube ambos
+# artefactos por FTPS a los dos document roots correspondientes en IONOS.
+#
+# Configuración previa (una sola vez):
+#   - Secrets en GitHub: SFTP_HOST, SFTP_USER, SFTP_PASSWORD.
+#   - .env de producción ya en el servidor (subido a mano por SFTP).
+#   - Carpetas uploads/ creadas con permisos 755 en el servidor.
+#   - DocumentRoot del subdominio api.villanuevarodrigo.com → /api.villanuevarodrigo.com/public/.
+#
+# Ver docs/despliegue.md y ADR-09 para el detalle.
+
+on:
+  push:
+    branches: [main]
+  # Disparo manual desde la pestaña Actions, útil para forzar un redeploy
+  # sin tener que hacer un commit cosmético.
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repositorio
+        uses: actions/checkout@v4
+
+      # ---------------------------------------------------------------
+      # Frontend: build de producción con Vite.
+      # ---------------------------------------------------------------
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependencias del frontend
+        # `npm ci` exige lockfile y construye desde cero respetando las
+        # versiones exactas — builds reproducibles entre dev y CI.
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund
+
+      - name: Build del frontend (Vite -> dist/)
+        working-directory: frontend
+        # Vite carga frontend/.env.production automáticamente en modo prod
+        # y resuelve VITE_API_BASE -> https://api.villanuevarodrigo.com/index.php.
+        run: npm run build
+
+      # ---------------------------------------------------------------
+      # Backend: dependencias PHP con Composer.
+      # ---------------------------------------------------------------
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: composer:v2
+          coverage: none
+
+      - name: Instalar dependencias del backend (composer)
+        # backend/vendor/ está en .gitignore, lo regeneramos en CI.
+        # --no-dev evita subir librerías de testing al servidor.
+        working-directory: backend
+        run: composer install --no-dev --no-interaction --optimize-autoloader --prefer-dist
+
+      # ---------------------------------------------------------------
+      # Deploy del frontend -> villanuevarodrigo.com (raíz).
+      # ---------------------------------------------------------------
+      - name: Deploy frontend
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.SFTP_HOST }}
+          username: ${{ secrets.SFTP_USER }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          local-dir: ./frontend/dist/
+          server-dir: /villanuevarodrigo.com/
+          # No usamos clean-slate: borrar todo el destino borraría también
+          # archivos que Apache pueda generar (error_log, etc.).
+          dangerous-clean-slate: false
+          log-level: minimal
+
+      # ---------------------------------------------------------------
+      # Deploy del backend -> api.villanuevarodrigo.com (raíz contenedora).
+      # IONOS expone solo /public/ vía Apache; el resto queda fuera del
+      # alcance HTTP pero los archivos sí están subidos para que el
+      # bootstrap PHP (require_once __DIR__ . '/../...') funcione.
+      # ---------------------------------------------------------------
+      - name: Deploy backend
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.SFTP_HOST }}
+          username: ${{ secrets.SFTP_USER }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          local-dir: ./backend/
+          server-dir: /api.villanuevarodrigo.com/
+          dangerous-clean-slate: false
+          log-level: minimal
+          # Excluimos:
+          #   - .env y similares: las credenciales viven solo en el servidor.
+          #   - .git*, .github/: metadata de Git no relevante en producción.
+          #   - node_modules: el backend no debería tenerlos, pero por si acaso.
+          #   - uploads/: datos de usuario, NUNCA pisar.
+          #   - tests/: no se ejecutan en producción.
+          #   - .DS_Store: residuos macOS.
+          exclude: |
+            **/.env
+            **/.env.*
+            **/.git*
+            **/.github/**
+            **/node_modules/**
+            **/.DS_Store
+            **/uploads/avatars/**
+            **/uploads/notes/**
+            **/tests/**
+            **/.vscode/**
+            **/.idea/**
+
+      - name: Resumen
+        if: always()
+        run: |
+          echo "Deploy completado."
+          echo "Frontend: https://villanuevarodrigo.com"
+          echo "Backend:  https://api.villanuevarodrigo.com"
