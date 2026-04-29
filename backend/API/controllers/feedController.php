@@ -26,7 +26,7 @@ require_once __DIR__ . '/../middleware/verify-token.php';
 require_once __DIR__ . '/../../MODEL/Map.php';
 require_once __DIR__ . '/../../MODEL/Like.php';
 require_once __DIR__ . '/../../MODEL/Comment.php';
-require_once __DIR__ . '/../../MODEL/user.php';
+require_once __DIR__ . '/../../MODEL/User.php';
 
 class FeedController {
     private $db;
