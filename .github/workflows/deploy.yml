@@ -92,6 +92,22 @@ jobs:
           remote_path: '/villanuevarodrigocom/'
           sftp_only: true
 
+      # El glob /* del step anterior NO incluye archivos que empiezan por
+      # punto (.htaccess), porque bash no tiene `dotglob` activo en el
+      # contenedor de la action. Sin .htaccess, React Router se rompe en
+      # refresh: F5 sobre /apuntes devuelve 404 de Apache. Subimos el
+      # .htaccess explícitamente para resolverlo.
+      - name: Subir .htaccess del frontend
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+        with:
+          username: ${{ secrets.SFTP_USER }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          server: ${{ secrets.SFTP_HOST }}
+          port: 22
+          local_path: './frontend/dist/.htaccess'
+          remote_path: '/villanuevarodrigocom/.htaccess'
+          sftp_only: true
+
       # ---------------------------------------------------------------
       # Preparar carpeta limpia para el backend.
       # wlixcc/SFTP-Deploy-Action no soporta `exclude` directamente, así
