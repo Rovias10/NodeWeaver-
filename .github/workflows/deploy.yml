@@ -69,21 +69,47 @@ jobs:
 
       # ---------------------------------------------------------------
       # Deploy del frontend -> villanuevarodrigo.com (raíz).
+      # IONOS Hosting Plus solo expone SFTP (puerto 22). Por eso usamos
+      # wlixcc/SFTP-Deploy-Action en lugar de la action estándar de FTPS:
+      # IONOS discontinuó el FTP/FTPS por seguridad y la conexión a 21
+      # da timeout. Documentado como decisión en ADR-09.
       # ---------------------------------------------------------------
       - name: Deploy frontend
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
         with:
-          server: ${{ secrets.SFTP_HOST }}
           username: ${{ secrets.SFTP_USER }}
           password: ${{ secrets.SFTP_PASSWORD }}
-          protocol: ftps
-          port: 21
-          local-dir: ./frontend/dist/
-          server-dir: /villanuevarodrigo.com/
-          # No usamos clean-slate: borrar todo el destino borraría también
-          # archivos que Apache pueda generar (error_log, etc.).
-          dangerous-clean-slate: false
-          log-level: minimal
+          server: ${{ secrets.SFTP_HOST }}
+          port: 22
+          # El glob /* sube el CONTENIDO de dist/ al destino, no la
+          # carpeta dist/ en sí. Sin el /* acabaríamos con
+          # /villanuevarodrigo.com/dist/index.html, que no es lo que queremos.
+          local_path: './frontend/dist/*'
+          remote_path: '/villanuevarodrigo.com/'
+          sftp_only: true
+
+      # ---------------------------------------------------------------
+      # Preparar carpeta limpia para el backend.
+      # wlixcc/SFTP-Deploy-Action no soporta `exclude` directamente, así
+      # que copiamos backend/ a una carpeta temporal con rsync y
+      # eliminamos lo que no debe ir a producción ANTES del SFTP.
+      # ---------------------------------------------------------------
+      - name: Preparar backend para deploy (excludes vía rsync)
+        run: |
+          mkdir -p backend-deploy
+          rsync -av \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            --exclude='.git*' \
+            --exclude='.github/' \
+            --exclude='node_modules/' \
+            --exclude='uploads/avatars/' \
+            --exclude='uploads/notes/' \
+            --exclude='tests/' \
+            --exclude='.vscode/' \
+            --exclude='.idea/' \
+            --exclude='.DS_Store' \
+            backend/ backend-deploy/
 
       # ---------------------------------------------------------------
       # Deploy del backend -> api.villanuevarodrigo.com (raíz contenedora).
@@ -92,36 +118,15 @@ jobs:
       # bootstrap PHP (require_once __DIR__ . '/../...') funcione.
       # ---------------------------------------------------------------
       - name: Deploy backend
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
         with:
-          server: ${{ secrets.SFTP_HOST }}
           username: ${{ secrets.SFTP_USER }}
           password: ${{ secrets.SFTP_PASSWORD }}
-          protocol: ftps
-          port: 21
-          local-dir: ./backend/
-          server-dir: /api.villanuevarodrigo.com/
-          dangerous-clean-slate: false
-          log-level: minimal
-          # Excluimos:
-          #   - .env y similares: las credenciales viven solo en el servidor.
-          #   - .git*, .github/: metadata de Git no relevante en producción.
-          #   - node_modules: el backend no debería tenerlos, pero por si acaso.
-          #   - uploads/: datos de usuario, NUNCA pisar.
-          #   - tests/: no se ejecutan en producción.
-          #   - .DS_Store: residuos macOS.
-          exclude: |
-            **/.env
-            **/.env.*
-            **/.git*
-            **/.github/**
-            **/node_modules/**
-            **/.DS_Store
-            **/uploads/avatars/**
-            **/uploads/notes/**
-            **/tests/**
-            **/.vscode/**
-            **/.idea/**
+          server: ${{ secrets.SFTP_HOST }}
+          port: 22
+          local_path: './backend-deploy/*'
+          remote_path: '/api.villanuevarodrigo.com/'
+          sftp_only: true
 
       - name: Resumen
         if: always()
