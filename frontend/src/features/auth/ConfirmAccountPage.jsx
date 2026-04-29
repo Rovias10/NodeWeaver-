@@ -114,7 +114,7 @@ export function ConfirmAccountPage() {
             <i className="fas fa-sign-in-alt" aria-hidden="true" /> Iniciar sesión
           </Button>
         </Link>
-        <Link to="/register" className="block mt-3">
+        <Link to="/registro" className="block mt-3">
           <Button variant="ghost" size="lg" className="w-full">
             <i className="fas fa-user-plus" aria-hidden="true" /> Volver a registrarse
           </Button>

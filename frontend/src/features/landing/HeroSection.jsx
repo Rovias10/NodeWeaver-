@@ -37,7 +37,7 @@ export function HeroSection() {
             style={{ animation: 'var(--animate-fade-up)', animationDelay: '0.2s' }}
           >
             Estudia mejor con
-            <span className="block mt-2 bg-gradient-to-r from-brand-600 via-brand-500 to-coral-400 bg-clip-text text-transparent leading-[1.1]">
+            <span className="block mt-2 pb-2 bg-gradient-to-r from-brand-600 via-brand-500 to-coral-400 bg-clip-text text-transparent leading-[1.1]">
               mapas inteligentes
             </span>
           </h1>

@@ -12,7 +12,7 @@
     </linearGradient>
   </defs>
 
-  <g transform="translate(20, 28) scale(1.2)">
+  <g transform="translate(20, 16) scale(1.2)">
     <path d="M16 18 C 22 8, 42 8, 48 18 S 58 42, 48 50 S 22 58, 16 50 S 6 28, 16 18 Z" 
           fill="none" stroke="url(#sw-grad)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.35" />
     
