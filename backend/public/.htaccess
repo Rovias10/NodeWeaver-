@@ -1,0 +1,43 @@
+# =====================================================================
+# StudyWeaver — Reglas Apache para el entry point público del backend.
+# Document root del subdominio api.villanuevarodrigo.com debe apuntar
+# aquí (backend/public/). Todo lo que está fuera de esta carpeta queda
+# inaccesible vía HTTP, que es exactamente lo que queremos.
+# =====================================================================
+
+# Activa el motor de reescritura.
+RewriteEngine On
+
+# Si la petición apunta a un archivo o directorio real (por ejemplo
+# /uploads/avatars/avatar_5_xxx.png), Apache lo sirve directamente
+# sin pasar por PHP. Así los avatares se sirven como estáticos.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Cualquier otra ruta cae en index.php, que delega en backend/API/index.php.
+# El router lee la ruta lógica de $_GET['route'], que el frontend siempre
+# añade a la URL (ver frontend/src/api/client.js).
+RewriteRule ^ index.php [L]
+
+# Cabeceras de seguridad básicas. Defienden contra clickjacking,
+# sniffing de tipo MIME y filtrado agresivo de Referer.
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "DENY"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+</IfModule>
+
+# Bloquea acceso a archivos sensibles si por error acaban dentro de public/.
+# Estas reglas son defensivas: nada en public/ debería tener estas extensiones.
+<FilesMatch "\.(env|sql|md|log|ini|conf|gitignore|gitattributes|htaccess|bak)$">
+    Require all denied
+</FilesMatch>
+
+# Apaga el listado de directorios. Si alguien navega a /uploads/avatars/
+# verá un 403 en lugar de la lista de archivos.
+Options -Indexes
+
+# Forzar UTF-8 por defecto para respuestas servidas como estáticos.
+AddDefaultCharset UTF-8

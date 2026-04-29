@@ -1,0 +1,53 @@
+# =====================================================================
+# StudyWeaver — Reglas Apache para la SPA (build de Vite).
+# Document root del dominio villanuevarodrigo.com debe apuntar a la
+# carpeta donde el deploy sube frontend/dist/. Vite copia este .htaccess
+# desde public/ al raíz del build automáticamente.
+# =====================================================================
+
+# Activa el motor de reescritura.
+RewriteEngine On
+RewriteBase /
+
+# Si la petición es directamente a /index.html, no reescribir.
+RewriteRule ^index\.html$ - [L]
+
+# Si la URL apunta a un archivo o directorio real (assets, imágenes,
+# fuentes, manifest, etc.), servirlo directamente.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Cualquier otra ruta (p. ej. /apuntes, /mapas/42) cae en index.html
+# para que React Router pueda manejar el routing client-side. Sin esta
+# regla, refrescar /mapas/42 en el navegador devolvería un 404 de Apache.
+RewriteRule . /index.html [L]
+
+# Cabeceras de seguridad básicas para la SPA.
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "DENY"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Caché agresiva para los activos versionados de Vite (los nombres
+# incluyen hash, así que un cambio invalida la URL automáticamente).
+# Mejora la performance percibida y reduce el tráfico de red — vale
+# como argumento de eficiencia para sostenibilidad (RA4).
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css                   "access plus 1 year"
+    ExpiresByType application/javascript     "access plus 1 year"
+    ExpiresByType image/png                  "access plus 1 year"
+    ExpiresByType image/jpeg                 "access plus 1 year"
+    ExpiresByType image/svg+xml              "access plus 1 year"
+    ExpiresByType image/webp                 "access plus 1 year"
+    ExpiresByType font/woff2                 "access plus 1 year"
+    # index.html NO se cachea: queremos que la nueva versión se note al instante.
+    ExpiresByType text/html                  "access plus 0 seconds"
+</IfModule>
+
+# Apaga listado de directorios.
+Options -Indexes
+
+# UTF-8 por defecto.
+AddDefaultCharset UTF-8

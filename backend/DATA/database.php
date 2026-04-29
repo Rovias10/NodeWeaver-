@@ -14,22 +14,24 @@
  * `json_encode`, y el frontend recibía un body imposible de parsear.
  */
 class Database {
-    private $host = 'localhost';
-    private $db_name = 'autoflow';
-    private $username = 'root';
-    private $password = '';
+    private $host;
+    private $db_name;
+    private $username;
+    private $password;
     private $conn;
 
-    /**
-     * Devuelve una instancia PDO conectada o null si la conexión falla.
-     * El error real queda en el log del servidor para no exponer
-     * detalles internos al cliente.
-     */
+    public function __construct() {
+        $this->host     = EnvLoader::get('DB_HOST',     'localhost');
+        $this->db_name  = EnvLoader::get('DB_NAME',     'autoflow');
+        $this->username = EnvLoader::get('DB_USER',     'root');
+        $this->password = EnvLoader::get('DB_PASSWORD', '');
+    }
+    
     public function getConnection() {
         $this->conn = null;
         try {
             $this->conn = new PDO(
-                "mysql:host=" . $this->host . ";dbname=" . $this->db_name,
+                "mysql:host={$this->host};dbname={$this->db_name};charset=utf8mb4",
                 $this->username,
                 $this->password
             );
