@@ -32,15 +32,25 @@ import '../styles/drawflow-summer.css';
  *    notificando con onChange.
  *
  *  · Modo lectura (`readOnly`): la Fase Comunidad necesita pintar
- *    mapas ajenos sin permitir editarlos. Activar `readOnly`:
- *      1. Pone `editor.editor_mode = 'fixed'` (Drawflow desactiva
- *         drag/connect/delete por sí solo).
+ *    mapas ajenos sin permitir editarlos pero permitiendo navegar
+ *    por el lienzo (pan + zoom). Activar `readOnly`:
+ *      1. Pone `editor.editor_mode = 'view'` y NO `'fixed'`. La
+ *         diferencia mirando el código de Drawflow: en `'fixed'`
+ *         el pan sólo se activa si haces click EXACTAMENTE sobre
+ *         `.parent-drawflow` o `.drawflow`; sobre un nodo el click
+ *         se ignora. Eso bloquea el pan en mapas con muchos nodos
+ *         (no queda zona vacía donde clickear). En `'view'`,
+ *         cualquier click dentro del lienzo se redirige al pan y
+ *         se hace `preventDefault()`, por lo que tampoco se enfoca
+ *         el contenteditable de los nodos. `view` también bloquea
+ *         contextmenu y teclas Delete/Backspace.
  *      2. Tras `import()`, post-procesa el DOM para quitar los
- *         `.sw-node__actions` (botones "+ IA" / "✕") y desactivar
- *         los `[contenteditable]` del label/hint que quedan
- *         serializados en el HTML del nodo. Drawflow no expone API
- *         para regenerar el HTML de un nodo importado, así que
- *         tocamos el DOM una sola vez tras la carga.
+ *         `.sw-node__actions` (botones "+ IA" / "✕") y poner los
+ *         `[contenteditable]` del label/hint a `false`. Drawflow
+ *         no expone API para regenerar el HTML de un nodo
+ *         importado, así que tocamos el DOM una sola vez tras la
+ *         carga. Es higiene visual: el `preventDefault()` ya
+ *         neutraliza la edición, pero los botones no deben verse.
  *      3. No bindea los handlers click/blur/paste de edición ni
  *         los eventos de cambio — el padre no necesita `onChange`.
  *      4. Expone una API minimal en `editorApiRef` con sólo
@@ -73,7 +83,11 @@ export function DrawflowEditor({
     const editor = new Drawflow(containerRef.current);
     editor.reroute = true;
     editor.reroute_fix_curvature = true;
-    editor.editor_mode = readOnly ? 'fixed' : 'edit';
+    // 'view' (no 'fixed'): el modo 'fixed' sólo permite pan al
+    // clickear el lienzo vacío, lo cual es inservible cuando el
+    // mapa está poblado de nodos. 'view' deja navegar haciendo
+    // click sobre cualquier zona y bloquea edición igualmente.
+    editor.editor_mode = readOnly ? 'view' : 'edit';
     editor.start();
 
     // Restauramos el JSON si existe; si está vacío o null, dejamos
@@ -247,11 +261,20 @@ export function DrawflowEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Inicialización única; el padre fuerza remount con key={mapId}.
 
+  // El tamaño va en `style` y NO en className por una razón concreta:
+  // Drawflow añade la clase `parent-drawflow` al contenedor en `start()`,
+  // pero las clases de Tailwind (`w-full h-full`) entran ANTES, así que
+  // acabarían como `classList[0] = 'w-full'`. En modo 'view', el switch
+  // interno de Drawflow lee `ele_selected.classList[0]` y sólo activa el
+  // pan cuando vale 'parent-drawflow' o 'drawflow'. Si la primera clase
+  // es otra, el switch sale sin asignar editor_selected = true y el pan
+  // queda muerto. Manteniendo el className vacío garantizamos que
+  // `parent-drawflow` sea la primera clase tras `editor.start()`.
   return (
     <div
       ref={containerRef}
       id="drawflow"
-      className="w-full h-full"
+      style={{ width: '100%', height: '100%' }}
     />
   );
 }
