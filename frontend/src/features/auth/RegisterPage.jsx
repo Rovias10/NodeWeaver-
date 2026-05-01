@@ -118,7 +118,7 @@ export function RegisterPage() {
               label="Nombre completo"
               type="text"
               icon="fa-user"
-              placeholder="Juan Pérez"
+              placeholder="Pedro Pedrete"
               value={form.name}
               onChange={update('name')}
               required

@@ -7,6 +7,17 @@
    Documentado en docs/redesign-plan.md §1.
    ============================================================= */
 @theme {
+  /* === Tipografía ===
+     Fraunces (display, serif moderno) para titulares.
+     Manrope (sans humanista) para cuerpo y UI.
+     Cargadas vía Google Fonts en index.html.
+     `--font-sans` sobrescribe el default de Tailwind 4 → todo
+     el texto del body usa Manrope sin tocar componentes.
+     `--font-display` queda disponible como utilidad `font-display`
+     y se aplica a h1-h4 desde la capa base de más abajo. */
+  --font-sans:    'Manrope', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+
   /* === Superficies === */
   --color-paper:        #f6fbff;
   --color-mist:         #eaf4ff;
@@ -100,10 +111,22 @@ html, body, #root { min-height: 100%; }
 body {
   background-color: var(--color-paper);
   color: var(--color-ink);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: 'ss01', 'cv11';
   letter-spacing: -0.005em;
+}
+
+/* Titulares con Fraunces.
+   Aplicado en capa base para que cualquier h1-h4 del proyecto
+   herede la tipografía sin tocar componentes uno a uno.
+   `font-optical-sizing: auto` deja que el navegador elija el eje
+   `opsz` adecuado según el tamaño renderizado (Fraunces es variable). */
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  letter-spacing: -0.02em;
 }
 
 /* =============================================================
