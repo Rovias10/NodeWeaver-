@@ -376,13 +376,6 @@ class Flashcard {
         return $stmt->rowCount() > 0;
     }
 
-    // ──────────────────────────────────────────────────────────────────
-    // Métricas para el panel de inicio (`GET dashboard/stats`).
-    //
-    // Tres helpers de sólo lectura que no dependen del algoritmo SM-2
-    // ni del flujo de repaso. Todos filtran por user_id en la query.
-    // ──────────────────────────────────────────────────────────────────
-
     /**
      * Cuenta cuántas flashcards posee el usuario en total.
      *

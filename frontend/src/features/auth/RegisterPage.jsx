@@ -45,8 +45,6 @@ export function RegisterPage() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  // Si ya hay sesión, mandamos al home autenticado: tras el pivote
-  // ADR-06 esa página es /apuntes (zona principal), no /dashboard.
   if (isAuthenticated) return <Navigate to="/apuntes" replace />;
 
   function update(field) {
@@ -101,7 +99,6 @@ export function RegisterPage() {
     }
   }
 
-  // Coincidencia visual en tiempo real (≠ del envío del form).
   const showMatchHint = form.confirmPassword.length > 0 && !errors.confirmPassword;
   const passwordsMatch = showMatchHint && form.password === form.confirmPassword;
 

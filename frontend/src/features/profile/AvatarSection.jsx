@@ -54,7 +54,6 @@ export function AvatarSection({ profile, onAvatarChanged }) {
       return;
     }
 
-    // Preview optimista local.
     const localUrl = URL.createObjectURL(file);
     setPreview(localUrl);
     setSubmitting(true);

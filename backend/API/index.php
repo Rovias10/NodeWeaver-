@@ -12,19 +12,16 @@
  * El detalle del error queda en el log del servidor.
  */
 
-// 1. Configuración inicial (cabeceras CORS y variables de entorno)
 require_once __DIR__ . '/../DATA/cors.php';
 require_once __DIR__ . '/../DATA/env.php';
 
-// 2. Conexión a base de datos. Puede devolver null si MySQL falla;
-//    en ese caso los controllers que necesiten BD lanzarán excepción
-//    y el catch global de abajo emitirá un JSON limpio.
+// Conexión a base de datos. Puede devolver null si MySQL falla;
+// en ese caso los controllers que necesiten BD lanzarán excepción
+// y el catch global de abajo emitirá un JSON limpio.
 require_once __DIR__ . '/../DATA/database.php';
 $database = new Database();
 $db = $database->getConnection();
 
-// 3. Despachar la petición al router MVC, blindado para que ningún
-//    error de PHP escape como HTML al cliente.
 try {
     require_once __DIR__ . '/router/api.php';
 } catch (Throwable $e) {

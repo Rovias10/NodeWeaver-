@@ -16,7 +16,6 @@ import { Button } from '@/ui/Button.jsx';
 export function FlippableCard({ card, revealed, onReveal }) {
   return (
     <div className="bg-glass backdrop-blur-2xl border border-line rounded-3xl shadow-card p-8 md:p-10 max-w-2xl mx-auto w-full">
-      {/* Pregunta */}
       <div>
         <span className="text-xs uppercase tracking-wider font-semibold text-brand-700">
           Pregunta
@@ -30,7 +29,6 @@ export function FlippableCard({ card, revealed, onReveal }) {
 
       <hr className="my-6 border-line" />
 
-      {/* Respuesta o botón Mostrar */}
       {revealed ? (
         <div>
           <span className="text-xs uppercase tracking-wider font-semibold text-emerald-700">

@@ -223,7 +223,6 @@ class FlashcardController {
 
         try {
             if ($id > 0) {
-                // ─── UPDATE ───
                 // Verificamos ownership antes de tocar nada. 404 con
                 // el mismo mensaje que "no existe" para no filtrar la
                 // existencia de tarjetas ajenas.
@@ -257,7 +256,6 @@ class FlashcardController {
                 return;
             }
 
-            // ─── CREATE ───
             // map_id es opcional. Si llega, debemos verificar que el
             // mapa pertenece al usuario; si no, podríamos colgar la
             // tarjeta de un map_id ajeno (no leakea datos pero permite

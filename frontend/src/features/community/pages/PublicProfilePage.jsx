@@ -41,7 +41,6 @@ export function PublicProfilePage() {
 
   const isMe = user && Number(user.id) === userId;
 
-  // ── Carga inicial: profile + página 1 de mapas en paralelo ────────
   const loadFirst = useCallback(async () => {
     if (!userId || userId <= 0) {
       setStatus('error');
@@ -78,7 +77,6 @@ export function PublicProfilePage() {
     loadFirst();
   }, [loadFirst]);
 
-  // ── Cargar siguiente página de mapas ──────────────────────────────
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
@@ -100,7 +98,6 @@ export function PublicProfilePage() {
     }
   }, [loadingMore, hasMore, page, userId, notify]);
 
-  // ── Sincronizar count tras toggle de like en una tarjeta ──────────
   const handleLikeChange = (mapId, { liked, count }) => {
     setMaps((prev) =>
       prev.map((m) =>
@@ -143,7 +140,6 @@ export function PublicProfilePage() {
 
   return (
     <div className="max-w-6xl mx-auto flex flex-col gap-6">
-      {/* Volver al feed */}
       <div>
         <Button variant="ghost" size="md" onClick={() => navigate('/comunidad')}>
           <i className="fas fa-arrow-left" aria-hidden="true" />
@@ -151,7 +147,6 @@ export function PublicProfilePage() {
         </Button>
       </div>
 
-      {/* Cabecera del perfil */}
       <Card padded className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
         <Avatar src={profile.avatar_url} name={profile.name} size="xl" />
         <div className="flex-1 text-center sm:text-left">
@@ -179,7 +174,6 @@ export function PublicProfilePage() {
         </div>
       </Card>
 
-      {/* Grid de mapas públicos del autor */}
       {maps.length === 0 ? (
         <Card padded className="text-center">
           <i className="fas fa-folder-open text-3xl text-ink-faint mb-3" aria-hidden="true" />

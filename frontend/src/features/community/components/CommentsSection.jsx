@@ -10,7 +10,6 @@ import {
 } from '../services/communityService.js';
 import { CommentItem } from './CommentItem.jsx';
 
-/** Tamaño de página del hilo de comentarios. */
 const PAGE_SIZE = 20;
 /** Mismas constantes que el backend (ver CommentController). */
 const BODY_MAX = 1000;
@@ -45,8 +44,6 @@ export function CommentsSection({ mapId, onCountChange }) {
   const [body, setBody]           = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
-
-  // ── Carga inicial / refresh ──────────────────────────────────────
   const loadFirst = useCallback(async () => {
     setStatus('loading');
     setPage(1);
@@ -72,7 +69,6 @@ export function CommentsSection({ mapId, onCountChange }) {
     loadFirst();
   }, [loadFirst]);
 
-  // ── Cargar siguiente página ──────────────────────────────────────
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
@@ -94,7 +90,6 @@ export function CommentsSection({ mapId, onCountChange }) {
     }
   }, [loadingMore, hasMore, page, mapId, notify]);
 
-  // ── Crear comentario ─────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     const trimmed = body.trim();
@@ -111,9 +106,6 @@ export function CommentsSection({ mapId, onCountChange }) {
         notify(res.message || 'No se pudo publicar el comentario.', 'error');
         return;
       }
-      // El backend devuelve el comment ya formado con autor.
-      // Lo añadimos al final para mantener el orden cronológico
-      // que usa la lista (más antiguos arriba, más nuevos abajo).
       setItems((prev) => [...prev, res.data]);
       setTotal((prev) => {
         const next = prev + 1;
@@ -129,7 +121,6 @@ export function CommentsSection({ mapId, onCountChange }) {
     }
   };
 
-  // ── Borrar comentario (confirm nativo, KISS) ─────────────────────
   const handleDelete = async (comment) => {
     const ok = window.confirm('¿Eliminar este comentario? Esta acción no se puede deshacer.');
     if (!ok) return;
@@ -167,7 +158,6 @@ export function CommentsSection({ mapId, onCountChange }) {
         </h2>
       </header>
 
-      {/* Form de añadir comentario */}
       <form onSubmit={handleSubmit} className="flex flex-col gap-2">
         <label htmlFor="new-comment" className="sr-only">
           Escribe un comentario
@@ -177,7 +167,7 @@ export function CommentsSection({ mapId, onCountChange }) {
           value={body}
           onChange={(e) => setBody(e.target.value)}
           rows={3}
-          maxLength={BODY_MAX + 50 /* margen para que el aviso de "te pasaste" salga */}
+          maxLength={BODY_MAX + 50}
           placeholder="Escribe un comentario…"
           className="
             w-full bg-white/70 border border-line rounded-xl px-4 py-3
@@ -208,7 +198,6 @@ export function CommentsSection({ mapId, onCountChange }) {
         </div>
       </form>
 
-      {/* Lista */}
       {status === 'loading' && (
         <div className="flex justify-center py-10">
           <Spinner />

@@ -348,13 +348,6 @@ class NoteController {
         }
     }
 
-    // ──────────────────────────────────────────────────────────────────
-    // Helpers privados
-    // ──────────────────────────────────────────────────────────────────
-
-    /**
-     * Subida de un PDF físico. Asumido `$file['error'] !== UPLOAD_ERR_NO_FILE`.
-     */
     private function uploadPdf($userId, array $file, array $fields) {
         // Errores de subida distintos de "no se envió archivo".
         if ($file['error'] !== UPLOAD_ERR_OK) {
@@ -516,9 +509,6 @@ class NoteController {
         }
     }
 
-    /**
-     * Subida de un apunte de texto pegado por el alumno.
-     */
     private function uploadText($userId, array $fields) {
         $title = isset($fields['title']) ? trim((string) $fields['title']) : '';
         $body  = isset($fields['body'])  ? (string) $fields['body']        : '';
@@ -595,12 +585,6 @@ class NoteController {
         }
     }
 
-    /**
-     * Devuelve la fila pública del apunte: tipos casteados, sin
-     * `file_path` (ruta interna del servidor que el cliente no debe
-     * conocer). `extracted_text` sí se incluye para que el preview
-     * pueda renderizar el body de un apunte 'text'.
-     */
     private function normalizePublic($row) {
         return [
             'id'                => isset($row['id']) ? (int) $row['id'] : null,
@@ -615,22 +599,10 @@ class NoteController {
         ];
     }
 
-    /**
-     * Raíz absoluta del directorio de uploads del backend.
-     * (`backend/uploads/`).
-     */
     private function uploadsRoot() {
         return __DIR__ . '/../../uploads';
     }
 
-    /**
-     * Sanea un nombre de archivo para incluirlo en el header
-     * `Content-Disposition`. Evita romperlo con saltos de línea o
-     * comillas dobles, y descarta caracteres no ASCII para no liarse
-     * con la sintaxis RFC 5987 (filename* encoded). El nombre que
-     * verá el usuario al "Guardar como" puede degradar a ASCII sin
-     * que afecte al uso normal — el embed funciona igual.
-     */
     private function sanitizeFilenameForHeader($name) {
         $clean = preg_replace('/[\r\n"]/', '_', (string) $name);
         $ascii = preg_replace('/[^\x20-\x7E]/', '_', $clean);
@@ -640,13 +612,6 @@ class NoteController {
         return $ascii;
     }
 
-    /**
-     * Resuelve la ruta absoluta de un `file_path` relativo guardado en
-     * BD (formato `notes/<user_id>/<uuid>.pdf`) y verifica que cae
-     * dentro de `backend/uploads/notes/<user_id>/`. Devuelve null si
-     * la ruta intenta salir de ese subárbol (defensa en profundidad
-     * contra path traversal aunque el path se genera en backend).
-     */
     private function absolutePathForRelative($relative, $userId) {
         if (!is_string($relative) || $relative === '') return null;
 

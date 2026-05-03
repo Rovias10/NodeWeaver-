@@ -37,7 +37,6 @@ export function CommunityFeedPage() {
   const [sort, setSort] = useState('recent');
   const [q, setQ]       = useState('');
 
-  // ── Carga inicial / reset al cambiar filtros ──────────────────────
   const loadFirst = useCallback(async (nextSort, nextQ) => {
     setStatus('loading');
     setPage(1);
@@ -57,7 +56,6 @@ export function CommunityFeedPage() {
     }
   }, [notify]);
 
-  // ── Cargar siguiente página ───────────────────────────────────────
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
@@ -79,7 +77,6 @@ export function CommunityFeedPage() {
     }
   }, [loadingMore, hasMore, page, sort, q, notify]);
 
-  // ── Cambios de filtros ────────────────────────────────────────────
   const handleSort = (next) => {
     if (next === sort) return;
     setSort(next);
@@ -91,14 +88,10 @@ export function CommunityFeedPage() {
     loadFirst(sort, next);
   };
 
-  // ── Carga inicial ─────────────────────────────────────────────────
   useEffect(() => {
     loadFirst('recent', '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Sincronizar estado tras toggle de like en una tarjeta ─────────
-  // Mantiene el contador y el badge correctos sin recargar el feed.
   const handleLikeChange = (mapId, { liked, count }) => {
     setItems((prev) =>
       prev.map((m) =>
@@ -111,7 +104,6 @@ export function CommunityFeedPage() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      {/* Cabecera */}
       <header className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-ink">Comunidad</h1>
         <p className="text-ink-muted text-sm mt-1">
@@ -126,7 +118,6 @@ export function CommunityFeedPage() {
         onQueryChange={handleQuery}
       />
 
-      {/* Estados */}
       {status === 'loading' && (
         <div className="flex justify-center py-20">
           <Spinner />

@@ -151,16 +151,6 @@ class Map {
         return $row['updated_at'] ?? null;
     }
 
-    // ──────────────────────────────────────────────────────────────────
-    // Métodos para la capa social (Fase Comunidad · C1).
-    //
-    // A diferencia de findByIdForUser, estos NO filtran por user_id
-    // de propietario: sirven mapas con `is_public = 1` a cualquier
-    // usuario autenticado y enriquecen la fila con autor + counts +
-    // liked_by_me. El filtro de seguridad ahora es `is_public`, no
-    // ownership.
-    // ──────────────────────────────────────────────────────────────────
-
     /**
      * Lookup mínimo por id, sin filtro de ownership ni de is_public.
      * Devuelve sólo {id, user_id, is_public}. Lo usan los controllers

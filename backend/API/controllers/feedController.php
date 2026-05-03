@@ -279,14 +279,6 @@ class FeedController {
         }
     }
 
-    // ──────────────────────────────────────────────────────────────────
-    // Helpers privados
-    // ──────────────────────────────────────────────────────────────────
-
-    /**
-     * Lee `page` y `page_size` del request y los traduce a
-     * (limit, offset) saneados. Aplica defaults y caps.
-     */
     private function resolvePagination($data) {
         $page = isset($data['page']) ? max(1, (int) $data['page']) : 1;
         $size = isset($data['page_size']) ? (int) $data['page_size'] : self::PAGE_SIZE_DEFAULT;
@@ -295,11 +287,6 @@ class FeedController {
         return [$size, ($page - 1) * $size];
     }
 
-    /**
-     * Construye el objeto `pagination` que acompaña a las listas.
-     * `has_more` es heurística simple: ¿quedan filas tras la página
-     * actual? El frontend lo usa para decidir si pintar "Cargar más".
-     */
     private function makePagination($total, $limit, $offset) {
         $page = (int) floor($offset / $limit) + 1;
         return [
@@ -310,11 +297,6 @@ class FeedController {
         ];
     }
 
-    /**
-     * Normaliza una fila de feed: castea tipos, anida el autor en un
-     * subobjeto y omite columnas internas (drawflow_json nunca llega
-     * por este camino — es responsabilidad de findPublicByIdWithMeta).
-     */
     private function normalizeFeedRow($r) {
         return [
             'id'             => isset($r['id']) ? (int) $r['id'] : null,
@@ -335,12 +317,6 @@ class FeedController {
         ];
     }
 
-    /**
-     * Normaliza la fila de mapa público para el detalle: incluye
-     * drawflow_json y owner_user_id (el frontend usa este último para
-     * saber si ofrecer el botón "Editar" cuando el visitante es el
-     * autor).
-     */
     private function normalizePublicMap($r) {
         return [
             'id'             => (int) $r['id'],

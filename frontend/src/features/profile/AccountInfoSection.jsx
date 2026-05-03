@@ -35,7 +35,6 @@ export function AccountInfoSection({ profile }) {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  // Cargamos los datos cada vez que cambia el profile recibido del backend.
   useEffect(() => {
     if (!profile) return;
     setForm({

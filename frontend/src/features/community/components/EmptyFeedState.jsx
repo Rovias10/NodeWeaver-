@@ -51,7 +51,6 @@ export function EmptyFeedState({ mode = 'empty', onResetFilter }) {
     );
   }
 
-  // 'empty' por defecto
   return (
     <Card padded className="text-center">
       <i className="fas fa-users text-3xl text-ink-faint mb-3" aria-hidden="true" />

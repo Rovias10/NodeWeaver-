@@ -11,10 +11,6 @@ class ProfileController {
         $this->userModel = new User($db);
     }
 
-    /**
-     * Extracts and validates the JWT from the Authorization header.
-     * Returns the authenticated user ID or exits with 401.
-     */
     private function getAuthenticatedUser() {
         $headers = apache_request_headers();
         $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
@@ -43,7 +39,6 @@ class ProfileController {
     public function getProfile() {
         $user_id = $this->getAuthenticatedUser();
 
-        // ── Virtual Super User Response ──
         if ($user_id == 999) {
             echo json_encode([
                 'success' => true, 

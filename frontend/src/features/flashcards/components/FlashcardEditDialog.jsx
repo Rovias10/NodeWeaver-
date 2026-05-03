@@ -117,7 +117,6 @@ export function FlashcardEditDialog({
           </div>
         </div>
 
-        {/* Front */}
         <label className="block mt-5">
           <span className="text-sm font-semibold text-ink">Pregunta (anverso)</span>
           <textarea
@@ -138,7 +137,6 @@ export function FlashcardEditDialog({
           </div>
         </label>
 
-        {/* Back */}
         <label className="block mt-3">
           <span className="text-sm font-semibold text-ink">Respuesta (reverso)</span>
           <textarea

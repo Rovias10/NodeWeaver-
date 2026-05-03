@@ -316,15 +316,6 @@ class AIClient {
         return $clean;
     }
 
-    // ──────────────────────────────────────────────────────────────────
-    // Prompts privados
-    // ──────────────────────────────────────────────────────────────────
-
-    /**
-     * Construye el prompt en castellano para la expansión de un nodo.
-     * Schema explícito en el cuerpo del prompt como refuerzo del
-     * `responseMimeType: 'application/json'` que ya aplica GeminiClient.
-     */
     private static function buildExpandPrompt($label, $context) {
         $contextLine = $context
             ? "Contexto del concepto padre: \"{$context}\"."
@@ -351,12 +342,6 @@ Reglas:
 EOT;
     }
 
-    /**
-     * Construye el prompt para generar flashcards a partir del título
-     * del mapa y su lista de nodos. Schema explícito en el cuerpo del
-     * prompt como refuerzo del `responseMimeType` y de la regla de
-     * 8-15 entradas.
-     */
     private static function buildFlashcardsPrompt($mapTitle, $nodes) {
         // Serializamos los nodos en una lista plana legible por el modelo.
         $lines = [];
@@ -398,12 +383,6 @@ Nodos:
 EOT;
     }
 
-    /**
-     * Construye el prompt para `parseNoteToMap`. La fuente del contenido
-     * es o bien un texto inline (modo 'text') o bien el PDF adjunto
-     * (modo 'pdf' multimodal). En el segundo caso el prompt sólo da
-     * instrucciones — el contenido del PDF llega por `inline_data`.
-     */
     private static function buildNoteToMapPrompt($title, $text, $useMultimodal) {
         $titleSafe = trim((string) $title);
         if ($titleSafe === '') $titleSafe = 'Apunte sin título';
@@ -447,10 +426,6 @@ Título sugerido por el alumno: "{$titleSafe}"{$textBlock}
 EOT;
     }
 
-    /**
-     * Construye el prompt para `parseNoteToFlashcards`. Mismo dual mode
-     * que `buildNoteToMapPrompt`.
-     */
     private static function buildNoteToFlashcardsPrompt($title, $text, $useMultimodal) {
         $titleSafe = trim((string) $title);
         if ($titleSafe === '') $titleSafe = 'Apunte sin título';
@@ -505,7 +480,6 @@ EOT;
             throw new RuntimeException('IA no disponible (formato inesperado).');
         }
 
-        // ─── Title ─────────────────────────────────────────────────────
         $title = isset($parsed['title']) ? trim((string) $parsed['title']) : '';
         if ($title === '') {
             $title = trim((string) $fallbackTitle);
@@ -519,7 +493,6 @@ EOT;
             $title = mb_substr($title, 0, 200);
         }
 
-        // ─── Nodes ─────────────────────────────────────────────────────
         $rawNodes = $parsed['nodes'] ?? [];
         if (!is_array($rawNodes)) {
             error_log('[AIClient::sanitizeMapResponse] nodes no es array.');
@@ -555,7 +528,6 @@ EOT;
             throw new RuntimeException('IA no disponible (sin nodos válidos).');
         }
 
-        // ─── Edges ─────────────────────────────────────────────────────
         $rawEdges = $parsed['edges'] ?? [];
         $cleanEdges = [];
         $seen = []; // claves "source-target" para deduplicar.

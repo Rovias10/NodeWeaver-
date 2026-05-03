@@ -32,14 +32,10 @@ export function LikeButton({
   const [optCount, setOptCount] = useState(Number(count) || 0);
   const [pending, setPending]   = useState(false);
 
-  // Re-sincronizar si los props cambian externamente (p. ej. el padre
-  // recarga el feed con cifras nuevas). Evitamos pisar la actualización
-  // optimista mientras hay una petición en curso.
   useEffect(() => {
     if (pending) return;
     setOptLiked(Boolean(liked));
     setOptCount(Number(count) || 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liked, count]);
 
   const handleClick = async () => {
@@ -57,13 +53,12 @@ export function LikeButton({
     try {
       const res = await toggleLike(mapId);
       if (!res.success) {
-        // Revertimos optimismo y avisamos.
+       
         setOptLiked(prevLiked);
         setOptCount(prevCount);
         notify(res.message || 'No se pudo registrar el like.', 'error');
         return;
       }
-      // Tomamos los valores canónicos del servidor (puede haber drift).
       const finalLiked = Boolean(res.data?.liked);
       const finalCount = Number.isFinite(Number(res.data?.count))
         ? Number(res.data.count)
@@ -82,8 +77,6 @@ export function LikeButton({
 
   const textSize  = size === 'sm' ? 'text-xs' : 'text-sm';
   const iconColor = optLiked ? 'text-coral-500' : 'text-ink-muted';
-  // Con `fa-solid` (fas) el corazón sale relleno; con `fa-regular` (far)
-  // sale como contorno. Usamos lo segundo cuando aún no hay like.
   const iconStyle = optLiked ? 'fas' : 'far';
 
   return (

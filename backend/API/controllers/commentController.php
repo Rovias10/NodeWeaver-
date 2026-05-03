@@ -295,11 +295,6 @@ class CommentController {
         }
     }
 
-    // ──────────────────────────────────────────────────────────────────
-    // Helpers privados (mismos defaults que FeedController, copiados a
-    // propósito para no introducir un BaseController por una sola fase).
-    // ──────────────────────────────────────────────────────────────────
-
     private function resolvePagination($data) {
         $page = isset($data['page']) ? max(1, (int) $data['page']) : 1;
         $size = isset($data['page_size']) ? (int) $data['page_size'] : self::PAGE_SIZE_DEFAULT;

@@ -2,7 +2,6 @@
 // backend/router/api.php
 require_once __DIR__ . '/Router.php';
 
-// Instantiate the router with the existing DB connection (passed from index.php)
 $router = new Router($db);
 
 /**
@@ -76,10 +75,8 @@ $router->get ('community/comments',       'commentController', 'list');
 $router->post('community/comment',        'commentController', 'create');
 $router->post('community/comment-delete', 'commentController', 'delete');
 
-// Receive the incoming request variables
 $route = $_GET['route'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];
 
-// Dispatch the router
 $router->dispatch($method, $route);
 ?>

@@ -188,7 +188,6 @@ class MapController {
 
         try {
             if ($id > 0) {
-                // ─── UPDATE ───
                 // Verificamos primero ownership/existencia. Si el mapa no
                 // existe o es de otro usuario, devolvemos 404 (mismo
                 // mensaje, sin distinguir, para no filtrar info).
@@ -222,7 +221,6 @@ class MapController {
                     ],
                 ]);
             } else {
-                // ─── CREATE ───
                 $newId = $this->mapModel->create($userId, $title, $description, $isPublic, $drawflowJson);
                 if (!$newId) {
                     http_response_code(500);

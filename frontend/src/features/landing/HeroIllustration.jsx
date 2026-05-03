@@ -34,10 +34,8 @@ export function HeroIllustration({ className = '' }) {
         </filter>
       </defs>
 
-      {/* Halo de fondo */}
       <circle cx="240" cy="210" r="200" fill="url(#hero-glow)" />
 
-      {/* Conexiones */}
       <g stroke="url(#hero-line)" strokeWidth="2.5" fill="none" strokeLinecap="round">
         <path d="M 240 210 C 200 130, 150 90, 110 70" />
         <path d="M 240 210 C 290 130, 340 80, 380 60" />
@@ -45,7 +43,6 @@ export function HeroIllustration({ className = '' }) {
         <path d="M 240 210 C 290 290, 340 330, 380 350" />
       </g>
 
-      {/* Nodo central */}
       <g filter="url(#soft-shadow)">
         <circle cx="240" cy="210" r="48" fill="#ffffff" stroke="#0ea5e9" strokeWidth="2.5" />
         <text
@@ -61,7 +58,6 @@ export function HeroIllustration({ className = '' }) {
         </text>
       </g>
 
-      {/* Nodos satélite */}
       <g filter="url(#soft-shadow)">
         <circle cx="100" cy="62" r="30" fill="#dbeefe" stroke="#7cc6fd" strokeWidth="2" />
         <text x="100" y="68" textAnchor="middle" fontSize="13" fontWeight="600" fill="#0369a1" fontFamily="ui-sans-serif, system-ui">

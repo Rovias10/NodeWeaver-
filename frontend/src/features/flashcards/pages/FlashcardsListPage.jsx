@@ -261,7 +261,6 @@ export function FlashcardsListPage() {
   // ── Render ───────────────────────────────────────────────────────
   return (
     <div className="max-w-6xl mx-auto">
-      {/* Cabecera */}
       <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-ink">Flashcards</h1>
@@ -275,7 +274,6 @@ export function FlashcardsListPage() {
         </Button>
       </header>
 
-      {/* Tabs */}
       <div role="tablist" aria-label="Vistas de flashcards" className="flex gap-1 mb-6 border-b border-line">
         <button
           type="button"
@@ -315,7 +313,6 @@ export function FlashcardsListPage() {
         </button>
       </div>
 
-      {/* Estados */}
       {status === 'loading' && (
         <div className="flex justify-center py-20">
           <Spinner />
@@ -338,7 +335,6 @@ export function FlashcardsListPage() {
         </Card>
       )}
 
-      {/* Tab Repasar */}
       {status === 'ok' && tab === 'review' && (
         <Card padded className="text-center">
           {due.length === 0 ? (
@@ -377,7 +373,6 @@ export function FlashcardsListPage() {
         </Card>
       )}
 
-      {/* Tab Mis tarjetas */}
       {status === 'ok' && tab === 'all' && (
         all.length === 0 ? (
           <EmptyFlashcardsState
@@ -412,7 +407,6 @@ export function FlashcardsListPage() {
         )
       )}
 
-      {/* Diálogos */}
       <FlashcardEditDialog
         open={dialogOpen}
         card={dialogCard}

@@ -22,15 +22,6 @@ if (!API_BASE) {
 
 const TOKEN_KEY = 'sw_token';
 
-/**
- * Compone la URL final de la petición.
- *
- * El backend espera la ruta lógica como query string `?route=<ruta>`.
- * Cualquier parámetro adicional (id, filtros, paginación...) se adjunta
- * como query independiente para que `$_GET[...]` lo recoja en PHP. No
- * los empotres dentro del propio `route` con `&id=...` o `?id=...`: el
- * wrapper se encarga de encodearlos correctamente.
- */
 function buildUrl(route, params) {
   const sep = API_BASE.includes('?') ? '&' : '?';
   let url = `${API_BASE}${sep}route=${encodeURIComponent(route)}`;
@@ -63,15 +54,7 @@ async function safeFetch(url, options) {
   try {
     return await fetch(url, options);
   } catch (error) {
-    // Si la petición se canceló desde el cliente (AbortController) hay
-    // que re-lanzar el AbortError tal cual: los callers ya filtran por
-    // `error.name === 'AbortError'` para distinguir cancelaciones de
-    // errores de red reales. Envolverlo perdería esa señal y haría que
-    // un cleanup normal de useEffect (típico bajo React StrictMode, que
-    // ejecuta el efecto dos veces en dev) parezca un fallo de red al
-    // usuario.
     if (error?.name === 'AbortError') throw error;
-    // Error de red/CORS: normalmente indica VITE_API_BASE incorrecta o backend caído.
     throw new Error(
       `No se pudo conectar con la API en "${url}". Revisa VITE_API_BASE y que el backend esté levantado.`
     );
@@ -83,16 +66,12 @@ async function handleResponse(response) {
   try {
     body = await response.json();
   } catch {
-    // El backend debería devolver siempre JSON. Si no, lo tratamos como error.
     throw new Error(`Respuesta no-JSON del servidor (HTTP ${response.status})`);
   }
 
   if (response.status === 401) {
     window.dispatchEvent(new CustomEvent('auth:logout', { detail: { reason: '401' } }));
   }
-
-  // El backend usa el contrato { success, message, data?, token?, user? }.
-  // Devolvemos el body tal cual: cada caller decide qué hacer con success=false.
   return body;
 }
 
@@ -135,7 +114,7 @@ export async function apiUpload(route, formData, signal) {
 }
 
 /**
- * GET a la API esperando una respuesta BINARIA (no JSON). Adjunta
+ * GET a la API esperando una respuesta . Adjunta
  * JWT igual que `apiGet`. Usado para descargar archivos como Blob —
  * por ejemplo, para envolver un PDF en `URL.createObjectURL` y
  * mostrarlo en un `<iframe>`.
@@ -171,8 +150,6 @@ export async function apiDownload(route, params, signal) {
       const body = await response.json();
       if (body && body.message) message = body.message;
     } catch {
-      // El backend pudo emitir binario aún en error o no devolver JSON;
-      // nos quedamos con el mensaje genérico.
     }
     return { success: false, message };
   }
@@ -186,8 +163,6 @@ export function setToken(token) {
     if (token) localStorage.setItem(TOKEN_KEY, token);
     else localStorage.removeItem(TOKEN_KEY);
   } catch {
-    // En modo privado de algunos navegadores localStorage puede fallar.
-    // Lo ignoramos: la sesión durará lo que dure la pestaña.
   }
 }
 

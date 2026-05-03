@@ -41,12 +41,7 @@ import { googleLogin } from './authService.js';
 const GOOGLE_CLIENT_ID =
   '558764914281-cklberlvgkjd04d9fhmo2umuq9eudp4j.apps.googleusercontent.com';
 
-/**
- * Espera a que `window.google.accounts.id` exista. El script de GIS
- * se carga con `async defer`, así que en el primer mount puede no
- * estar listo todavía. Devolvemos una promesa que se resuelve en
- * cuanto el SDK aparece o se rechaza tras el timeout.
- */
+
 function waitForGoogleScript(timeoutMs = 8000) {
   return new Promise((resolve, reject) => {
     if (window.google?.accounts?.id) {
@@ -72,12 +67,8 @@ export function GoogleButton({ label = 'Continuar con Google' }) {
   const { notify } = useNotification();
   const navigate = useNavigate();
   const location = useLocation();
-
-  const [scriptStatus, setScriptStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
+  const [scriptStatus, setScriptStatus] = useState('loading');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-
-  // Tras login con éxito, volvemos a la ruta original que disparó la
-  // redirección desde ProtectedRoute (si la hay) o a /apuntes.
   const redirectTo = location.state?.from?.pathname || '/apuntes';
 
   useEffect(() => {

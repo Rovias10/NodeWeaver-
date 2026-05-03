@@ -57,7 +57,6 @@ export function FlashcardCard({ card, onEdit, onDelete }) {
         )}
       </div>
 
-      {/* Pregunta truncada */}
       <div className="flex-1">
         <h3 className="text-base font-bold text-ink leading-snug line-clamp-3">
           {truncated || <span className="italic text-ink-faint">Sin pregunta</span>}
@@ -69,7 +68,6 @@ export function FlashcardCard({ card, onEdit, onDelete }) {
         </p>
       </div>
 
-      {/* Acciones */}
       <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
         <Button
           type="button"

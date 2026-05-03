@@ -23,7 +23,6 @@ export function AmbientBackground() {
       />
       <div className="fixed inset-0 grid-pattern opacity-60 z-[-8] pointer-events-none" />
 
-      {/* Glows ambientales */}
       <div className="fixed top-[-15%] left-[-10%] w-[55%] h-[55%] rounded-full bg-sun-300/30 blur-[140px] pointer-events-none z-[-7]" />
       <div className="fixed bottom-[-15%] right-[-10%] w-[45%] h-[45%] rounded-full bg-brand-400/25 blur-[130px] pointer-events-none z-[-7]" />
       <div className="fixed top-[25%] right-[30%] w-[30%] h-[30%] rounded-full bg-coral-400/20 blur-[120px] pointer-events-none z-[-7]" />

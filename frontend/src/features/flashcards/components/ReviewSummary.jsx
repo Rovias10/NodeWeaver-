@@ -73,7 +73,6 @@ export function ReviewSummary({ kind, stats = {}, onBack }) {
   );
 }
 
-/** Caja de stat individual del resumen (encapsulada para no repetir markup). */
 function StatBox({ label, value, className = '' }) {
   return (
     <div className={`rounded-2xl p-4 ${className}`}>

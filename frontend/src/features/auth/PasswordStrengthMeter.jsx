@@ -25,12 +25,12 @@ function computeScore(password) {
 }
 
 const LEVELS = [
-  { label: '',           color: 'bg-coral-400',  text: 'text-coral-500' },  // 0 vacío
-  { label: 'Muy débil',  color: 'bg-coral-500',  text: 'text-coral-500' },  // 1
-  { label: 'Débil',      color: 'bg-sun-400',    text: 'text-sun-400'   },  // 2
-  { label: 'Media',      color: 'bg-sun-300',    text: 'text-sun-400'   },  // 3
-  { label: 'Fuerte',     color: 'bg-mint-400',   text: 'text-emerald-700' }, // 4
-  { label: 'Muy fuerte', color: 'bg-mint-500',   text: 'text-emerald-700' }, // 5
+  { label: '',           color: 'bg-coral-400',  text: 'text-coral-500' },  
+  { label: 'Muy débil',  color: 'bg-coral-500',  text: 'text-coral-500' },  
+  { label: 'Débil',      color: 'bg-sun-400',    text: 'text-sun-400'   }, 
+  { label: 'Media',      color: 'bg-sun-300',    text: 'text-sun-400'   },  
+  { label: 'Fuerte',     color: 'bg-mint-400',   text: 'text-emerald-700' }, 
+  { label: 'Muy fuerte', color: 'bg-mint-500',   text: 'text-emerald-700' }, 
 ];
 
 export function PasswordStrengthMeter({ password }) {

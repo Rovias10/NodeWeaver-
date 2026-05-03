@@ -373,7 +373,6 @@ export function MapEditorPage() {
         </div>
       </header>
 
-      {/* Toolbar */}
       <EditorToolbar
         onAddConcept={handleAddConcept}
         onZoomIn={handleZoomIn}
@@ -386,7 +385,6 @@ export function MapEditorPage() {
         isGeneratingFlashcards={isGeneratingFlashcards}
       />
 
-      {/* Canvas Drawflow */}
       <Card padded={false} className="flex-1 min-h-0 overflow-hidden relative">
         {/* key={mapId} fuerza remount si el usuario navega de un mapa
             a otro sin desmontar la página (no ocurre con la ruta

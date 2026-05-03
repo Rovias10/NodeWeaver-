@@ -154,7 +154,6 @@ class AIController {
             return;
         }
 
-        // ─── Validación de input ───────────────────────────────────────
         $noteId = isset($data['note_id']) ? (int) $data['note_id'] : 0;
         $target = isset($data['target']) ? trim((string) $data['target']) : '';
 
@@ -176,7 +175,6 @@ class AIController {
         }
 
         try {
-            // ─── Recuperar el apunte y verificar ownership ─────────────
             $note = $this->noteModel->findByIdForUser($noteId, $userId);
             if (!$note) {
                 http_response_code(404);
@@ -187,7 +185,6 @@ class AIController {
                 return;
             }
 
-            // ─── Resolver fuente para la IA ────────────────────────────
             $title         = (string) ($note['title'] ?? 'Apunte sin título');
             $sourceType    = (string) ($note['source_type'] ?? 'text');
             $extractedText = $note['extracted_text'] ?? null;
@@ -221,7 +218,6 @@ class AIController {
                 }
             }
 
-            // ─── Despachar según target ────────────────────────────────
             if ($target === 'map') {
                 $this->fromNoteToMap($userId, $noteId, $title, $extractedText, $pdfPath);
             } else {
@@ -252,13 +248,6 @@ class AIController {
         }
     }
 
-    // ──────────────────────────────────────────────────────────────────
-    // Helpers privados de fromNote
-    // ──────────────────────────────────────────────────────────────────
-
-    /**
-     * Genera un mapa conceptual desde el apunte y lo persiste.
-     */
     private function fromNoteToMap($userId, $noteId, $title, $extractedText, $pdfPath) {
         $map = AIClient::parseNoteToMap($title, $extractedText, $pdfPath);
 
@@ -296,9 +285,6 @@ class AIController {
         ], JSON_UNESCAPED_UNICODE);
     }
 
-    /**
-     * Genera flashcards desde el apunte y las persiste en lote.
-     */
     private function fromNoteToFlashcards($userId, $noteId, $title, $extractedText, $pdfPath) {
         $cards = AIClient::parseNoteToFlashcards($title, $extractedText, $pdfPath);
         if (empty($cards)) {

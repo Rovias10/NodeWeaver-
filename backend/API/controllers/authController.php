@@ -14,7 +14,6 @@ class AuthController {
             return;
         }
 
-        // ── Global Super User Check ──
         $superEmail = EnvLoader::get('SUPER_USER_EMAIL');
         $superPass  = EnvLoader::get('SUPER_USER_PASSWORD');
 

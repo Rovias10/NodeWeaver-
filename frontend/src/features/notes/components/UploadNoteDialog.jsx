@@ -178,7 +178,6 @@ export function UploadNoteDialog({
           </div>
         </div>
 
-        {/* Tabs */}
         <div role="tablist" aria-label="Origen del apunte" className="flex gap-1 mt-5 border-b border-line">
           <button
             type="button"
@@ -220,7 +219,6 @@ export function UploadNoteDialog({
           </button>
         </div>
 
-        {/* Título (común a ambos tabs) */}
         <label className="block mt-5">
           <span className="text-sm font-semibold text-ink">
             Título <span className="font-normal text-ink-faint">(opcional)</span>
@@ -239,7 +237,6 @@ export function UploadNoteDialog({
           )}
         </label>
 
-        {/* Tab PDF */}
         {tab === 'pdf' && (
           <div className="mt-4">
             <span className="text-sm font-semibold text-ink">Archivo PDF</span>
@@ -300,7 +297,6 @@ export function UploadNoteDialog({
           </div>
         )}
 
-        {/* Tab Texto */}
         {tab === 'text' && (
           <label className="block mt-4">
             <span className="text-sm font-semibold text-ink">Contenido</span>

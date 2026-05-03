@@ -31,13 +31,6 @@ export function resetPassword(payload) {
 export function confirmAccount(token) {
   return apiPost(ENDPOINTS.auth.confirmAccount, { token });
 }
-
-/**
- * Login con Google. Recibe el `id_token` (credential) que devuelve
- * Google Identity Services en el callback del botón oficial. El
- * backend verifica el token contra `oauth2.googleapis.com/tokeninfo`
- * y, si es válido, crea o recupera al usuario y emite un JWT propio.
- */
 export function googleLogin(idToken) {
   return apiPost(ENDPOINTS.auth.google, { token: idToken });
 }

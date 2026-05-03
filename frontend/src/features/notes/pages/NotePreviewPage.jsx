@@ -188,7 +188,6 @@ export function NotePreviewPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      {/* Cabecera */}
       <div className="mb-4">
         <Link
           to="/apuntes"
@@ -225,7 +224,6 @@ export function NotePreviewPage() {
         )}
       </header>
 
-      {/* Acciones IA — cableadas contra POST ai/from-note (Gemini). */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <Button
           variant="primary"
@@ -270,7 +268,6 @@ export function NotePreviewPage() {
         )}
       </div>
 
-      {/* Contenido */}
       {!isPdf && (
         <Card padded>
           <pre className="whitespace-pre-wrap break-words font-sans text-sm text-ink leading-relaxed">

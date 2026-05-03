@@ -133,7 +133,6 @@ export function PublicMapPage() {
 
   return (
     <div className="max-w-6xl mx-auto flex flex-col gap-6">
-      {/* Volver al feed */}
       <div>
         <Button variant="ghost" size="md" onClick={handleBack}>
           <i className="fas fa-arrow-left" aria-hidden="true" />
@@ -141,7 +140,6 @@ export function PublicMapPage() {
         </Button>
       </div>
 
-      {/* Cabecera del mapa */}
       <Card padded className="flex flex-col gap-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-0">
@@ -153,7 +151,6 @@ export function PublicMapPage() {
                 {mapData.description}
               </p>
             )}
-            {/* Autor + fecha */}
             <div className="flex items-center gap-2 mt-3">
               <Link
                 to={profileTo}
@@ -196,7 +193,6 @@ export function PublicMapPage() {
         </div>
       </Card>
 
-      {/* Visor Drawflow read-only */}
       <Card padded={false} className="overflow-hidden h-[60vh] min-h-[420px] relative">
         <DrawflowEditor
           key={mapData.id}
@@ -217,7 +213,6 @@ export function PublicMapPage() {
         )}
       </Card>
 
-      {/* Comentarios */}
       <CommentsSection
         mapId={mapData.id}
         onCountChange={(n) => setCommentsCount(n)}

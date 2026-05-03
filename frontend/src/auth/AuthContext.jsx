@@ -19,10 +19,6 @@ import { isJwtExpired } from '@/utils/jwt';
 export const AuthContext = createContext(null);
 
 const USER_KEY = 'sw_user';
-
-/**
- * Lee el usuario persistido. Devuelve null si está corrupto.
- */
 function readPersistedUser() {
   try {
     const raw = localStorage.getItem(USER_KEY);
@@ -37,7 +33,6 @@ function writePersistedUser(user) {
     if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
     else localStorage.removeItem(USER_KEY);
   } catch {
-    // ignorado: ver nota en client.js
   }
 }
 
@@ -54,8 +49,6 @@ export function AuthProvider({ children }) {
   const [token, setTokenState] = useState(null);
   const [user, setUser] = useState(null);
   const [isReady, setIsReady] = useState(false);
-
-  // Bandera para evitar duplicar listeners en HMR.
   const listenerAttached = useRef(false);
 
   const logout = useCallback(() => {
@@ -80,7 +73,6 @@ export function AuthProvider({ children }) {
     });
   }, []);
 
-  // Rehidratación inicial.
   useEffect(() => {
     const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
     const storedUser = readPersistedUser();
@@ -89,7 +81,6 @@ export function AuthProvider({ children }) {
       setTokenState(storedToken);
       setUser(storedUser);
     } else if (storedToken) {
-      // Token caducado en local: limpiamos.
       setToken(null);
       writePersistedUser(null);
     }
@@ -97,7 +88,6 @@ export function AuthProvider({ children }) {
     setIsReady(true);
   }, []);
 
-  // Listener global 'auth:logout' disparado por apiClient en 401.
   useEffect(() => {
     if (listenerAttached.current) return;
     listenerAttached.current = true;

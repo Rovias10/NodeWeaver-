@@ -121,7 +121,6 @@ export function MapMetadataDialog({
           </div>
         </div>
 
-        {/* Título */}
         <label className="block mt-5">
           <span className="text-sm font-semibold text-ink">Título</span>
           <input
@@ -143,7 +142,6 @@ export function MapMetadataDialog({
           </div>
         </label>
 
-        {/* Descripción */}
         <label className="block mt-3">
           <span className="text-sm font-semibold text-ink">
             Descripción <span className="font-normal text-ink-faint">(opcional)</span>

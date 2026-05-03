@@ -28,10 +28,6 @@ export function LoginPage() {
   const { notify } = useNotification();
   const navigate = useNavigate();
   const location = useLocation();
-  // Tras el pivote ADR-06, "Mis apuntes" es la zona principal de la app
-  // autenticada. El redirect respeta `location.state.from` cuando viene
-  // de ProtectedRoute (volver a la ruta original tras login), y cae a
-  // /apuntes por defecto en lugar del antiguo /dashboard.
   const redirectTo = location.state?.from?.pathname || '/apuntes';
 
   const [email, setEmail] = useState('');
@@ -39,7 +35,6 @@ export function LoginPage() {
   const [emailError, setEmailError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Si ya estamos logueados, no tiene sentido ver /login.
   if (isAuthenticated) return <Navigate to={redirectTo} replace />;
 
   function validate() {

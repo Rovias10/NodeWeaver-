@@ -118,7 +118,6 @@ class GeminiClient {
         $pdfPath = null,
         array $options = []
     ) {
-        // ─── 1. Configuración ──────────────────────────────────────────
         $apiKey      = trim((string) EnvLoader::get('GEMINI_API_KEY', ''));
         $primary     = trim((string) EnvLoader::get('GEMINI_MODEL',   ''));
         $fallbackRaw = trim((string) EnvLoader::get('GEMINI_FALLBACK_MODELS', ''));
@@ -135,7 +134,6 @@ class GeminiClient {
         // `buildModelChain` normaliza el prefijo `models/` y deduplica.
         $models = self::buildModelChain($primary, $fallbackRaw);
 
-        // ─── 2. Construcción de las parts del mensaje ──────────────────
         // El campo `contents[0].parts` puede llevar texto y, opcionalmente,
         // un PDF inline en base64. Gemini procesa ambos en la misma
         // llamada gracias a su capacidad multimodal nativa.
@@ -159,7 +157,6 @@ class GeminiClient {
             ];
         }
 
-        // ─── 3. Cuerpo completo de la petición ─────────────────────────
         // El body es independiente del modelo: se construye una sola vez
         // y se reutiliza en cada intento de la cascada.
         $temperature   = isset($options['temperature']) ? (float) $options['temperature'] : 0.5;
@@ -199,7 +196,7 @@ class GeminiClient {
             throw new RuntimeException('IA no disponible (payload).');
         }
 
-        // ─── 4. Cascada: probar cada modelo hasta éxito ────────────────
+        // Cascada: probar cada modelo hasta éxito.
         // Se cae al siguiente modelo SOLO en errores transitorios
         // (`GeminiTransientException`). Errores terminales propagan
         // inmediatamente desde `executeRequest`. Si todos los modelos
@@ -327,7 +324,6 @@ class GeminiClient {
             throw new RuntimeException("IA no disponible (HTTP $code).");
         }
 
-        // ─── Parseo del envelope Gemini ────────────────────────────────
         $payload = json_decode($raw, true);
         if (!is_array($payload)) {
             error_log('[GeminiClient] Respuesta no es JSON: ' . substr((string) $raw, 0, 300));
@@ -379,7 +375,6 @@ class GeminiClient {
             throw new RuntimeException('IA no disponible (respuesta vacía).');
         }
 
-        // ─── Parseo del JSON del candidate ─────────────────────────────
         // Aunque pedimos responseMimeType=json, algunos modelos a veces
         // encapsulan el JSON en un fence ```json ... ```. Lo desnudamos
         // defensivamente antes de json_decode.

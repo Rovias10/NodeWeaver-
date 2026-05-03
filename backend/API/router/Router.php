@@ -20,7 +20,6 @@ class Router {
     }
 
     public function dispatch($method, $path) {
-        // Parse input data depending on HTTP method
         $data = [];
         if ($method === 'POST' || $method === 'PUT') {
             $data = json_decode(file_get_contents('php://input'), true) ?? [];
@@ -35,19 +34,17 @@ class Router {
             if (file_exists($controllerPath)) {
                 require_once $controllerPath;
                 // e.g. authController -> AuthController
-                $controllerClass = ucfirst($action['controller']); 
+                $controllerClass = ucfirst($action['controller']);
                 $controllerInstance = new $controllerClass($this->db);
                 $methodName = $action['method'];
-                
+
                 if (method_exists($controllerInstance, $methodName)) {
-                    // Call the mapped controller method
                     $controllerInstance->$methodName($data);
                     return;
                 }
             }
         }
-        
-        // If route does not exist
+
         http_response_code(404);
         echo json_encode(['success' => false, 'message' => 'Ruta no encontrada: ' . $path]);
     }

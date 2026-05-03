@@ -22,7 +22,6 @@ export function MapCard({ map, onDelete }) {
 
   return (
     <Card padded className="flex flex-col gap-4 h-full">
-      {/* Cabecera: badge + fecha relativa */}
       <div className="flex items-start justify-between gap-3">
         <span
           className={
@@ -43,7 +42,6 @@ export function MapCard({ map, onDelete }) {
         </span>
       </div>
 
-      {/* Cuerpo: título + descripción */}
       <div className="flex-1">
         <h3 className="text-lg font-bold text-ink leading-snug line-clamp-2">
           {map.title || 'Mapa sin título'}
@@ -55,7 +53,6 @@ export function MapCard({ map, onDelete }) {
         )}
       </div>
 
-      {/* Acciones */}
       <div className="flex items-center justify-between gap-2 pt-2 border-t border-line">
         <Link to={`/mapas/${map.id}`} className="flex-1">
           <Button variant="primary" size="md" className="w-full">

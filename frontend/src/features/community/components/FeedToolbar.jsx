@@ -18,15 +18,10 @@ import { Link } from 'react-router';
 export function FeedToolbar({ sort, q, onSortChange, onQueryChange }) {
   const [localQ, setLocalQ] = useState(q ?? '');
   const debounceRef = useRef(null);
-
-  // Si el padre cambia `q` externamente (p. ej. al limpiar el filtro
-  // desde el empty state), sincronizamos.
   useEffect(() => {
     setLocalQ(q ?? '');
   }, [q]);
 
-  // Limpieza al desmontar para evitar setState sobre componente vivo
-  // tras un debounce pendiente.
   useEffect(() => () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
   }, []);
@@ -42,7 +37,6 @@ export function FeedToolbar({ sort, q, onSortChange, onQueryChange }) {
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-      {/* Tabs Recientes / Populares */}
       <div role="tablist" aria-label="Ordenar feed" className="flex gap-1 border-b border-line">
         <Tab active={sort === 'recent'} onClick={() => onSortChange?.('recent')}>
           <i className="fas fa-clock mr-2" aria-hidden="true" />
@@ -54,7 +48,6 @@ export function FeedToolbar({ sort, q, onSortChange, onQueryChange }) {
         </Tab>
       </div>
 
-      {/* Buscador + acceso a favoritos */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1 sm:flex-none">
           <i

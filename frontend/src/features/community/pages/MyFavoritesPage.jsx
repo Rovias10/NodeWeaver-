@@ -34,7 +34,6 @@ export function MyFavoritesPage() {
   const [hasMore, setHasMore]         = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // ── Carga inicial / refresh ───────────────────────────────────────
   const loadFirst = useCallback(async () => {
     setStatus('loading');
     setPage(1);
@@ -58,7 +57,6 @@ export function MyFavoritesPage() {
     loadFirst();
   }, [loadFirst]);
 
-  // ── Cargar siguiente página ───────────────────────────────────────
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
@@ -97,7 +95,6 @@ export function MyFavoritesPage() {
 
   return (
     <div className="max-w-6xl mx-auto flex flex-col gap-6">
-      {/* Volver al feed */}
       <div>
         <Button variant="ghost" size="md" onClick={() => navigate('/comunidad')}>
           <i className="fas fa-arrow-left" aria-hidden="true" />
@@ -105,7 +102,6 @@ export function MyFavoritesPage() {
         </Button>
       </div>
 
-      {/* Cabecera */}
       <header>
         <h1 className="text-2xl md:text-3xl font-bold text-ink">Mis favoritos</h1>
         <p className="text-ink-muted text-sm mt-1">

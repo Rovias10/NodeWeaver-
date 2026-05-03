@@ -65,9 +65,6 @@ export function CommentItem({ comment, onDelete, isDeleting = false }) {
             </button>
           )}
         </div>
-        {/* Body: text-only. Mantenemos saltos de línea con
-            whitespace-pre-line; el backend ya hace trim y limita a
-            1000 chars, así que no hay riesgo de párrafo gigantesco. */}
         <p className="mt-1 text-sm text-ink whitespace-pre-line break-words">
           {comment.body}
         </p>

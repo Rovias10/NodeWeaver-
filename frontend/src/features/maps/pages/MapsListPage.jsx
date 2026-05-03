@@ -102,7 +102,6 @@ export function MapsListPage() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      {/* Cabecera */}
       <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-ink">Mis mapas</h1>
@@ -116,7 +115,6 @@ export function MapsListPage() {
         </Button>
       </header>
 
-      {/* Estados */}
       {status === 'loading' && (
         <div className="flex justify-center py-20">
           <Spinner />

@@ -27,7 +27,6 @@ export function PublicMapCard({ map, onLikeChange }) {
 
   return (
     <Card padded className="flex flex-col gap-4 h-full">
-      {/* Cabecera autor + fecha */}
       <div className="flex items-center justify-between gap-3">
         <Link
           to={profileTo}
@@ -42,7 +41,6 @@ export function PublicMapCard({ map, onLikeChange }) {
         </span>
       </div>
 
-      {/* Cuerpo: título + descripción */}
       <div className="flex-1">
         <Link
           to={`/comunidad/mapa/${map.id}`}
@@ -59,7 +57,6 @@ export function PublicMapCard({ map, onLikeChange }) {
         )}
       </div>
 
-      {/* Acciones: like + contador comentarios + abrir */}
       <div className="flex items-center justify-between gap-2 pt-2 border-t border-line">
         <div className="flex items-center gap-1">
           <LikeButton
